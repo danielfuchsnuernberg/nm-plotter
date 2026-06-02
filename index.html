@@ -1,0 +1,2723 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--
+  ============================================================
+  PROJECT:      NM Plotter
+  FILE:         index.html  (coord_distance.html)
+  VERSION:      2026-06-02  (Coordinate distance + fuel planner for HEMS)
+  LAST CHANGE:  Sans/mono pass complete — fuel calc lines, modal hint, errors
+  ============================================================
+
+  CHANGELOG (newest first):
+    2026-06-02  Sans for Fuel Calc labels, Copy Route modal hint, errors, export tooltip
+    2026-06-02  Map waypoint labels (DUBI etc.) + provenance line → sans
+    2026-06-02  Sans/mono pass: waypoint names, header, leg names → sans (numbers stay mono)
+    2026-06-02  Palette aligned to Chart Analyst exact values (suite family)
+    2026-06-02  Sans font → system stack (matches Chart Analyst); mono kept for numbers
+    2026-06-02  Reverted Total Route to amber — NM Plotter's identity color
+    2026-06-02  Added Haversine·WGS-84 provenance line (muted, under summary)
+    2026-05-25  Web app manifest + apple-touch-icon (distinct app identity)
+    2026-05-22  Mobile / iPad responsive layout with panel tabs
+    2026-05-22  Copy Route modal: fixed close/copy buttons, ForeFlight format
+    2026-05-22  Removed FPL export (Garmin Pilot won't accept third-party files)
+    2026-05-21  Copy Route feature — ForeFlight DDMMSS route strings
+    2026-05-21  GPX export for OzRunways / ForeFlight import
+    2026-05-15  Fuel Calc reworked: inputs → required fuel (FOB check removed)
+    2026-05-15  Fuel Calculator added as right-panel tab
+    2026-05-13  Offline-aware tiles, debounced resize (no freezes)
+    2026-05-13  Distance readout, legs, bearings, per-leg map highlight
+    2026-05-13  Initial build — coordinate parser + great-circle distances
+  ============================================================
+-->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>NM Plotter — Coordinate Distance Tool</title>
+
+<!-- ===== Web App identity =====
+     These tags tell iOS Safari that THIS page is its own distinct web app
+     ("NM Plotter"), so it won't get confused with other web apps saved from
+     the same github.io domain (e.g. BK117 W&B). They also control how the
+     icon + title appear when you "Add to Home Screen". -->
+<meta name="application-name" content="NM Plotter" />
+<meta name="apple-mobile-web-app-title" content="NM Plotter" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0a0e13" />
+
+<!-- App icon: amber "NM" route glyph on the dark panel background, as an
+     inline SVG data URI so the file stays fully self-contained (no separate
+     icon file to upload to GitHub). -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20180%20180'%3E%3Crect%20width='180'%20height='180'%20rx='40'%20fill='%230c1015'/%3E%3Ccircle%20cx='44'%20cy='130'%20r='9'%20fill='%23ffb020'/%3E%3Ccircle%20cx='136'%20cy='50'%20r='9'%20fill='%23ffb020'/%3E%3Cline%20x1='44'%20y1='130'%20x2='136'%20y2='50'%20stroke='%23ffb020'%20stroke-width='5'%20stroke-dasharray='10,7'/%3E%3Ctext%20x='90'%20y='86'%20font-family='monospace'%20font-size='42'%20font-weight='700'%20fill='%23ffb020'%20text-anchor='middle'%3ENM%3C/text%3E%3C/svg%3E" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20180%20180'%3E%3Crect%20width='180'%20height='180'%20rx='40'%20fill='%230c1015'/%3E%3Ccircle%20cx='44'%20cy='130'%20r='9'%20fill='%23ffb020'/%3E%3Ccircle%20cx='136'%20cy='50'%20r='9'%20fill='%23ffb020'/%3E%3Cline%20x1='44'%20y1='130'%20x2='136'%20y2='50'%20stroke='%23ffb020'%20stroke-width='5'%20stroke-dasharray='10,7'/%3E%3Ctext%20x='90'%20y='86'%20font-family='monospace'%20font-size='42'%20font-weight='700'%20fill='%23ffb020'%20text-anchor='middle'%3ENM%3C/text%3E%3C/svg%3E" />
+
+<!-- Inline web app manifest (data URI) — gives the app a name + identity
+     distinct from other apps on the same domain. -->
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22NM%20Plotter%22%2C%22short_name%22%3A%22NM%20Plotter%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230c1015%22%2C%22theme_color%22%3A%22%230c1015%22%2C%22start_url%22%3A%22.%22%7D" />
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    /* ===== Palette aligned with Chart Analyst (Pilot Tools suite) =====
+       Backgrounds layer toward the data: app → panel → field. Each tool
+       in the suite uses these exact values so the family feel is consistent. */
+    --bg:#0a0e13;            /* app background */
+    --bg-2:#0f141b;          /* field/card background (input bg, readout card) */
+    --panel:#0d1219;         /* side panels */
+    --inset:#12191f;         /* inset blocks (example/code) */
+
+    --border:#1a2330;        /* structural dividers */
+    --border-strong:#2a3744; /* component outlines */
+
+    --text:#dce6f0;          /* primary readout / body */
+    --text-2:#b8c5d1;        /* secondary labels */
+    --text-dim:#8a9bb0;      /* dim descriptions */
+    --text-muted:#7d93a8;    /* hints, group labels */
+    --text-faint:#5f7186;    /* axis ticks, fine print */
+    --text-fainter:#46566a;  /* disclaimer */
+
+    /* ===== Accents — three roles ====
+       Amber = path / construction / trace.
+       Green = answer / result (Chart Analyst uses this; NM Plotter keeps amber
+               as its tool identity since route line + total live in different
+               regions, so no path/answer collision happens here).
+       Red   = limit / error. */
+    --accent:#ffb020;        /* NM Plotter's identity color */
+    --accent-2:#7fb3d5;      /* highlighted curve / secondary cool accent */
+    --good:#34d399;          /* green — used for "valid" indicators */
+    --bad:#f0506e;           /* red — out-of-envelope / error */
+
+    /* ===== Type =====
+       System sans for headings/labels/buttons (matches Chart Analyst).
+       Mono kept for coordinates, distances, fuel numbers — places where
+       digit alignment actually improves readability. */
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:14px;
+    overflow:hidden;
+  }
+  .app{
+    display:grid;
+    grid-template-columns:380px 1fr 320px;
+    grid-template-rows:auto minmax(0,1fr);
+    height:100vh;
+  }
+
+  /* ===== Mobile / iPad portrait layout =====
+     Below 900px: stack into a vertical layout with mobile tabs.
+     Map stays prominent (top), and a tab strip below it switches between
+     Waypoints, Distance, and Fuel content. This matches in-flight needs
+     where you always want the map visible. */
+  .mobile-tabs{
+    display:none;
+    background:var(--panel);
+    border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+  }
+  .mobile-tabs button{
+    flex:1;
+    background:transparent;
+    border:none;
+    border-bottom:2px solid transparent;
+    border-radius:0;
+    padding:12px 4px;
+    font-family:var(--sans);
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    cursor:pointer;
+  }
+  .mobile-tabs button.active{
+    color:var(--accent);
+    border-bottom-color:var(--accent);
+  }
+
+  @media (max-width: 900px){
+    html, body{
+      height:auto;
+      min-height:100vh;
+      overflow:hidden;
+      /* iOS Safari: avoid the "100vh is bigger than the visible area" trap */
+      height:100dvh;
+    }
+    .app{
+      grid-template-columns:1fr;
+      /* rows: header + map + mobile-tabs + active-panel */
+      grid-template-rows:auto 45dvh auto minmax(0, 1fr);
+      height:100dvh;
+    }
+
+    /* Header strip: tighten and hide the verbose subtitle bits */
+    .header-strip{padding:6px 12px;font-size:10px;gap:8px}
+    .header-strip > span:nth-child(3),
+    .header-strip > span:nth-child(4),
+    .header-strip > span:nth-child(5){display:none}
+
+    /* Map area takes its row */
+    .map-wrap{order:2;min-height:0}
+    .mobile-tabs{display:flex;order:3}
+
+    /* Both side panels live in row 4, but only the active one is visible */
+    .panel.left, .panel.right{
+      order:4;
+      grid-column:1;
+      grid-row:4;
+      border:none;
+      border-top:1px solid var(--border);
+    }
+    .panel.m-hidden{display:none}
+
+    /* Tighten paddings for small screens */
+    .panel-head{padding:10px 12px}
+    .panel-body{padding:10px 12px}
+    .panel-foot{padding:8px 10px;gap:6px;flex-wrap:wrap}
+    .panel-foot button{flex:1;min-width:120px;font-size:11px;padding:8px 10px}
+
+    /* Waypoint rows: slightly tighter on mobile */
+    .row{grid-template-columns:14px 80px 1fr auto 20px 20px;gap:5px;padding:6px 8px}
+
+    /* Right-panel tab strip stays as-is but tighten */
+    .tabstrip button{padding:10px 6px;font-size:9px}
+
+    /* Stat cards — make the summary grid more compact */
+    .summary{gap:6px;margin-bottom:10px}
+    .stat{padding:8px 10px}
+    .stat .v{font-size:16px}
+
+    /* Fuel calc — tighter on mobile */
+    #fuel-calc{padding:10px 12px}
+    .fc-card{padding:10px 12px;margin-bottom:10px}
+
+    /* Copy Route modal — full width on mobile */
+    .cr-modal{width:96vw;max-height:88dvh}
+    .cr-body{padding:12px 14px}
+  }
+
+  .panel{
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    display:flex;flex-direction:column;
+    min-width:0;
+    min-height:0;
+  }
+  .panel.right{border-right:none;border-left:1px solid var(--border)}
+
+  .panel-head{
+    padding:14px 16px;
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+    gap:8px;
+  }
+  .panel-head h2{
+    margin:0;
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    font-weight:600;
+  }
+  .badge{
+    font-family:var(--mono);
+    font-size:10px;
+    padding:2px 6px;
+    border:1px solid var(--border-strong);
+    border-radius:3px;
+    color:var(--text-dim);
+  }
+  .badge.live{color:var(--accent);border-color:#3a2e10;background:#1a1408}
+
+  .panel-body{padding:14px 16px;overflow:auto;flex:1;min-height:0}
+  .panel-foot{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
+
+  /* Row-based input */
+  .rows{display:flex;flex-direction:column;gap:6px}
+  .row{
+    display:grid;
+    grid-template-columns:18px 90px 1fr auto 22px 22px;
+    gap:6px;
+    align-items:center;
+  }
+  .row .fuel-range{
+    width:42px;
+    background:var(--bg-2);
+    border:1px solid #3a2e10;
+    color:var(--accent);
+    font-family:var(--mono);
+    font-size:11px;
+    font-weight:600;
+    padding:4px 5px;
+    border-radius:3px;
+    outline:none;
+    text-align:right;
+    -moz-appearance:textfield;
+  }
+  .row .fuel-range::-webkit-outer-spin-button,
+  .row .fuel-range::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .row .fuel-range:focus{border-color:var(--accent)}
+  .row .fuel-range-wrap{
+    display:flex;align-items:center;gap:3px;
+    font-family:var(--mono);font-size:9px;color:var(--text-faint);
+    letter-spacing:.06em;
+  }
+  .row .fuel-range-hidden{visibility:hidden;width:0;overflow:hidden}
+  .row .handle{
+    color:var(--text-faint);
+    font-size:14px;
+    cursor:grab;
+    user-select:none;
+    text-align:center;
+    line-height:1;
+  }
+  .row .handle:active{cursor:grabbing}
+  .row.dragging{opacity:.4}
+  .row.drag-over{box-shadow:inset 0 2px 0 var(--accent)}
+
+  .row input{
+    background:var(--bg-2);
+    border:1px solid var(--border-strong);
+    border-radius:3px;
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:12px;
+    padding:7px 9px;
+    outline:none;
+    width:100%;
+    min-width:0;
+  }
+  .row input:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .row input.name{
+    font-family:var(--sans);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:var(--accent);
+    font-weight:600;
+  }
+  .row input.name::placeholder{color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0}
+  .row input.coord::placeholder{color:var(--text-faint)}
+  .row input.invalid{border-color:#5a2828;background:#1a1010}
+  .row .del{
+    background:transparent;
+    border:none;
+    color:var(--text-faint);
+    font-size:16px;
+    line-height:1;
+    cursor:pointer;
+    padding:4px;
+    border-radius:3px;
+  }
+  .row .del:hover{color:var(--bad);background:#1a1010}
+
+  .row .fuel-toggle{
+    background:transparent;
+    border:1px solid var(--border-strong);
+    color:var(--text-faint);
+    line-height:0;
+    cursor:pointer;
+    padding:3px 4px;
+    border-radius:3px;
+    transition:all .12s;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .row .fuel-toggle:hover{
+    color:var(--accent);
+    border-color:var(--accent);
+  }
+  .row .fuel-toggle.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#0a0e13;
+  }
+
+  .hint{
+    color:var(--text-faint);
+    font-size:11px;
+    margin:12px 0 0;
+    line-height:1.5;
+    font-family:var(--sans);
+  }
+  .hint code{color:var(--accent-2);font-family:var(--mono)}
+  .hint .kbd{
+    background:var(--bg-2);
+    border:1px solid var(--border-strong);
+    padding:1px 4px;
+    border-radius:2px;
+    font-size:10px;
+    font-family:var(--mono);
+  }
+
+  button{
+    font-family:var(--sans);
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    padding:9px 14px;
+    border-radius:3px;
+    border:1px solid var(--border-strong);
+    background:var(--bg-2);
+    color:var(--text);
+    cursor:pointer;
+    transition:all .12s;
+  }
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#0a0e13}
+  button.primary:hover{background:#ffc24a;color:#0a0e13}
+  button.ghost{background:transparent}
+  button.small{padding:5px 10px;font-size:10px;letter-spacing:.08em}
+
+  /* Map */
+  .map-wrap{position:relative;min-width:0}
+  #map{height:100%;width:100%;background:#0a0e13}
+  .map-overlay{
+    position:absolute;top:14px;left:14px;z-index:500;
+    background:rgba(17,22,29,.92);
+    backdrop-filter:blur(6px);
+    border:1px solid var(--border-strong);
+    border-radius:4px;
+    padding:8px 12px;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-dim);
+    pointer-events:none;
+    letter-spacing:.05em;
+  }
+  .map-overlay strong{color:var(--accent);font-weight:600}
+
+  /* Right readout */
+  .summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+  .stat{background:var(--bg-2);border:1px solid var(--border);border-radius:4px;padding:10px 12px}
+  .stat .k{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-faint)}
+  .stat .v{font-family:var(--mono);font-size:18px;color:var(--text);margin-top:4px;font-weight:500}
+  .stat.accent .v{color:var(--accent)}
+
+  .legs{display:flex;flex-direction:column;gap:6px}
+  .leg{
+    background:var(--bg-2);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:10px 12px;
+    font-family:var(--sans);
+    font-size:12px;
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:10px;
+    align-items:center;
+    cursor:pointer;
+    transition:border-color .12s, background .12s;
+  }
+  .leg:hover, .leg.active{
+    border-color:var(--accent);
+    background:#1a1408;
+  }
+  .leg .lid{color:var(--accent);font-weight:600;width:28px;letter-spacing:.02em}
+  .leg .lroute{color:var(--text);font-size:12px;line-height:1.4;letter-spacing:.02em}
+  .leg .lroute .arrow{color:var(--text-faint);margin:0 4px;font-family:var(--mono)}
+  .leg .lroute .brg{color:var(--text-faint);display:block;margin-top:2px;font-family:var(--mono);font-size:11px}
+  .leg .ldist{color:var(--text);text-align:right;font-weight:500;font-family:var(--mono)}
+  .leg .ldist small{color:var(--text-faint);font-weight:400;display:block;font-size:10px;margin-top:2px;font-family:var(--mono)}
+
+  .points-list{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+  .point{
+    font-family:var(--sans);
+    font-size:12px;
+    padding:6px 8px;
+    background:var(--bg-2);
+    border:1px solid var(--border);
+    border-radius:3px;
+    display:grid;
+    grid-template-columns:24px 1fr;
+    gap:8px;
+    align-items:center;
+  }
+  .point .pid{color:var(--accent);font-weight:600;text-align:center;font-size:10px;font-family:var(--mono)}
+  .point .pname{color:var(--text);font-weight:600;letter-spacing:.04em}
+  .point .fuel-tag, .leg .fuel-tag{
+    display:inline-block;
+    font-size:9px;
+    font-weight:600;
+    padding:1px 5px;
+    border-radius:2px;
+    background:#3a2e10;
+    color:var(--accent);
+    letter-spacing:.08em;
+    margin-left:4px;
+    vertical-align:middle;
+  }
+  .point .pcoord{color:var(--text-dim);font-size:10px;line-height:1.4;margin-top:2px;font-family:var(--mono)}
+  .point .pcoord .dec{color:var(--text-faint);display:block;margin-top:1px;font-family:var(--mono)}
+
+  .empty{color:var(--text-faint);font-size:12px;font-style:italic;text-align:center;padding:20px 0}
+
+  .errors{
+    background:#2a1414;
+    border:1px solid #5a2828;
+    border-radius:4px;
+    padding:10px 12px;
+    margin-top:10px;
+    font-family:var(--sans);
+    font-size:11px;
+    color:#ff8888;
+  }
+  .errors .etitle{color:var(--bad);text-transform:uppercase;letter-spacing:.1em;font-size:10px;margin-bottom:6px;font-weight:600}
+  .errors div{line-height:1.5}
+
+  .marker-label{
+    background:var(--accent);
+    color:#0a0e13;
+    font-family:var(--sans);
+    font-size:11px;
+    font-weight:700;
+    padding:2px 7px;
+    border-radius:2px;
+    border:none;
+    box-shadow:0 1px 4px rgba(0,0,0,.5);
+    white-space:nowrap;
+    letter-spacing:.04em;
+  }
+  .leg-distance-label{
+    background:rgba(12,16,21,.92);
+    color:#ffb020;
+    font-family:var(--mono);
+    font-size:10px;
+    font-weight:600;
+    padding:1px 5px;
+    border:1px solid #3a2e10;
+    border-radius:2px;
+    white-space:nowrap;
+    transform:translate(-50%, -50%);
+    box-shadow:0 1px 3px rgba(0,0,0,.6);
+  }
+
+  /* Tooltips used only on the offscreen export map */
+  .waypoint-tooltip{
+    background:#ffb020 !important;
+    color:#0a0e13 !important;
+    font-family:var(--sans);
+    font-size:12px;
+    font-weight:700;
+    padding:3px 8px;
+    border:none !important;
+    border-radius:2px;
+    box-shadow:0 1px 4px rgba(0,0,0,.5);
+    white-space:nowrap;
+    letter-spacing:.04em;
+  }
+  .waypoint-tooltip:before{display:none !important}
+  .leg-distance-tooltip{
+    background:rgba(12,16,21,.92) !important;
+    color:#ffb020 !important;
+    font-family:var(--mono);
+    font-size:10px;
+    font-weight:600;
+    padding:1px 5px !important;
+    border:1px solid #3a2e10 !important;
+    border-radius:2px;
+    white-space:nowrap;
+    box-shadow:0 1px 3px rgba(0,0,0,.6);
+  }
+  .leg-distance-tooltip:before{display:none !important}
+  .leaflet-tooltip{
+    background:var(--panel);
+    color:var(--text);
+    border:1px solid var(--border-strong);
+    font-family:var(--sans);
+    font-size:11px;
+    box-shadow:0 4px 12px rgba(0,0,0,.4);
+  }
+  .leaflet-tooltip-top:before{border-top-color:var(--border-strong)}
+
+  .header-strip{
+    grid-column:1/-1;
+    background:#080b10;
+    border-bottom:1px solid var(--border);
+    padding:8px 16px;
+    display:flex;align-items:center;gap:14px;
+    font-family:var(--sans);
+    font-size:11px;
+    color:var(--text-dim);
+    letter-spacing:.1em;
+  }
+  .header-strip .brand{color:var(--accent);font-weight:700;letter-spacing:.18em}
+  .header-strip .sep{color:var(--text-faint)}
+
+  /* ===== Right-panel tabs ===== */
+  .tabstrip{
+    display:flex;gap:0;
+    border-bottom:1px solid var(--border);
+    background:var(--panel);
+  }
+  .tabstrip button{
+    flex:1;
+    background:transparent;
+    border:none;
+    border-bottom:2px solid transparent;
+    border-radius:0;
+    padding:12px 8px;
+    font-family:var(--sans);
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    cursor:pointer;
+    transition:color .12s, border-color .12s;
+  }
+  .tabstrip button:hover{color:var(--accent)}
+  .tabstrip button.active{
+    color:var(--accent);
+    border-bottom-color:var(--accent);
+  }
+  .tab-pane{display:none;flex:1;min-height:0;overflow:auto}
+  .tab-pane.active{display:block}
+
+  /* ===== Fuel Calc — styled to match the planner ===== */
+  #fuel-calc{
+    font-family:var(--sans);
+    color:var(--text);
+    background:var(--panel);
+    padding:14px 16px;
+  }
+  #fuel-calc *{box-sizing:border-box}
+  .fc-card{
+    background:var(--bg-2);
+    border:1px solid var(--border);
+    border-radius:3px;
+    padding:12px 14px;
+    margin-bottom:12px;
+  }
+  .fc-card-title{
+    font-size:10px;color:var(--text-dim);
+    letter-spacing:.18em;text-transform:uppercase;
+    font-weight:600;margin-bottom:10px;
+  }
+  .fc-hint{font-size:11px;color:var(--text-faint);margin:-4px 0 10px}
+  .fc-row-density{
+    display:flex;align-items:center;justify-content:space-between;
+    background:#1a1408;border:1px solid #3a2e10;
+    border-radius:3px;padding:8px 12px;margin-bottom:12px;
+  }
+  .fc-row-density span{
+    font-size:10px;color:var(--accent);letter-spacing:.18em;
+    text-transform:uppercase;font-weight:600;
+  }
+  .fc-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .fc-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+  .fc-field-label{
+    display:block;font-size:9px;color:var(--text-dim);
+    letter-spacing:.15em;text-transform:uppercase;
+    font-weight:600;margin-bottom:4px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .fc-input{
+    width:100%;background:var(--bg);
+    border:1px solid var(--border-strong);
+    border-radius:3px;padding:7px 10px;font-size:13px;
+    color:var(--text);font-family:var(--mono);
+    text-align:right;font-weight:500;outline:none;
+    transition:border-color .12s,box-shadow .12s;
+  }
+  .fc-input:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .fc-input.fc-accent{color:var(--accent)}
+  .fc-input.fc-blue{color:var(--accent-2)}
+  .fc-input.fc-density{
+    width:90px;padding:4px 8px;font-size:12px;
+    color:var(--accent);border-color:#3a2e10;background:var(--bg);
+  }
+  .fc-conv-summary{
+    margin-top:12px;padding:8px 12px;
+    background:var(--bg);border:1px solid var(--border);border-radius:3px;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  }
+  .fc-conv-summary .fc-cell{text-align:center;min-width:56px}
+  .fc-conv-summary .fc-cell .v{font-size:16px;font-weight:600;color:var(--text);font-family:var(--mono)}
+  .fc-conv-summary .fc-cell .u{font-size:9px;color:var(--text-faint);margin-top:2px;letter-spacing:.1em;text-transform:uppercase}
+  .fc-result-box{
+    background:var(--bg);border:1px solid var(--border);
+    border-radius:3px;padding:12px 14px;margin-top:12px;
+  }
+  .fc-result-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .fc-result-pill{
+    text-align:center;padding:12px 0;border-radius:3px;
+    border:1px solid var(--border-strong);background:var(--bg-2);
+  }
+  .fc-result-pill.endurance{background:#0e1f15;border-color:#1f5837}
+  .fc-result-pill.range{background:#0a1828;border-color:#1f4d7a}
+  .fc-result-pill.empty{display:flex;align-items:center;justify-content:center}
+  .fc-result-pill .big{font-size:22px;font-weight:700;font-family:var(--mono)}
+  .fc-result-pill.endurance .big{color:var(--good)}
+  .fc-result-pill.range .big{color:var(--accent-2)}
+  .fc-result-pill .lbl{font-size:9px;margin-top:5px;letter-spacing:.18em;text-transform:uppercase;font-weight:600}
+  .fc-result-pill.endurance .lbl{color:var(--good)}
+  .fc-result-pill.range .lbl{color:var(--accent-2)}
+  .fc-result-pill .sub{font-size:9px;color:var(--text-faint);margin-top:3px;letter-spacing:.05em}
+  .fc-result-pill .nm-suffix{font-size:12px;margin-left:3px;font-weight:500}
+  .fc-result-pill .empty-txt{font-size:11px;color:var(--text-faint);letter-spacing:.05em}
+  .fc-mini-row{margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  .fc-mini{
+    background:var(--panel);border:1px solid var(--border);
+    border-radius:3px;padding:7px 8px;text-align:center;
+  }
+  .fc-mini .v{font-size:12px;font-weight:600;color:var(--text);font-family:var(--mono)}
+  .fc-mini .l{font-size:8px;color:var(--text-faint);margin-top:3px;text-transform:uppercase;letter-spacing:.12em}
+  .fc-banner-error{
+    margin-top:10px;padding:8px 12px;
+    background:#1f0a0a;border:1px solid var(--bad);
+    border-radius:3px;color:var(--bad);
+    font-size:12px;font-weight:600;letter-spacing:.03em;
+  }
+  .fc-readonly{
+    padding:7px 10px;font-size:13px;
+    background:var(--bg);border:1px solid var(--border-strong);
+    border-radius:3px;display:flex;align-items:center;justify-content:flex-end;
+    min-height:31px;font-family:var(--mono);
+  }
+  .fc-readonly.has-value{color:var(--text);font-weight:500}
+  .fc-readonly.empty{color:var(--text-faint);font-size:11px;font-family:var(--sans);letter-spacing:.03em}
+  .fc-minutes-result{
+    background:#1a1408;border:1px solid #3a2e10;
+    border-radius:3px;padding:10px 12px;margin-top:10px;
+  }
+  .fc-minutes-result .head{
+    font-size:10px;color:var(--accent);letter-spacing:.18em;
+    font-weight:700;margin-bottom:10px;text-transform:uppercase;
+  }
+  .fc-minutes-result .cell{text-align:center;padding:2px;min-width:0;overflow:hidden}
+  .fc-minutes-result .cell .v{
+    font-size:14px;font-weight:600;color:var(--accent);
+    font-family:var(--mono);line-height:1.1;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .fc-minutes-result .cell .l{
+    font-size:8px;color:var(--text-faint);margin-top:4px;
+    letter-spacing:.12em;text-transform:uppercase;
+  }
+  .fc-empty-line{color:var(--text-faint);font-size:11px;text-align:center;padding:8px 0;letter-spacing:.03em}
+  .fc-reserve-buttons{display:flex;gap:4px}
+  .fc-reserve-buttons button{
+    flex:1;padding:8px 0;border-radius:3px;
+    border:1px solid var(--border-strong);background:var(--bg-2);
+    color:var(--text-dim);font-family:var(--sans);
+    font-size:11px;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;cursor:pointer;transition:all .12s;
+  }
+  .fc-reserve-buttons button:hover{border-color:var(--accent);color:var(--accent)}
+  .fc-reserve-buttons button.active{
+    background:var(--accent);border-color:var(--accent);color:#0a0e13;
+  }
+  .fc-fuel-card{
+    border-radius:3px;padding:10px 14px;margin-bottom:8px;
+    border:1px solid var(--border);background:var(--bg);
+  }
+  .fc-fuel-card.total{border-color:var(--border-strong)}
+  .fc-fuel-card.reserve{border-color:#3a2e10;background:#1a1408}
+  .fc-fuel-card.usable{border-color:#1f5837;background:#0e1f15}
+  .fc-fuel-card .head{
+    font-size:9px;letter-spacing:.2em;font-weight:700;
+    text-transform:uppercase;margin-bottom:8px;
+  }
+  .fc-fuel-card.total .head{color:var(--text-dim)}
+  .fc-fuel-card.reserve .head{color:var(--accent)}
+  .fc-fuel-card.usable .head{color:var(--good)}
+  .fc-fuel-card .cell{text-align:center;padding:5px 2px;min-width:0;overflow:hidden}
+  .fc-fuel-card .cell .v{
+    font-size:14px;font-weight:600;line-height:1;
+    font-family:var(--mono);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .fc-fuel-card.total .cell .v{color:var(--text)}
+  .fc-fuel-card.reserve .cell .v{color:var(--accent)}
+  .fc-fuel-card.usable .cell .v{color:var(--good)}
+  .fc-fuel-card .cell .u{font-size:8px;color:var(--text-faint);margin-top:4px;letter-spacing:.15em;text-transform:uppercase}
+
+  /* "Use route" link in fuel calc */
+  .fc-use-route{
+    background:transparent;border:1px solid var(--border-strong);
+    color:var(--accent-2);font-family:var(--mono);font-size:10px;
+    padding:4px 8px;border-radius:3px;cursor:pointer;
+    letter-spacing:.05em;text-transform:none;font-weight:600;
+    transition:all .12s;
+    white-space:nowrap;flex-shrink:0;
+  }
+  .fc-use-route:hover{border-color:var(--accent-2);background:rgba(127,179,213,.08)}
+  .fc-use-route:disabled{opacity:.4;cursor:not-allowed}
+
+  /* Required-fuel hero readout */
+  .fc-required{
+    background:var(--bg);border:1px solid var(--border);border-radius:3px;
+    padding:14px 16px;
+  }
+  .fc-required .rows{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+  .fc-required .line{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-family:var(--sans);font-size:12px;color:var(--text-dim);
+  }
+  .fc-required .line .lbl{color:var(--text-faint);letter-spacing:.06em}
+  .fc-required .line .val{color:var(--text);font-weight:500;font-family:var(--mono)}
+  .fc-required .divider{
+    border-top:1px solid var(--border-strong);
+    margin:8px 0 4px;
+  }
+  .fc-required .total{
+    background:#1a1408;border:1px solid #3a2e10;border-radius:3px;
+    padding:12px 14px;text-align:center;
+  }
+  .fc-required .total .big{
+    font-size:28px;font-weight:700;color:var(--accent);
+    font-family:var(--mono);line-height:1;
+  }
+  .fc-required .total .big .unit{font-size:14px;font-weight:500;margin-left:4px;color:var(--accent)}
+  .fc-required .total .lbl{
+    font-size:9px;color:var(--accent);letter-spacing:.2em;
+    text-transform:uppercase;margin-bottom:8px;font-weight:700;
+  }
+  .fc-required .total .alt{
+    margin-top:8px;display:flex;justify-content:center;gap:14px;
+    font-family:var(--mono);font-size:11px;color:var(--text-dim);
+  }
+  .fc-required .total .alt span small{color:var(--text-faint);font-size:9px;margin-left:2px;letter-spacing:.1em}
+
+  ::-webkit-scrollbar{width:8px;height:8px}
+
+  /* ===== Copy Route modal ===== */
+  .cr-overlay{
+    position:fixed;inset:0;z-index:1000;
+    background:rgba(0,0,0,.6);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;
+  }
+  .cr-overlay.active{display:flex}
+  .cr-modal{
+    background:var(--panel);
+    border:1px solid var(--border-strong);
+    border-radius:6px;
+    padding:0;
+    width:560px;max-width:92vw;
+    max-height:90vh;display:flex;flex-direction:column;
+    box-shadow:0 8px 40px rgba(0,0,0,.5);
+  }
+  .cr-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:14px 18px;border-bottom:1px solid var(--border);
+  }
+  .cr-head h3{
+    margin:0;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--text-dim);font-weight:600;
+  }
+  .cr-close{
+    background:transparent;border:none;color:var(--text-faint);
+    font-size:20px;line-height:1;cursor:pointer;padding:4px;
+    text-transform:none;letter-spacing:0;
+  }
+  .cr-close:hover{color:var(--bad)}
+  .cr-body{padding:14px 18px;overflow:auto}
+  .cr-fmt{margin-bottom:14px}
+  .cr-fmt-head{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:6px;
+  }
+  .cr-fmt-head h4{
+    margin:0;font-size:11px;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--accent);font-weight:600;
+  }
+  .cr-fmt-head .sub{font-size:10px;color:var(--text-faint);letter-spacing:.03em;text-transform:none}
+  .cr-string{
+    background:var(--bg);border:1px solid var(--border-strong);
+    border-radius:3px;padding:10px 12px;
+    font-family:var(--mono);font-size:12px;color:var(--text);
+    word-break:break-all;line-height:1.5;
+    max-height:120px;overflow:auto;user-select:all;cursor:text;
+  }
+  .cr-actions{
+    display:flex;gap:6px;margin-top:8px;
+  }
+  .cr-actions button{
+    flex:1;padding:8px 10px;font-size:11px;
+  }
+  .cr-actions button.copied{
+    background:var(--good);border-color:var(--good);color:#0a0e13;
+  }
+  .cr-hint{
+    background:#0e1f15;border:1px solid #1f5837;
+    border-radius:3px;padding:8px 12px;
+    color:var(--good);font-size:11px;letter-spacing:.03em;
+    margin-top:6px;font-family:var(--sans);
+  }
+  .cr-hint .head{font-weight:700;letter-spacing:.15em;text-transform:uppercase;margin-bottom:4px;font-size:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:#3d4a5e}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header-strip">
+    <span class="brand">NM·PLOTTER</span>
+    <span class="sep">/</span>
+    <span>COORDINATE DISTANCE TOOL</span>
+    <span class="sep">/</span>
+    <span>WGS-84 · GREAT CIRCLE</span>
+    <span style="margin-left:auto" id="status">READY</span>
+  </div>
+
+  <aside class="panel left">
+    <div class="panel-head">
+      <h2>Waypoints</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="ghost small" id="homeBtn" title="Insert LAE BASE coordinates">⌂ Home Base</button>
+        <button class="ghost small" id="addBtn">+ Add Row</button>
+        <span class="badge" id="countBadge">0 PTS</span>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="rows" id="rows"></div>
+      <div class="hint">
+        Coord formats: <code>6°45'11''S 146°6'21''E</code> · <code>-6.7531, 146.1058</code><br>
+        Paste multi-line coords into any coord box → auto-fills rows.<br>
+        Drag <span class="kbd">⋮⋮</span> to reorder. <span class="kbd">⌘/Ctrl+Enter</span> to plot.
+      </div>
+      <div id="errors"></div>
+    </div>
+    <div class="panel-foot">
+      <button class="primary" id="plotBtn">Plot &amp; Calculate</button>
+      <button class="primary" id="copyRouteBtn" style="background:var(--accent-2);border-color:var(--accent-2);color:#0a0e13" title="Copy route to clipboard for ForeFlight">⎘ Copy Route</button>
+      <button class="ghost" id="exportBtn">Export PDF</button>
+      <button class="ghost" id="exportGpxBtn">Export GPX</button>
+      <button class="ghost" id="sampleBtn">Sample</button>
+      <button class="ghost" id="clearBtn">Clear</button>
+    </div>
+  </aside>
+
+  <main class="map-wrap">
+    <div id="map"></div>
+  </main>
+
+  <!-- Mobile-only tab strip: switches which panel is visible below the map -->
+  <div class="mobile-tabs" id="mobileTabs">
+    <button data-mtab="waypoints" class="active">⊙ Waypoints</button>
+    <button data-mtab="readout">⊟ Readout / Fuel</button>
+  </div>
+
+  <aside class="panel right">
+    <div class="tabstrip" role="tablist">
+      <button id="tabBtnDistance" class="active" role="tab" aria-controls="tabDistance">Distance</button>
+      <button id="tabBtnFuel" role="tab" aria-controls="tabFuel">Fuel Calc</button>
+    </div>
+
+    <!-- Pane: Distance Readout -->
+    <div class="tab-pane active" id="tabDistance" role="tabpanel">
+      <div class="panel-head" style="border-top:none">
+        <h2>Distance Readout</h2>
+        <span class="badge live" id="totalBadge">— NM</span>
+      </div>
+      <div class="panel-body">
+        <div class="summary">
+          <div class="stat accent">
+            <div class="k">Total Route</div>
+            <div class="v" id="totalNm">— NM</div>
+          </div>
+          <div class="stat">
+            <div class="k">Direct (1→N)</div>
+            <div class="v" id="directNm">— NM</div>
+          </div>
+          <div class="stat">
+            <div class="k">Legs</div>
+            <div class="v" id="legCount">—</div>
+          </div>
+          <div class="stat">
+            <div class="k">Longest Leg</div>
+            <div class="v" id="maxLeg">— NM</div>
+          </div>
+        </div>
+
+        <!-- Provenance line: tells the pilot HOW the number was made.
+             Muted (not amber) — amber is reserved for the answer itself.
+             Sans because this is prose, not numbers. -->
+        <div class="provenance" id="provenance" style="
+          font-family:var(--sans);font-size:11px;
+          color:var(--text-faint);
+          padding:8px 2px 0;letter-spacing:.02em;
+          display:none;
+        ">✓ Haversine · WGS-84 · sum of great-circle legs</div>
+
+        <h2 style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-dim);font-weight:600;margin:14px 0 8px">Legs</h2>
+        <div class="legs" id="legs">
+          <div class="empty">No legs yet. Plot at least 2 points.</div>
+        </div>
+
+        <h2 style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-dim);font-weight:600;margin:18px 0 6px">Points</h2>
+        <div class="points-list" id="points">
+          <div class="empty">No points plotted.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pane: Fuel Calculator -->
+    <div class="tab-pane" id="tabFuel" role="tabpanel">
+      <section id="fuel-calc">
+        <!-- Density -->
+        <div class="fc-row-density">
+          <span>Jet A-1 Density · kg/L</span>
+          <input id="fc-density" class="fc-input fc-density" type="number" step="0.001" value="0.800">
+        </div>
+
+        <!-- ── 1. INPUTS ─────────────────────────────────── -->
+        <div class="fc-card">
+          <div class="fc-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:12px">
+            <span>Flight Inputs</span>
+            <button id="fc-use-route" class="fc-use-route" type="button" disabled title="Use plotted route distance">↩ Use route</button>
+          </div>
+          <div class="fc-grid-2" style="margin-bottom:12px;">
+            <div>
+              <label class="fc-field-label">Trip · NM</label>
+              <input id="fc-trip" class="fc-input fc-blue" type="number" placeholder="270">
+            </div>
+            <div>
+              <label class="fc-field-label">TAS · kt</label>
+              <input id="fc-tas" class="fc-input" type="number" placeholder="130">
+            </div>
+            <div>
+              <label class="fc-field-label">Burn · kg/hr</label>
+              <input id="fc-burn" class="fc-input" type="number" placeholder="176">
+            </div>
+          </div>
+          <label class="fc-field-label">Reserve · min</label>
+          <div id="fc-reserve-buttons" class="fc-reserve-buttons"></div>
+        </div>
+
+        <!-- ── 2. REQUIRED FUEL (the answer) ─────────────── -->
+        <div class="fc-card" id="fc-required-card">
+          <div class="fc-card-title">Fuel Required to Load</div>
+          <div id="fc-required-output">
+            <div class="fc-empty-line">Enter trip distance, TAS and burn rate</div>
+          </div>
+        </div>
+
+        <!-- ── 3. UTILITIES (always open) ─────────────────── -->
+        <div class="fc-card">
+          <div class="fc-card-title">Minutes → Fuel Burn</div>
+          <div class="fc-grid-2" style="margin-bottom:10px;">
+            <div>
+              <label class="fc-field-label">Minutes</label>
+              <input id="fc-mins" class="fc-input fc-accent" type="number" placeholder="45">
+            </div>
+            <div>
+              <label class="fc-field-label">Burn · kg/hr</label>
+              <div id="fc-burn-mirror" class="fc-readonly empty">enter burn above</div>
+            </div>
+          </div>
+          <div id="fc-minutes-output"></div>
+        </div>
+
+        <div class="fc-card">
+          <div class="fc-card-title">Fuel Unit Converter</div>
+          <div class="fc-hint">Edit any field — others update instantly</div>
+          <div class="fc-grid-2">
+            <div>
+              <label class="fc-field-label">Litres</label>
+              <input data-fuel="L" class="fc-input fc-blue" type="number" placeholder="0.0">
+            </div>
+            <div>
+              <label class="fc-field-label">US Gallons</label>
+              <input data-fuel="USG" class="fc-input fc-blue" type="number" placeholder="0.00">
+            </div>
+            <div>
+              <label class="fc-field-label">Kilograms</label>
+              <input data-fuel="kg" class="fc-input fc-blue" type="number" placeholder="0.0">
+            </div>
+            <div>
+              <label class="fc-field-label">Pounds</label>
+              <input data-fuel="lbs" class="fc-input fc-blue" type="number" placeholder="0.0">
+            </div>
+          </div>
+          <div id="fc-conv-summary" class="fc-conv-summary" style="display:none;"></div>
+        </div>
+      </section>
+    </div>
+  </aside>
+</div>
+
+<script>
+/* ===== Fuel icon (SVG) — used everywhere we previously used ⛽ ===== */
+// Lucide-style "fuel" pump glyph. Single-color via currentColor so it
+// inherits from the surrounding CSS. 24×24 viewBox.
+const FUEL_SVG_PATH = 'M3 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M3 21h12M14 9h2a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0V9l-3-3M6 8h6';
+function fuelSvg(size = 14, color = 'currentColor'){
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block"><path d="${FUEL_SVG_PATH}"/></svg>`;
+}
+
+// Pre-render the fuel icon to a high-res PNG data URL for use in jsPDF.
+// We render at 96px so it stays sharp at the small print sizes used in tables.
+let fuelIconPngDark = null;   // dark stroke for light backgrounds (tables)
+let fuelIconPngAccent = null; // amber stroke for accent contexts
+function renderFuelPng(strokeColor){
+  return new Promise(resolve => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${FUEL_SVG_PATH}"/></svg>`;
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 96; canvas.height = 96;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(null);
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+
+/* ===== Coordinate parser (unchanged from earlier) ===== */
+function parseCoordinatePair(line){
+  const raw = line.trim();
+  if(!raw) throw new Error('empty');
+
+  const dec = raw.match(/^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if(dec) return validate(parseFloat(dec[1]), parseFloat(dec[2]));
+
+  let s = raw
+    .replace(/[″"”]/g, '"')
+    .replace(/[′'’]/g, "'")
+    .replace(/''/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const hemis = [...s.matchAll(/[NSEWnsew]/g)];
+  if(hemis.length === 2){
+    const cut = hemis[0].index + 1;
+    const part1 = s.slice(0, cut).trim();
+    const part2 = s.slice(cut).replace(/^[,\s]+/, '').trim();
+    const a = parseDms(part1);
+    const b = parseDms(part2);
+    const isLatA = /[NS]/i.test(part1);
+    return validate(isLatA ? a : b, isLatA ? b : a);
+  }
+
+  if(s.includes(',')){
+    const [p1, p2] = s.split(',');
+    return validate(parseDms(p1), parseDms(p2));
+  }
+  throw new Error('unrecognised format');
+}
+
+function parseDms(str){
+  let s = str.trim();
+  if(!s) throw new Error('empty component');
+  let sign = 1;
+  const hemi = s.match(/([NSEWnsew])\s*$/);
+  if(hemi){
+    if(hemi[1].toUpperCase() === 'S' || hemi[1].toUpperCase() === 'W') sign = -1;
+    s = s.slice(0, hemi.index).trim();
+  }
+  if(s.startsWith('-')){ sign *= -1; s = s.slice(1).trim(); }
+  if(s.startsWith('+')){ s = s.slice(1).trim(); }
+  const nums = s.match(/\d+(?:\.\d+)?/g);
+  if(!nums) throw new Error('no numbers');
+  const deg = parseFloat(nums[0]) || 0;
+  const min = parseFloat(nums[1]) || 0;
+  const sec = parseFloat(nums[2]) || 0;
+  return sign * (deg + min/60 + sec/3600);
+}
+
+function validate(lat, lon){
+  if(!isFinite(lat) || !isFinite(lon)) throw new Error('non-finite');
+  if(lat < -90 || lat > 90) throw new Error('lat out of range');
+  if(lon < -180 || lon > 180) throw new Error('lon out of range');
+  return {lat, lon};
+}
+
+/* ===== Distance / bearing / format ===== */
+const EARTH_RADIUS_NM = 3440.065;
+
+function haversineNm(a, b){
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
+  const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+  return EARTH_RADIUS_NM * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1-h));
+}
+
+function bearingDeg(a, b){
+  const toRad = d => d * Math.PI / 180;
+  const toDeg = r => r * 180 / Math.PI;
+  const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const y = Math.sin(dLon)*Math.cos(lat2);
+  const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+function toDms(dec, isLat){
+  const hemi = isLat ? (dec >= 0 ? 'N' : 'S') : (dec >= 0 ? 'E' : 'W');
+  const abs = Math.abs(dec);
+  const d = Math.floor(abs);
+  const mFloat = (abs - d) * 60;
+  const m = Math.floor(mFloat);
+  const sec = (mFloat - m) * 60;
+  return `${d}°${String(m).padStart(2,'0')}'${sec.toFixed(1).padStart(4,'0')}"${hemi}`;
+}
+const fmtNm = n => n.toFixed(2);
+const fmtKm = n => (n * 1.852).toFixed(2);
+
+/* ===== State ===== */
+let nextId = 1;
+const state = { rows: [] };
+
+function addRow(name = '', coord = '', fuel = false, fuelRange = 100){
+  state.rows.push({ id: nextId++, name, coord, fuel, fuelRange });
+}
+
+/* ===== Debounce helper =====
+   Waits until typing stops before running. Critical so we don't
+   re-plot the map / re-render rows on every keystroke. */
+function debounce(fn, ms = 250){
+  let t;
+  return function(...args){
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
+/* ===== Map ===== */
+const map = L.map('map', {
+  zoomControl: true,
+  worldCopyJump: true,
+  // Don't auto-fade tiles — cuts down on render thrash when tiles fail
+  fadeAnimation: false
+}).setView([-6.5, 145.5], 8);
+
+// Keep a ref so we can pause/resume tile loading on offline.
+// errorTileUrl + a 1×1 transparent PNG prevents the browser from showing
+// broken-image markers when tiles fail.
+const TRANSPARENT_PNG_1PX =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap · © CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19,
+  // If tiles fail, show transparent rather than ugly broken images
+  errorTileUrl: TRANSPARENT_PNG_1PX,
+  // Don't keep loading off-screen tiles — saves bandwidth and prevents
+  // the queue from getting jammed when the network is flaky
+  updateWhenIdle: true,
+  updateWhenZooming: false,
+  keepBuffer: 1
+}).addTo(map);
+
+// Track network state. When offline, we DON'T remove the tile layer (that
+// would clear the cached tiles you can still see); we just stop it from
+// trying to fetch new ones, which is what causes the freezes.
+// navigator.onLine is unreliable — some browsers report false at page load
+// even when online, which previously blanked the whole map. So we DON'T act
+// on the startup reading. We start in "online" mode (tiles load normally) and
+// only swap to the transparent placeholder if a genuine 'offline' event fires.
+let isOffline = false;
+
+function applyNetworkState(){
+  if(isOffline){
+    // Replace tile URL with our transparent PNG so any loads that DO happen
+    // complete instantly with no hanging network call.
+    tileLayer.options._origUrl = tileLayer.options._origUrl || tileLayer._url;
+    tileLayer.setUrl(TRANSPARENT_PNG_1PX, true);
+  } else {
+    if(tileLayer.options._origUrl){
+      tileLayer.setUrl(tileLayer.options._origUrl, false);
+    }
+  }
+}
+
+window.addEventListener('online',  () => { isOffline = false; applyNetworkState(); });
+window.addEventListener('offline', () => { isOffline = true;  applyNetworkState(); });
+// NOTE: intentionally NOT calling applyNetworkState() at startup — we let
+// Leaflet load tiles normally and only react to real connectivity changes.
+
+// Debounced map resize — stops Leaflet from re-rendering on every pixel
+// change while you drag the window edge. THIS is what was causing the
+// "expand window goes dark" freeze.
+let _resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    try { map.invalidateSize({ animate: false, pan: false }); } catch(_){}
+  }, 120);
+});
+
+const markerLayer = L.layerGroup().addTo(map);
+const lineLayer   = L.layerGroup().addTo(map);
+const fuelRingLayer = L.layerGroup().addTo(map);
+
+let legLines = []; // one polyline per leg, indexed 0..n-1
+let lastPlottedPoints = [];
+
+const NM_TO_M = 1852;
+
+function plotPoints(points){
+  markerLayer.clearLayers();
+  lineLayer.clearLayers();
+  fuelRingLayer.clearLayers();
+  legLines = [];
+  lastPlottedPoints = points;
+  if(!points.length) return;
+
+  const latlngs = points.map(p => [p.lat, p.lon]);
+
+  // Draw fuel-range circles UNDER the route lines so they don't obscure them.
+  // Subtle: dashed amber line, very faint amber fill.
+  // Radius of 0 (or unset) hides the ring while keeping the fuel flag.
+  points.forEach(p => {
+    if(!p.fuel) return;
+    const range = p.fuelRange ?? 100;
+    if(range <= 0) return;
+    const radiusM = range * NM_TO_M;
+    L.circle([p.lat, p.lon], {
+      radius: radiusM,
+      color: '#ffb020',
+      weight: 1,
+      opacity: 0.55,
+      dashArray: '4,4',
+      fillColor: '#ffb020',
+      fillOpacity: 0.05,
+      interactive: false
+    }).addTo(fuelRingLayer);
+  });
+
+  // Draw one polyline per leg so we can highlight individually
+  for(let i = 0; i < points.length - 1; i++){
+    const seg = L.polyline([latlngs[i], latlngs[i+1]], {
+      color:'#ffb020', weight:2.5, opacity:.85, dashArray:'6,4'
+    }).addTo(lineLayer);
+    legLines.push(seg);
+  }
+
+  points.forEach((p) => {
+    L.circleMarker([p.lat, p.lon], {
+      radius:7, color:'#ffb020', weight:2,
+      fillColor:'#ffb020', fillOpacity:.9
+    }).addTo(markerLayer)
+      .bindTooltip(
+        `<b>${escapeHtml(p.label)}${p.fuel ? ' ' + fuelSvg(11, '#ffd870') : ''}</b><br>${toDms(p.lat,true)}<br>${toDms(p.lon,false)}<br><span style="color:#8a9bb0">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span>`,
+        {direction:'top', offset:[0,-8]}
+      );
+
+    const labelIcon = L.divIcon({
+      className:'marker-label',
+      html: escapeHtml(p.label) + (p.fuel ? ' ' + fuelSvg(11, '#0a0e13') : ''),
+      iconSize:null,
+      iconAnchor:[-10, 8]
+    });
+    L.marker([p.lat, p.lon], { icon: labelIcon, interactive: false }).addTo(markerLayer);
+  });
+
+  // Auto-fit map view. Defensive against degenerate cases (one point, or all
+  // points at the same coordinates) which can otherwise hang Leaflet.
+  if(points.length === 1){
+    map.setView(latlngs[0], 10);
+  } else {
+    const bounds = L.latLngBounds(latlngs);
+    if(bounds.isValid() && !bounds.getNorthEast().equals(bounds.getSouthWest())){
+      map.fitBounds(bounds, { padding:[50, 50] });
+    } else {
+      // All points at the same location — just center on it
+      map.setView(latlngs[0], 10);
+    }
+  }
+}
+
+function highlightLeg(idx){
+  legLines.forEach((line, i) => {
+    if(i === idx){
+      line.setStyle({ color:'#ffe080', weight:5, opacity:1, dashArray:null });
+      line.bringToFront();
+    } else {
+      line.setStyle({ color:'#ffb020', weight:1.5, opacity:.35, dashArray:'6,4' });
+    }
+  });
+}
+
+function clearLegHighlight(){
+  legLines.forEach(line => {
+    line.setStyle({ color:'#ffb020', weight:2.5, opacity:.85, dashArray:'6,4' });
+  });
+}
+
+/* ===== Render rows ===== */
+const rowsEl = document.getElementById('rows');
+
+function renderRows(focusId = null, focusField = null){
+  rowsEl.innerHTML = '';
+  state.rows.forEach((r, i) => {
+    const div = renderOneRow(r, i);
+    rowsEl.appendChild(div);
+  });
+
+  // Restore focus if requested
+  if(focusId != null){
+    const sel = `.row[data-id="${focusId}"] input.${focusField}`;
+    const el = rowsEl.querySelector(sel);
+    if(el){
+      el.focus();
+      const v = el.value;
+      el.setSelectionRange(v.length, v.length);
+    }
+  }
+}
+
+// Build a single row's DOM with all listeners attached. Returns the element
+// (caller decides whether to append, replace, etc.). Used by renderRows()
+// for full rebuilds AND by appendBlankRow() to add a single row without
+// disturbing the rest of the DOM.
+function renderOneRow(r, i){
+  const div = document.createElement('div');
+  div.className = 'row';
+  div.dataset.id = r.id;
+  div.innerHTML = `
+    <span class="handle" draggable="true" title="Drag to reorder">⋮⋮</span>
+    <input class="name" type="text" maxlength="12" placeholder="P${i+1}" value="${escapeAttr(r.name)}">
+    <input class="coord" type="text" placeholder="6°45'11''S 146°6'21''E" value="${escapeAttr(r.coord)}">
+    <span class="fuel-range-wrap ${r.fuel ? '' : 'fuel-range-hidden'}" title="Fuel range in NM">
+      <input class="fuel-range" type="number" min="0" max="9999" value="${r.fuelRange ?? 100}">
+      <span>NM</span>
+    </span>
+    <button class="fuel-toggle ${r.fuel ? 'active' : ''}" title="Toggle fuel stop">${fuelSvg(13)}</button>
+    <button class="del" title="Delete row">×</button>
+  `;
+
+  const nameInput  = div.querySelector('input.name');
+  const coordInput = div.querySelector('input.coord');
+  const handle     = div.querySelector('.handle');
+  const delBtn     = div.querySelector('.del');
+  const fuelBtn    = div.querySelector('.fuel-toggle');
+  const rangeWrap  = div.querySelector('.fuel-range-wrap');
+  const rangeInput = div.querySelector('.fuel-range');
+
+  fuelBtn.addEventListener('click', () => {
+    r.fuel = !r.fuel;
+    fuelBtn.classList.toggle('active', r.fuel);
+    rangeWrap.classList.toggle('fuel-range-hidden', !r.fuel);
+    // Debounced — if you click multiple fuel toggles fast (and you do, that
+    // was the freeze you saw), this collapses N rapid renders into one.
+    processDebounced();
+  });
+  rangeInput.addEventListener('input', e => {
+    const v = parseInt(e.target.value, 10);
+    // Allow 0 (hides ring); only fall back to 100 for empty/non-numeric input
+    r.fuelRange = isFinite(v) && v >= 0 ? v : 100;
+    processDebounced();
+  });
+  rangeInput.addEventListener('click', e => e.stopPropagation());
+
+  nameInput.addEventListener('input', e => {
+    r.name = e.target.value;
+    ensureTrailingBlankRow();
+  });
+  coordInput.addEventListener('input', e => {
+    r.coord = e.target.value;
+    coordInput.classList.remove('invalid');
+    ensureTrailingBlankRow();
+  });
+  coordInput.addEventListener('paste', e => {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if(text && text.includes('\n')){
+      e.preventDefault();
+      distributePastedCoords(r.id, text);
+    }
+  });
+  coordInput.addEventListener('keydown', e => {
+    if((e.metaKey || e.ctrlKey) && e.key === 'Enter') process();
+  });
+  nameInput.addEventListener('keydown', e => {
+    if((e.metaKey || e.ctrlKey) && e.key === 'Enter') process();
+  });
+  delBtn.addEventListener('click', () => {
+    state.rows = state.rows.filter(x => x.id !== r.id);
+    if(state.rows.length === 0) addRow();
+    renderRows();
+  });
+
+  // Drag-reorder
+  handle.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/plain', String(r.id));
+    e.dataTransfer.effectAllowed = 'move';
+    div.classList.add('dragging');
+  });
+  handle.addEventListener('dragend', () => {
+    div.classList.remove('dragging');
+    // Clear any stale drag-over highlights from other rows that didn't fire dragleave
+    rowsEl.querySelectorAll('.row.drag-over').forEach(el => el.classList.remove('drag-over'));
+  });
+  div.addEventListener('dragover', e => {
+    e.preventDefault();
+    div.classList.add('drag-over');
+  });
+  div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+  div.addEventListener('drop', e => {
+    e.preventDefault();
+    div.classList.remove('drag-over');
+    const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    if(fromId === r.id) return;
+    const fromIdx = state.rows.findIndex(x => x.id === fromId);
+    const toIdx   = state.rows.findIndex(x => x.id === r.id);
+    if(fromIdx < 0 || toIdx < 0) return;
+    const [moved] = state.rows.splice(fromIdx, 1);
+    state.rows.splice(toIdx, 0, moved);
+    renderRows();
+  });
+
+  return div;
+}
+
+// Auto-add a blank row at the end when the user types in the last row.
+// CRITICAL: this must NOT re-render existing rows (would interrupt typing
+// and destroy focus mid-keystroke). We just append one new row.
+function ensureTrailingBlankRow(){
+  const last = state.rows[state.rows.length - 1];
+  if(last && (last.name.trim() || last.coord.trim())){
+    addRow();
+    const newRow = state.rows[state.rows.length - 1];
+    const div = renderOneRow(newRow, state.rows.length - 1);
+    rowsEl.appendChild(div);
+  }
+}
+
+function distributePastedCoords(startId, text){
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  let idx = state.rows.findIndex(x => x.id === startId);
+  if(idx < 0) return;
+  for(const ln of lines){
+    if(idx >= state.rows.length) addRow();
+    state.rows[idx].coord = ln;
+    idx++;
+  }
+  // Ensure trailing blank
+  const last = state.rows[state.rows.length - 1];
+  if(!last || last.name.trim() || last.coord.trim()) addRow();
+  renderRows();
+}
+
+function escapeAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ===== Process ===== */
+const els = {
+  errors:   document.getElementById('errors'),
+  legs:     document.getElementById('legs'),
+  points:   document.getElementById('points'),
+  totalNm:  document.getElementById('totalNm'),
+  directNm: document.getElementById('directNm'),
+  legCount: document.getElementById('legCount'),
+  maxLeg:   document.getElementById('maxLeg'),
+  totalBadge:document.getElementById('totalBadge'),
+  countBadge:document.getElementById('countBadge'),
+  status:   document.getElementById('status'),
+  provenance:document.getElementById('provenance'),
+};
+
+function process(){
+  // State is kept in sync by input handlers as the user types,
+  // so we don't need to re-sync from the DOM here.
+  const points = [];
+  const errors = [];
+
+  state.rows.forEach((r, i) => {
+    if(!r.coord.trim()) return;
+    try {
+      const c = parseCoordinatePair(r.coord);
+      const label = r.name.trim() ? r.name.trim().toUpperCase() : `P${points.length + 1}`;
+      points.push({ ...c, label, fuel: !!r.fuel, fuelRange: r.fuelRange ?? 100 });
+      const inp = rowsEl.querySelector(`.row[data-id="${r.id}"] input.coord`);
+      if(inp) inp.classList.remove('invalid');
+    } catch(e){
+      errors.push(`Row ${i+1}: ${e.message}`);
+      const inp = rowsEl.querySelector(`.row[data-id="${r.id}"] input.coord`);
+      if(inp) inp.classList.add('invalid');
+    }
+  });
+
+  els.errors.innerHTML = errors.length
+    ? `<div class="errors"><div class="etitle">${errors.length} error${errors.length>1?'s':''}</div>${errors.map(e => `<div>${escapeHtml(e)}</div>`).join('')}</div>`
+    : '';
+
+  els.countBadge.textContent = `${points.length} PT${points.length===1?'':'S'}`;
+  els.status.textContent = errors.length ? 'PARSE ERRORS' : (points.length ? 'PLOTTED' : 'READY');
+  els.status.style.color = errors.length ? 'var(--bad)' : (points.length ? 'var(--good)' : 'var(--text-dim)');
+
+  plotPoints(points);
+  renderReadout(points);
+}
+
+// Debounced wrapper for process() — used by the fuel-range input
+// so the heavy map/list redraw only fires once typing has paused.
+const processDebounced = debounce(process, 300);
+
+function renderReadout(points){
+  if(!points.length){
+    els.points.innerHTML = '<div class="empty">No points plotted.</div>';
+  } else {
+    els.points.innerHTML = points.map((p,i) => `
+      <div class="point">
+        <div class="pid">${i+1}</div>
+        <div>
+          <span class="pname">${escapeHtml(p.label)}</span>${p.fuel ? ` <span class="fuel-tag">${fuelSvg(10)} FUEL${(p.fuelRange ?? 100) > 0 ? ' ' + p.fuelRange + 'NM' : ''}</span>` : ''}
+          <div class="pcoord">
+            ${toDms(p.lat,true)} &nbsp; ${toDms(p.lon,false)}
+            <span class="dec">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  if(points.length < 2){
+    els.legs.innerHTML = '<div class="empty">Plot at least 2 points to see distances.</div>';
+    els.totalNm.textContent = '— NM';
+    els.directNm.textContent = '— NM';
+    els.legCount.textContent = '—';
+    els.maxLeg.textContent = '— NM';
+    els.totalBadge.textContent = '— NM';
+    if(els.provenance) els.provenance.style.display = 'none';
+    return;
+  }
+
+  let total = 0, maxLeg = 0;
+  const legHtml = [];
+  for(let i = 0; i < points.length - 1; i++){
+    const a = points[i], b = points[i+1];
+    const d = haversineNm(a, b);
+    const brg = bearingDeg(a, b);
+    total += d;
+    if(d > maxLeg) maxLeg = d;
+    legHtml.push(`
+      <div class="leg" data-leg-idx="${i}">
+        <div class="lid">L${i+1}</div>
+        <div class="lroute">${escapeHtml(a.label)}<span class="arrow">→</span>${escapeHtml(b.label)}${b.fuel ? ` <span class="fuel-tag">${fuelSvg(10)}</span>` : ''}
+          <span class="brg">brg ${brg.toFixed(0).padStart(3,'0')}°</span>
+        </div>
+        <div class="ldist">${fmtNm(d)} NM<small>${fmtKm(d)} km</small></div>
+      </div>
+    `);
+  }
+  els.legs.innerHTML = legHtml.join('');
+
+  // Wire up hover-to-highlight on each leg card
+  els.legs.querySelectorAll('.leg').forEach(card => {
+    const idx = parseInt(card.dataset.legIdx, 10);
+    card.addEventListener('mouseenter', () => {
+      card.classList.add('active');
+      highlightLeg(idx);
+    });
+    card.addEventListener('mouseleave', () => {
+      card.classList.remove('active');
+      clearLegHighlight();
+    });
+    card.addEventListener('click', () => {
+      // Click zooms the map to fit just this leg
+      const pts = lastPlottedPoints;
+      if(pts.length > idx + 1){
+        const a = pts[idx], b = pts[idx+1];
+        map.fitBounds(L.latLngBounds([[a.lat,a.lon],[b.lat,b.lon]]), { padding:[80,80] });
+      }
+    });
+  });
+
+  const direct = haversineNm(points[0], points[points.length-1]);
+  els.totalNm.textContent  = `${fmtNm(total)} NM`;
+  els.directNm.textContent = `${fmtNm(direct)} NM`;
+  els.legCount.textContent = String(points.length - 1);
+  els.maxLeg.textContent   = `${fmtNm(maxLeg)} NM`;
+  els.totalBadge.textContent = `${fmtNm(total)} NM`;
+  if(els.provenance) els.provenance.style.display = '';
+}
+
+/* ===== Buttons ===== */
+document.getElementById('plotBtn').addEventListener('click', process);
+document.getElementById('addBtn').addEventListener('click', () => {
+  addRow();
+  renderRows();
+});
+
+// ── Home Base — pre-programmed waypoint ───────────────────────
+const HOME_BASE = {
+  name:  'LAE BASE',
+  coord: '-6.733833, 146.999914'
+};
+document.getElementById('homeBtn').addEventListener('click', () => {
+  // Find the first fully-empty row (no name AND no coord)
+  const emptyIdx = state.rows.findIndex(r => !r.name.trim() && !r.coord.trim());
+  if(emptyIdx >= 0){
+    state.rows[emptyIdx].name  = HOME_BASE.name;
+    state.rows[emptyIdx].coord = HOME_BASE.coord;
+  } else {
+    addRow(HOME_BASE.name, HOME_BASE.coord);
+  }
+  // Ensure trailing blank
+  const last = state.rows[state.rows.length - 1];
+  if(last.name.trim() || last.coord.trim()) addRow();
+  renderRows();
+  // Debounced — coalesces rapid clicks (e.g. building round-trip routes)
+  processDebounced();
+});
+
+document.getElementById('exportBtn').addEventListener('click', exportPdf);
+document.getElementById('exportGpxBtn').addEventListener('click', exportGpx);
+
+/* ============================================================
+   GPX EXPORT
+   Generates a standards-compliant GPX 1.1 file containing:
+   - One <wpt> per waypoint (so they appear as user waypoints in
+     Garmin Pilot / OzRunways / ForeFlight / etc.)
+   - One <rte> linking them in order as a flight plan route.
+   Works in: Garmin Pilot, OzRunways, ForeFlight, SkyVector,
+            Google Earth, and basically any aviation/GIS tool.
+   ============================================================ */
+function exportGpx(){
+  // Refresh in case the user hasn't clicked Plot since their last edit
+  process();
+
+  if(!lastPlottedPoints.length){
+    alert('Plot some points before exporting.');
+    return;
+  }
+
+  const xmlEsc = s => String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+
+  // Garmin/OzRunways prefer short, uppercase, alphanumeric-ish waypoint
+  // names. We sanitize but keep them recognizable.
+  const sanitizeName = (label, idx) => {
+    let s = String(label || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if(!s) s = `WP${String(idx + 1).padStart(2, '0')}`;
+    if(s.length > 10) s = s.slice(0, 10); // safe length for most apps
+    return s;
+  };
+
+  // Deduplicate waypoint definitions by coordinate (a round trip uses
+  // LAE BASE twice in the route, but it should only be defined once
+  // as a waypoint). The <rte> below still references it twice in order.
+  const seenCoord = new Map(); // "lat,lon" -> sanitized name
+  const wpts = [];
+
+  // Build sanitized names first (with dedup by coord)
+  const namesInOrder = lastPlottedPoints.map((p, i) => {
+    const key = `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
+    if(seenCoord.has(key)) return seenCoord.get(key);
+    // Ensure no name collision across different coords
+    let base = sanitizeName(p.label, i);
+    let unique = base;
+    let n = 2;
+    const usedNames = new Set(seenCoord.values());
+    while(usedNames.has(unique)){
+      unique = (base.slice(0, 8) + n).slice(0, 10);
+      n++;
+    }
+    seenCoord.set(key, unique);
+    wpts.push({ name: unique, lat: p.lat, lon: p.lon, fuel: p.fuel });
+    return unique;
+  });
+
+  // Compute trip metadata for the file header
+  let totalNm = 0;
+  for(let i = 0; i < lastPlottedPoints.length - 1; i++){
+    totalNm += haversineNm(lastPlottedPoints[i], lastPlottedPoints[i+1]);
+  }
+  const now = new Date().toISOString();
+
+  // Build the GPX XML
+  const lines = [];
+  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+  lines.push('<gpx version="1.1" creator="NM Plotter" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">');
+  lines.push('  <metadata>');
+  lines.push(`    <name>NM Plotter Route</name>`);
+  lines.push(`    <desc>${wpts.length} waypoints, ${totalNm.toFixed(1)} NM total</desc>`);
+  lines.push(`    <time>${now}</time>`);
+  lines.push('  </metadata>');
+
+  // Waypoint definitions (one per unique coordinate)
+  for(const w of wpts){
+    lines.push(`  <wpt lat="${w.lat.toFixed(6)}" lon="${w.lon.toFixed(6)}">`);
+    lines.push(`    <name>${xmlEsc(w.name)}</name>`);
+    if(w.fuel) lines.push(`    <desc>Fuel stop</desc>`);
+    lines.push(`    <sym>Flag, Blue</sym>`);
+    lines.push(`    <type>Waypoint</type>`);
+    lines.push('  </wpt>');
+  }
+
+  // The route — references the waypoints in order (with repeats for round trips)
+  lines.push('  <rte>');
+  lines.push(`    <name>NM Plotter Route</name>`);
+  lines.push(`    <desc>${totalNm.toFixed(1)} NM</desc>`);
+  for(let i = 0; i < lastPlottedPoints.length; i++){
+    const p = lastPlottedPoints[i];
+    const name = namesInOrder[i];
+    lines.push(`    <rtept lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}">`);
+    lines.push(`      <name>${xmlEsc(name)}</name>`);
+    lines.push('    </rtept>');
+  }
+  lines.push('  </rte>');
+  lines.push('</gpx>');
+
+  const gpx = lines.join('\n');
+
+  // Trigger download
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+  const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `nm-plotter-${stamp}.gpx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+let exportInProgress = false;
+
+async function exportPdf(){
+  if(exportInProgress) return; // Guard against double-click triggering a second export
+  exportInProgress = true;
+
+  const btn = document.getElementById('exportBtn');
+  const orig = btn.textContent;
+  btn.textContent = 'Rendering…';
+  btn.disabled = true;
+
+  // Track offscreen resources so we can guarantee cleanup even if anything throws
+  let exportMap = null;
+  let offscreen = null;
+
+  try {
+    // Make sure we're exporting the latest state, not whatever was last plotted.
+    // process() updates lastPlottedPoints as a side effect of plotPoints().
+    process();
+
+    if(!lastPlottedPoints.length){
+      alert('Plot some points before exporting.');
+      return;
+    }
+
+    // Pre-render fuel icons once for PDF use (cached after first export)
+    if(!fuelIconPngDark){
+      fuelIconPngDark   = await renderFuelPng('#1a2030');
+      fuelIconPngAccent = await renderFuelPng('#ff8c00');
+    }
+
+    // 1. Render a fresh copy of the map into a hidden offscreen container,
+    //    sized to match the PDF's image area. This avoids label-misalignment
+    //    when the live map's aspect ratio doesn't match the PDF's.
+    const PDF_MAP_W_PX = 1200;
+    const PDF_MAP_H_PX = 800;   // 3:2 — matches the PDF image area cleanly
+    offscreen = document.createElement('div');
+    offscreen.style.cssText = `
+      position:fixed; left:-10000px; top:0;
+      width:${PDF_MAP_W_PX}px; height:${PDF_MAP_H_PX}px;
+      background:#0a0e13;
+    `;
+    document.body.appendChild(offscreen);
+
+    exportMap = L.map(offscreen, {
+      zoomControl: false,
+      attributionControl: false,
+      fadeAnimation: false,
+      zoomAnimation: false,
+      markerZoomAnimation: false,
+      preferCanvas: false  // we want SVG for crisp html2canvas capture
+    });
+
+    if(!isOffline){
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd', maxZoom: 19,
+        errorTileUrl: TRANSPARENT_PNG_1PX
+      }).addTo(exportMap);
+    }
+
+    // Plot points + per-leg lines on the export map, with distance labels.
+    // We use Leaflet permanent tooltips for waypoint labels (instead of divIcon
+    // markers) because tooltips are positioned by Leaflet's renderer relative
+    // to the marker itself — html2canvas captures them in the right place,
+    // whereas CSS-transformed divIcons can drift.
+    const latlngs = lastPlottedPoints.map(p => [p.lat, p.lon]);
+
+    // Fuel rings first, so route lines render on top
+    lastPlottedPoints.forEach(p => {
+      if(!p.fuel) return;
+      const range = p.fuelRange ?? 100;
+      if(range <= 0) return;
+      L.circle([p.lat, p.lon], {
+        radius: range * NM_TO_M,
+        color: '#ffb020',
+        weight: 1,
+        opacity: 0.5,
+        dashArray: '5,4',
+        fillColor: '#ffb020',
+        fillOpacity: 0.05,
+        interactive: false
+      }).addTo(exportMap);
+    });
+
+    for(let i = 0; i < lastPlottedPoints.length - 1; i++){
+      const a = lastPlottedPoints[i], b = lastPlottedPoints[i+1];
+      L.polyline([latlngs[i], latlngs[i+1]], {
+        color:'#ffb020', weight:3, opacity:.95, dashArray:'8,5'
+      }).addTo(exportMap);
+      // Distance label at the midpoint of each leg
+      const midLat = (a.lat + b.lat) / 2;
+      const midLon = (a.lon + b.lon) / 2;
+      const d = haversineNm(a, b);
+      L.circleMarker([midLat, midLon], {
+        radius:0, opacity:0, fillOpacity:0
+      }).addTo(exportMap)
+        .bindTooltip(`${fmtNm(d)} NM`, {
+          permanent:true, direction:'center',
+          className:'leg-distance-tooltip', offset:[0,0]
+        }).openTooltip();
+    }
+    // Deduplicate waypoints by coordinate so a closed loop doesn't draw two
+    // labels on top of each other (e.g. LAE BASE start + LAE BASE end).
+    const seenCoords = new Set();
+    lastPlottedPoints.forEach(p => {
+      const key = `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+      if(seenCoords.has(key)) return;
+      seenCoords.add(key);
+      L.circleMarker([p.lat, p.lon], {
+        radius:8, color:'#ffb020', weight:2,
+        fillColor:'#ffb020', fillOpacity:1
+      }).addTo(exportMap)
+        .bindTooltip(p.label + (p.fuel ? ' ' + fuelSvg(12, '#0a0e13') : ''), {
+          permanent:true, direction:'right', offset:[8, 0],
+          className:'waypoint-tooltip'
+        }).openTooltip();
+    });
+
+    // Fit bounds. Defensive against degenerate cases.
+    if(lastPlottedPoints.length === 1){
+      exportMap.setView(latlngs[0], 10);
+    } else {
+      const bounds = L.latLngBounds(latlngs);
+      if(bounds.isValid() && !bounds.getNorthEast().equals(bounds.getSouthWest())){
+        exportMap.fitBounds(bounds, { padding:[50, 60] });
+      } else {
+        exportMap.setView(latlngs[0], 10);
+      }
+    }
+
+    // Wait for tiles to load before snapshot.
+    // If we're offline, skip the wait entirely — no point waiting for tiles
+    // that will never come. Map will export with whatever's cached or empty bg.
+    if(!isOffline){
+      await new Promise(resolve => {
+        let outstanding = 0;
+        let resolved = false;
+        let settleTimer = null;
+        const finish = () => {
+          if(resolved) return;
+          resolved = true;
+          clearTimeout(settleTimer);
+          clearTimeout(hardTimeout);
+          // Tiny extra delay so the last tile actually paints to the canvas
+          setTimeout(resolve, 200);
+        };
+        exportMap.eachLayer(layer => {
+          if(layer instanceof L.TileLayer){
+            layer.on('tileloadstart', () => { outstanding++; });
+            layer.on('tileload tileerror', () => {
+              outstanding = Math.max(0, outstanding - 1);
+              if(outstanding === 0){
+                clearTimeout(settleTimer);
+                settleTimer = setTimeout(finish, 250);
+              }
+            });
+          }
+        });
+        // Hard timeout fallback so a stalled tile server can never freeze us
+        const hardTimeout = setTimeout(finish, 5000);
+      });
+    } else {
+      // Brief frame to let the map widget settle into its layout
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    const canvas = await html2canvas(offscreen, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#0a0e13',
+      logging: false,
+      scale: 1,
+      width: PDF_MAP_W_PX,
+      height: PDF_MAP_H_PX
+    });
+    const mapImg = canvas.toDataURL('image/png');
+
+    // (cleanup of offscreen map happens in finally, even on error)
+
+    // 2. Build A4 portrait PDF (210 × 297 mm)
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+    const pageW = 210, pageH = 297;
+    const M = 14;
+
+    // Header
+    doc.setFillColor(8, 11, 16);
+    doc.rect(0, 0, pageW, 18, 'F');
+    doc.setTextColor(255, 176, 32);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('NM·PLOTTER', M, 11);
+    doc.setTextColor(180, 190, 205);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text('Coordinate Distance Report  ·  Straight-line distances in nautical miles', M + 32, 11);
+    // Unambiguous date format: "09 May 2026, 10:02 (UTC+10)"
+    const now = new Date();
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const tzOffsetMin = -now.getTimezoneOffset();
+    const tzSign = tzOffsetMin >= 0 ? '+' : '-';
+    const tzAbs = Math.abs(tzOffsetMin);
+    const tzStr = `UTC${tzSign}${Math.floor(tzAbs/60)}${tzAbs%60 ? ':'+String(tzAbs%60).padStart(2,'0') : ''}`;
+    const dateStr = `${String(now.getDate()).padStart(2,'0')} ${months[now.getMonth()]} ${now.getFullYear()}, ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} ${tzStr}`;
+    doc.text(dateStr, pageW - M, 11, { align:'right' });
+
+    // Compute totals (and detect closed loop)
+    let total = 0, maxLeg = 0;
+    const legData = [];
+    for(let i = 0; i < lastPlottedPoints.length - 1; i++){
+      const a = lastPlottedPoints[i], b = lastPlottedPoints[i+1];
+      const d = haversineNm(a, b);
+      legData.push({ a, b, d, brg: bearingDeg(a, b) });
+      total += d;
+      if(d > maxLeg) maxLeg = d;
+    }
+    const direct = lastPlottedPoints.length > 1
+      ? haversineNm(lastPlottedPoints[0], lastPlottedPoints[lastPlottedPoints.length-1])
+      : 0;
+    const isClosedLoop = lastPlottedPoints.length > 2 && direct < 0.1; // start ≈ end
+
+    // Summary strip — TOTAL is hero, others are secondary
+    let y = 27;
+    doc.setTextColor(255, 140, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text(`${fmtNm(total)} NM`, M, y);
+    doc.setTextColor(120, 130, 145);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('TOTAL ROUTE', M, y - 6);
+
+    let xCursor = M + 50;
+    function summaryStat(label, value, accent=false){
+      doc.setTextColor(120, 130, 145);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(label, xCursor, y - 6);
+      doc.setTextColor(accent ? 255 : 40, accent ? 140 : 50, accent ? 0 : 65);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(value, xCursor, y);
+      xCursor += 38;
+    }
+    summaryStat('LEGS', String(legData.length));
+    summaryStat('LONGEST', `${fmtNm(maxLeg)} NM`);
+    if(isClosedLoop){
+      summaryStat('TYPE', 'CLOSED LOOP');
+    } else {
+      summaryStat('DIRECT', `${fmtNm(direct)} NM`);
+    }
+    y += 6;
+
+    // Map image
+    const imgW = pageW - 2 * M;
+    const aspect = canvas.height / canvas.width;
+    let imgH = imgW * aspect;
+    if(imgH > 110) imgH = 110;
+    doc.addImage(mapImg, 'PNG', M, y, imgW, imgH);
+    doc.setDrawColor(46, 58, 76);
+    doc.rect(M, y, imgW, imgH);
+    y += imgH + 8;
+
+    // ── Waypoints table (deduplicated) ──
+    // Build a unique-by-coordinate list, but keep the order of first appearance.
+    // If any occurrence of the same coordinate is marked as fuel, the deduped
+    // entry inherits that flag.
+    const uniqWp = [];
+    const seen = new Map();
+    lastPlottedPoints.forEach(p => {
+      const key = `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+      const existingIdx = seen.get(key);
+      if(existingIdx === undefined){
+        seen.set(key, uniqWp.length);
+        uniqWp.push({ ...p });
+      } else if(p.fuel){
+        uniqWp[existingIdx].fuel = true;
+      }
+    });
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 50, 65);
+    const wpTitle = isClosedLoop || uniqWp.length < lastPlottedPoints.length
+      ? `WAYPOINTS  (${uniqWp.length} unique)`
+      : 'WAYPOINTS';
+    doc.text(wpTitle, M, y);
+    y += 5;
+
+    doc.setFontSize(8);
+    doc.setFillColor(235, 240, 247);
+    doc.rect(M, y - 4, imgW, 6, 'F');
+    doc.setTextColor(80, 95, 115);
+    doc.text('#',         M + 2,  y);
+    doc.text('NAME',      M + 10, y);
+    doc.text('LATITUDE',  M + 45, y);
+    doc.text('LONGITUDE', M + 90, y);
+    doc.text('DECIMAL',   M + 135, y);
+    y += 4;
+
+    doc.setFont('courier', 'normal');
+    doc.setTextColor(20, 25, 35);
+    uniqWp.forEach((p, i) => {
+      if(y > pageH - 40){ doc.addPage(); y = M; }
+      doc.text(String(i+1),                M + 2,  y);
+      doc.text(p.label.substring(0, 14),   M + 10, y);
+      // Fuel icon after the name (3.5mm square, sits next to text baseline)
+      if(p.fuel && fuelIconPngDark){
+        const iconX = M + 10 + Math.min(p.label.length, 14) * 1.7 + 1;
+        doc.addImage(fuelIconPngDark, 'PNG', iconX, y - 3, 3.5, 3.5);
+      }
+      doc.text(toDms(p.lat, true),         M + 45, y);
+      doc.text(toDms(p.lon, false),        M + 90, y);
+      doc.text(`${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`, M + 135, y);
+      y += 4.5;
+    });
+
+    y += 5;
+
+    // ── Legs table ──
+    if(legData.length){
+      if(y > pageH - 50){ doc.addPage(); y = M; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(40, 50, 65);
+      doc.text('LEGS', M, y);
+      y += 5;
+
+      doc.setFontSize(8);
+      doc.setFillColor(235, 240, 247);
+      doc.rect(M, y - 4, imgW, 6, 'F');
+      doc.setTextColor(80, 95, 115);
+      doc.setFont('helvetica', 'bold');
+      doc.text('LEG',     M + 2,   y);
+      doc.text('FROM',    M + 14,  y);
+      doc.text('TO',      M + 50,  y);
+      doc.text('BEARING', M + 90,  y);
+      doc.text('DISTANCE',M + 120, y);
+      doc.text('KM',      M + 150, y);
+      y += 4;
+
+      doc.setFont('courier', 'normal');
+      doc.setTextColor(20, 25, 35);
+      let totalKm = 0;
+      legData.forEach(({a, b, d, brg}, i) => {
+        if(y > pageH - 20){ doc.addPage(); y = M; }
+        const km = d * 1.852;
+        totalKm += km;
+        doc.text(`L${i+1}`,                       M + 2,   y);
+        doc.text(a.label.substring(0, 14),        M + 14,  y);
+        doc.text(b.label.substring(0, 14),        M + 50,  y);
+        // Fuel icon after the destination name when this leg ends at a fuel stop
+        if(b.fuel && fuelIconPngDark){
+          const iconX = M + 50 + Math.min(b.label.length, 14) * 1.7 + 1;
+          doc.addImage(fuelIconPngDark, 'PNG', iconX, y - 3, 3.5, 3.5);
+        }
+        doc.text(`${brg.toFixed(0).padStart(3,'0')}°`, M + 90, y);
+        doc.text(`${fmtNm(d)} NM`,                M + 120, y);
+        doc.text(km.toFixed(2),                   M + 150, y);
+        y += 4.5;
+      });
+
+      // Total row — use accumulated km so it matches the column sum exactly
+      y += 2;
+      doc.setDrawColor(180, 190, 205);
+      doc.line(M, y - 1, pageW - M, y - 1);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(255, 140, 0);
+      doc.text('TOTAL', M + 14, y + 3);
+      doc.text(`${fmtNm(total)} NM`, M + 120, y + 3);
+      doc.text(totalKm.toFixed(2), M + 150, y + 3);
+    }
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for(let p = 1; p <= pageCount; p++){
+      doc.setPage(p);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(140, 150, 165);
+      doc.text(`Page ${p} of ${pageCount}`, pageW - M, pageH - 6, { align:'right' });
+      doc.text('Generated by NM·Plotter', M, pageH - 6);
+    }
+
+    // Save
+    const stamp = new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
+    doc.save(`nm-plotter-${stamp}.pdf`);
+  } catch(err){
+    console.error(err);
+    alert('PDF export failed: ' + err.message);
+  } finally {
+    // Always tear down offscreen resources, even on error, so they don't
+    // pile up in the DOM and keep listeners alive.
+    try { if(exportMap) exportMap.remove(); } catch(_){}
+    try { if(offscreen && offscreen.parentNode) offscreen.parentNode.removeChild(offscreen); } catch(_){}
+    btn.textContent = orig;
+    btn.disabled = false;
+    exportInProgress = false;
+  }
+}
+document.getElementById('sampleBtn').addEventListener('click', () => {
+  state.rows = [];
+  addRow('BASE',    "6°45'11''S 146°6'21''E");
+  addRow('ALPHA',   "6°16'10''S 145°0'44''E");
+  addRow('BRAVO',   "6°4'25''S 145°23'34''E");
+  addRow('CHARLIE', "-5.8167, 144.2900");
+  addRow();
+  renderRows();
+  process();
+});
+document.getElementById('clearBtn').addEventListener('click', () => {
+  state.rows = [];
+  addRow();
+  renderRows();
+  els.errors.innerHTML = '';
+  plotPoints([]);
+  renderReadout([]);
+  els.countBadge.textContent = '0 PTS';
+  els.status.textContent = 'READY';
+  els.status.style.color = 'var(--text-dim)';
+});
+
+/* ===== Init ===== */
+addRow();
+renderRows();
+process();
+
+/* ============================================================
+   COPY ROUTE
+   Builds route strings for ForeFlight's "Enter Route" field.
+   ForeFlight accepts inline coordinates in DDMMSS<N|S>/DDDMMSS<E|W>
+   format per their documentation:
+   https://support.foreflight.com/hc/en-us/articles/204026105
+   Example: 064402S/1465959E
+   ============================================================ */
+
+// Convert lat/lon to ForeFlight route format: DDMMSS<hem>/DDDMMSS<hem>
+// e.g. lat -6.733833, lon 146.999914 -> "064402S/1465959E"
+// Latitude: 2-digit deg + 2-digit min + 2-digit sec + N|S
+// Longitude: 3-digit deg + 2-digit min + 2-digit sec + E|W
+function formatAviationCoord(lat, lon){
+  function build(absVal, degWidth, hemPositive, hemNegative, signedVal){
+    let deg = Math.floor(absVal);
+    let minFloat = (absVal - deg) * 60;
+    let min = Math.floor(minFloat);
+    let sec = Math.round((minFloat - min) * 60);
+    // Handle rollover from rounding (e.g. 59.9 sec rounds to 60)
+    if(sec >= 60){ sec -= 60; min += 1; }
+    if(min >= 60){ min -= 60; deg += 1; }
+    const hem = signedVal >= 0 ? hemPositive : hemNegative;
+    return String(deg).padStart(degWidth, '0')
+         + String(min).padStart(2, '0')
+         + String(sec).padStart(2, '0')
+         + hem;
+  }
+  return build(Math.abs(lat), 2, 'N', 'S', lat)
+       + '/'
+       + build(Math.abs(lon), 3, 'E', 'W', lon);
+}
+
+// Sanitize a waypoint name for route-string use (uppercase, alphanumeric, no spaces)
+function sanitizeRouteName(label, idx){
+  let s = String(label || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if(!s) s = `WP${String(idx + 1).padStart(2, '0')}`;
+  if(s.length > 10) s = s.slice(0, 10);
+  return s;
+}
+
+// Helper: close the modal (used by multiple paths)
+function closeCopyRouteModal(){
+  const overlay = document.getElementById('crOverlay');
+  if(overlay) overlay.classList.remove('active');
+}
+
+// Wire up the modal interactions ONCE on first open. We use a flag so
+// listeners are attached exactly once — directly on the elements (not
+// delegated), which avoids the "click registered on child element"
+// problem where e.target.id doesn't match.
+let copyRouteWired = false;
+function wireCopyRouteModal(){
+  if(copyRouteWired) return;
+  copyRouteWired = true;
+
+  const overlay = document.getElementById('crOverlay');
+  const closeBtn = document.getElementById('crClose');
+
+  // Close on ✕ click. Use 'closest' so clicks on child glyphs still count.
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeCopyRouteModal();
+  });
+
+  // Click on the overlay backdrop closes; click inside the modal does not.
+  overlay.addEventListener('click', (e) => {
+    if(e.target === overlay) closeCopyRouteModal();
+  });
+
+  // Escape key closes
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && overlay.classList.contains('active')){
+      closeCopyRouteModal();
+    }
+  });
+
+  // Copy buttons — attach directly to each one
+  overlay.querySelectorAll('.cr-actions button[data-copy]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const which = btn.dataset.copy;
+      const text = which === 'names'
+        ? document.getElementById('crStringNames').textContent
+        : document.getElementById('crStringCoords').textContent;
+
+      // Save original label (set fresh each modal open)
+      const originalLabel = btn.dataset.label || btn.textContent;
+      btn.dataset.label = originalLabel;
+
+      // Try the modern clipboard API; fall back to execCommand if needed
+      // (Safari sometimes requires the fallback in older versions or
+      // non-secure contexts.)
+      let ok = false;
+      try {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      } catch(err) {
+        // execCommand('copy') fallback — requires a selection
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+        } catch(_) {
+          ok = false;
+        }
+      }
+
+      if(ok){
+        btn.classList.add('copied');
+        btn.textContent = '✓ Copied';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.textContent = originalLabel;
+        }, 1800);
+      } else {
+        // Last resort — select the text element so the user can Cmd/Ctrl+C
+        const el = which === 'names'
+          ? document.getElementById('crStringNames')
+          : document.getElementById('crStringCoords');
+        const range = document.createRange();
+        range.selectNode(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        alert('Could not auto-copy. The text is selected — press Cmd/Ctrl+C.');
+      }
+    });
+  });
+}
+
+document.getElementById('copyRouteBtn').addEventListener('click', () => {
+  // Make sure we're working from fresh data
+  process();
+  if(!lastPlottedPoints.length){
+    alert('Plot some points before copying route.');
+    return;
+  }
+
+  // Build name string
+  const names = lastPlottedPoints
+    .map((p, i) => sanitizeRouteName(p.label, i))
+    .join(' ');
+
+  // Build coordinate string (ForeFlight DDMMSS format)
+  const coords = lastPlottedPoints
+    .map(p => formatAviationCoord(p.lat, p.lon))
+    .join(' ');
+
+  document.getElementById('crStringNames').textContent = names;
+  document.getElementById('crStringCoords').textContent = coords;
+
+  // Reset any prior "Copied" state — restore each button's original HTML label
+  document.querySelectorAll('.cr-actions button[data-copy]').forEach(b => {
+    b.classList.remove('copied');
+    // Use the label stored on first wire-up, or fall back to current text
+    if(b.dataset.label){
+      b.textContent = b.dataset.label;
+    }
+  });
+
+  // Wire the modal's internal listeners on first open
+  wireCopyRouteModal();
+
+  document.getElementById('crOverlay').classList.add('active');
+});
+
+/* ===== Public API for Emergency Dispatch integration ===== */
+window.NMPlotter = {
+  parseCoordinatePair,
+  haversineNm,
+  bearingDeg,
+  toDms,
+  EARTH_RADIUS_NM
+};
+
+/* ============================================================
+   TAB SWITCHING (Distance ↔ Fuel Calc)
+   ============================================================ */
+(function setupTabs(){
+  const btnDistance = document.getElementById('tabBtnDistance');
+  const btnFuel     = document.getElementById('tabBtnFuel');
+  const paneDistance = document.getElementById('tabDistance');
+  const paneFuel     = document.getElementById('tabFuel');
+
+  function show(tab){
+    const isFuel = tab === 'fuel';
+    btnDistance.classList.toggle('active', !isFuel);
+    btnFuel.classList.toggle('active', isFuel);
+    paneDistance.classList.toggle('active', !isFuel);
+    paneFuel.classList.toggle('active', isFuel);
+    // Refresh "Use route" button state when switching to fuel tab
+    if(isFuel) updateUseRouteButton();
+  }
+  btnDistance.addEventListener('click', () => show('distance'));
+  btnFuel.addEventListener('click',     () => show('fuel'));
+})();
+
+/* ============================================================
+   MOBILE TAB SWITCHING (Waypoints ↔ Readout/Fuel)
+   Active only on mobile/iPad portrait. Toggles which panel is
+   visible below the map. Triggers map.invalidateSize() to make
+   Leaflet recompute after the layout shift.
+   ============================================================ */
+(function setupMobileTabs(){
+  const tabs = document.getElementById('mobileTabs');
+  if(!tabs) return;
+  const leftPanel = document.querySelector('.panel.left');
+  const rightPanel = document.querySelector('.panel.right');
+
+  function show(which){
+    const showLeft = which === 'waypoints';
+    leftPanel.classList.toggle('m-hidden', !showLeft);
+    rightPanel.classList.toggle('m-hidden', showLeft);
+    tabs.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('active', b.dataset.mtab === which);
+    });
+    // Tell Leaflet the container size may have changed
+    setTimeout(() => {
+      try { map.invalidateSize({ animate: false }); } catch(_){}
+    }, 50);
+  }
+
+  tabs.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => show(btn.dataset.mtab));
+  });
+
+  // Initial state on mobile: waypoints panel visible
+  // (We use a media-query check so this doesn't affect desktop layout)
+  function applyInitial(){
+    if(window.matchMedia('(max-width: 900px)').matches){
+      rightPanel.classList.add('m-hidden');
+      leftPanel.classList.remove('m-hidden');
+      tabs.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('active', b.dataset.mtab === 'waypoints');
+      });
+    } else {
+      // Desktop: ensure neither panel is hidden by mobile class
+      leftPanel.classList.remove('m-hidden');
+      rightPanel.classList.remove('m-hidden');
+    }
+  }
+  applyInitial();
+
+  // Re-apply on rotation / resize so switching between portrait and landscape
+  // on iPad cleans up the hidden state.
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      applyInitial();
+      try { map.invalidateSize({ animate: false }); } catch(_){}
+    }, 150);
+  });
+})();
+
+function updateUseRouteButton(){
+  const btn = document.getElementById('fc-use-route');
+  if(!btn) return;
+  const hasRoute = lastPlottedPoints.length >= 2;
+  btn.disabled = !hasRoute;
+  if(hasRoute){
+    let total = 0;
+    for(let i = 0; i < lastPlottedPoints.length - 1; i++){
+      total += haversineNm(lastPlottedPoints[i], lastPlottedPoints[i+1]);
+    }
+    btn.title = `Use plotted route distance (${total.toFixed(1)} NM)`;
+    btn.textContent = `↩ Use route (${total.toFixed(0)} NM)`;
+  } else {
+    btn.title = 'Plot a route first';
+    btn.textContent = '↩ Use route';
+  }
+}
+
+/* ============================================================
+   FUEL CALCULATOR
+   IIFE — keeps internal state isolated from planner globals.
+   ============================================================ */
+(function () {
+  const fcState = { density: 0.800, res: 15 };
+
+  const $  = id => document.getElementById(id);
+  const num = el => { const v = parseFloat(el.value); return isNaN(v) ? null : v; };
+  const fmt = (n, d = 1) => Number(n).toFixed(d);
+
+  /* ── Unit converter ────────────────────────────────────────── */
+  const fuelInputs = document.querySelectorAll('#fuel-calc input[data-fuel]');
+  const summary = $('fc-conv-summary');
+
+  function updateFuel(field, raw) {
+    const v = parseFloat(raw);
+    if (raw === '' || isNaN(v)) {
+      fuelInputs.forEach(i => { if (i.dataset.fuel !== field) i.value = ''; });
+      summary.style.display = 'none';
+      return;
+    }
+    let L;
+    if (field === 'L')   L = v;
+    if (field === 'USG') L = v * 3.78541;
+    if (field === 'kg')  L = v / fcState.density;
+    if (field === 'lbs') L = (v * 0.453592) / fcState.density;
+
+    const vals = {
+      L:   field === 'L'   ? raw : fmt(L, 1),
+      USG: field === 'USG' ? raw : fmt(L / 3.78541, 2),
+      kg:  field === 'kg'  ? raw : fmt(L * fcState.density, 1),
+      lbs: field === 'lbs' ? raw : fmt((L * fcState.density) / 0.453592, 1),
+    };
+    fuelInputs.forEach(i => {
+      if (i.dataset.fuel !== field) i.value = vals[i.dataset.fuel];
+    });
+    summary.innerHTML = `
+      <div class="fc-cell"><div class="v">${(+vals.L).toLocaleString(undefined,{maximumFractionDigits:2})}</div><div class="u">L</div></div>
+      <div class="fc-cell"><div class="v">${(+vals.USG).toLocaleString(undefined,{maximumFractionDigits:2})}</div><div class="u">USG</div></div>
+      <div class="fc-cell"><div class="v">${(+vals.kg).toLocaleString(undefined,{maximumFractionDigits:2})}</div><div class="u">kg</div></div>
+      <div class="fc-cell"><div class="v">${(+vals.lbs).toLocaleString(undefined,{maximumFractionDigits:2})}</div><div class="u">lbs</div></div>`;
+    summary.style.display = 'flex';
+  }
+  fuelInputs.forEach(i => i.addEventListener('input', e => updateFuel(e.target.dataset.fuel, e.target.value)));
+
+  /* ── Density change clears converter ──────────────────────── */
+  $('fc-density').addEventListener('input', e => {
+    fcState.density = parseFloat(e.target.value) || 0.800;
+    fuelInputs.forEach(i => i.value = '');
+    summary.style.display = 'none';
+    renderAll();
+  });
+
+  /* ── Required Fuel (the answer the calculator is built around) ── */
+  function renderRequired() {
+    const trip = num($('fc-trip')), tas = num($('fc-tas')), burn = num($('fc-burn'));
+    const out = $('fc-required-output');
+
+    // Need trip, TAS and burn rate. Reserve is always set (defaults to 15 min).
+    if(!trip || !tas || !burn || trip <= 0 || tas <= 0 || burn <= 0){
+      // Tell the user what's missing
+      const missing = [];
+      if(!trip || trip <= 0) missing.push('Trip distance');
+      if(!tas  || tas  <= 0) missing.push('TAS');
+      if(!burn || burn <= 0) missing.push('Burn rate');
+      out.innerHTML = `<div class="fc-empty-line">Enter ${missing.join(', ')}</div>`;
+      return;
+    }
+
+    const tripHr = trip / tas;
+    const tripFuelKg = tripHr * burn;
+    const reserveKg = burn * (fcState.res / 60);
+    const totalKg = tripFuelKg + reserveKg;
+    const totalL  = totalKg / fcState.density;
+    const totalUSG = totalL / 3.78541;
+    const totalLbs = totalKg / 0.453592;
+
+    const tripH = Math.floor(tripHr);
+    const tripM = Math.round((tripHr - tripH) * 60);
+    const reserveText = fcState.res === 0 ? 'NIL' : `${fmt(reserveKg,1)} kg (${fcState.res} min)`;
+
+    out.innerHTML = `
+      <div class="fc-required">
+        <div class="rows">
+          <div class="line"><span class="lbl">Flight time</span><span class="val">${tripH}h ${String(tripM).padStart(2,'0')}m</span></div>
+          <div class="line"><span class="lbl">Trip fuel</span><span class="val">${fmt(tripFuelKg,1)} kg</span></div>
+          <div class="line"><span class="lbl">Reserve</span><span class="val">${reserveText}</span></div>
+        </div>
+        <div class="total">
+          <div class="lbl">Total to Load</div>
+          <div class="big">${fmt(totalKg,0)}<span class="unit">kg</span></div>
+          <div class="alt">
+            <span>${fmt(totalL,0)}<small>L</small></span>
+            <span>${fmt(totalUSG,1)}<small>USG</small></span>
+            <span>${fmt(totalLbs,0)}<small>lbs</small></span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /* ── FOB input no longer needed — removed for simpler workflow ── */
+
+  ['fc-burn','fc-tas','fc-trip'].forEach(id => $(id).addEventListener('input', renderAll));
+
+  /* ── "Use route" button — pulls trip distance from plotted route ── */
+  $('fc-use-route').addEventListener('click', () => {
+    if(lastPlottedPoints.length < 2) return;
+    let total = 0;
+    for(let i = 0; i < lastPlottedPoints.length - 1; i++){
+      total += haversineNm(lastPlottedPoints[i], lastPlottedPoints[i+1]);
+    }
+    $('fc-trip').value = total.toFixed(1);
+    renderAll();
+  });
+
+  /* ── Minutes → Fuel ───────────────────────────────────────── */
+  function renderMinutes() {
+    const b = num($('fc-burn')), m = num($('fc-mins'));
+    const mirror = $('fc-burn-mirror'), out = $('fc-minutes-output');
+
+    if (b > 0) {
+      mirror.className = 'fc-readonly has-value';
+      mirror.textContent = fmt(b, 0) + ' kg/hr';
+    } else {
+      mirror.className = 'fc-readonly empty';
+      mirror.textContent = 'enter burn above';
+    }
+
+    if (!(b > 0) || !(m > 0)) {
+      out.innerHTML = `<div class="fc-empty-line">${
+        !(b > 0) ? 'Enter burn rate in main inputs' : 'Enter minutes to calculate'
+      }</div>`;
+      return;
+    }
+    const L = b * (m / 60) / fcState.density;
+    const kg = b * (m / 60);
+    const USG = L / 3.78541;
+    const lbs = kg / 0.453592;
+    out.innerHTML = `
+      <div class="fc-minutes-result">
+        <div class="head">${m} minutes of fuel</div>
+        <div class="fc-grid-4">
+          <div class="cell"><div class="v">${fmt(kg,1)}</div><div class="l">kg</div></div>
+          <div class="cell"><div class="v">${fmt(L,1)}</div><div class="l">Litres</div></div>
+          <div class="cell"><div class="v">${fmt(USG,2)}</div><div class="l">US Gal</div></div>
+          <div class="cell"><div class="v">${fmt(lbs,1)}</div><div class="l">lbs</div></div>
+        </div>
+      </div>`;
+  }
+  $('fc-mins').addEventListener('input', renderAll);
+
+  /* ── Reserve buttons ───────────────────────────────────────── */
+  const RESERVE_OPTIONS = [0, 15, 20, 30, 45, 60];
+  const btnHost = $('fc-reserve-buttons');
+  RESERVE_OPTIONS.forEach(r => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = r === 0 ? 'NIL' : r;
+    if (r === fcState.res) b.classList.add('active');
+    b.addEventListener('click', () => {
+      fcState.res = r;
+      btnHost.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+      renderAll();
+    });
+    btnHost.appendChild(b);
+  });
+
+  /* ── Master render ─────────────────────────────────────────── */
+  function renderAll() {
+    renderRequired();
+    renderMinutes();
+  }
+  renderAll();
+})();
+
+// "Use route" button stays fresh in two simple ways:
+//   1. When the user opens the Fuel Calc tab (see show('fuel') above)
+//   2. When the user clicks Plot & Calculate, we just refresh after a tick
+//      so even if they're on the fuel tab, the button updates.
+document.getElementById('plotBtn').addEventListener('click', () => {
+  setTimeout(updateUseRouteButton, 50);
+});
+</script>
+
+<!-- ===== Copy Route modal ===== -->
+<div class="cr-overlay" id="crOverlay">
+  <div class="cr-modal">
+    <div class="cr-head">
+      <h3>Copy Route to Clipboard</h3>
+      <button class="cr-close" id="crClose" aria-label="Close">✕</button>
+    </div>
+    <div class="cr-body">
+      <div class="cr-hint">
+        <div class="head">For ForeFlight</div>
+        Tap Copy → open ForeFlight on iPad → tap FPL → Enter Route → paste.
+        Universal Clipboard syncs Mac → iPad automatically.
+      </div>
+
+      <div class="cr-fmt" style="margin-top:14px">
+        <div class="cr-fmt-head">
+          <h4>ForeFlight Route String</h4>
+          <span class="sub">DDMMSS format — works directly in ForeFlight's route field</span>
+        </div>
+        <div class="cr-string" id="crStringCoords"></div>
+        <div class="cr-actions">
+          <button class="primary" data-copy="coords">Copy Route</button>
+        </div>
+      </div>
+
+      <div class="cr-fmt">
+        <div class="cr-fmt-head">
+          <h4>Waypoint Names</h4>
+          <span class="sub">For reference / saved waypoint identifiers</span>
+        </div>
+        <div class="cr-string" id="crStringNames"></div>
+        <div class="cr-actions">
+          <button class="primary" data-copy="names">Copy Names</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
