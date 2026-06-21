@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>NM·Plotter — Terrain (prototype)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<!-- =============================================================================
+     NM PLOTTER — TERRAIN ALTITUDE SHADING  ·  standalone prototype
+     -----------------------------------------------------------------------------
+     GOAL
+       See the high ground at a glance. Pick an altitude; any terrain at or above
+       it turns RED (you'd hit it), terrain just below turns AMBER (within your
+       margin), everything safely below is left clear so the map stays readable.
+
+     HOW IT WORKS  (so it's easy to extend later)
+       1. We load open elevation data as "Terrarium" terrain-RGB tiles
+          (AWS Open Data — free, no key). Each pixel encodes a height:
+             elevation_m = (R*256 + G + B/256) - 32768
+       2. A custom Leaflet GridLayer (TerrainShadeLayer) fetches each tile,
+          decodes every pixel's height ONCE into a Float32Array (cached), then
+          paints a colour band based on your altitude. Changing altitude just
+          re-paints from the cached heights — no re-download — so the slider is
+          instant.
+
+     INTEGRATION PLAN (later, into the main app)
+       - This whole thing becomes one module + a "Terrain" row in the Layers menu.
+       - The altitude control becomes a shared piece of state (W&B / DA already
+         track altitude in the suite).
+       - Offline: swap the tile URL for cached/bundled terrain tiles (pmtiles)
+         for the operating area. The shading code does not change.
+
+     SAFETY  (built in from day one)
+       Advisory situational awareness ONLY. Open DEMs carry vertical error and do
+       NOT include towers, wires, trees or buildings. Never a substitute for a
+       certified terrain warning system, current charts, or the Garmin. The
+       banner stays on screen on purpose.
+     ============================================================================ -->
+<style>
+  :root{
+    --bg:#0a0e13; --panel:#0d1219; --bg-2:#0f141b; --border:#1a2330; --border-strong:#2a3744;
+    --text:#e6edf5; --text-dim:#9fb0c3; --text-faint:#5f7186;
+    --accent:#ffb020; --accent-2:#7fb3d5; --good:#34d399; --bad:#f0506e;
+    --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:var(--sans);-webkit-text-size-adjust:100%;overflow:hidden}
+  #map{position:absolute;inset:0;background:#05070a}
+  .leaflet-container{background:#05070a}
+
+  /* ---- title strip ---- */
+  .titlebar{position:absolute;top:0;left:0;right:0;z-index:600;display:flex;align-items:center;gap:10px;
+    padding:10px 14px;background:linear-gradient(#0a0e13ee,#0a0e13aa 70%,#0a0e1300);
+    font-weight:800;letter-spacing:.03em;font-size:14px;pointer-events:none}
+  .titlebar .tag{color:var(--accent)}
+  .titlebar .proto{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--text-faint);
+    border:1px solid var(--border-strong);border-radius:4px;padding:2px 6px}
+
+  /* ---- control panel ---- */
+  .panel{position:absolute;left:12px;bottom:12px;z-index:600;width:280px;max-width:calc(100vw - 24px);
+    background:rgba(13,18,25,.94);backdrop-filter:blur(8px);border:1px solid var(--border-strong);
+    border-radius:12px;padding:13px 14px;box-shadow:0 12px 34px rgba(0,0,0,.55)}
+  .panel h2{margin:0 0 2px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim)}
+  .alt-readout{display:flex;align-items:baseline;gap:6px;margin:6px 0 2px}
+  .alt-readout .val{font-family:var(--mono);font-size:30px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+  .alt-readout .u{font-size:13px;color:var(--text-faint);font-weight:700}
+  .alt-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .step{flex:0 0 auto;width:38px;height:38px;border-radius:8px;border:1px solid var(--border-strong);
+    background:var(--bg-2);color:var(--text);font-size:20px;font-weight:700;cursor:pointer;line-height:1}
+  .step:active{background:#16202c}
+  input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;
+    background:linear-gradient(90deg,#243042,#3a4a5e);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;
+    background:var(--accent);border:2px solid #0a0e13;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+  input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--accent);
+    border:2px solid #0a0e13;cursor:pointer}
+
+  .seg{display:flex;gap:6px;margin-top:12px}
+  .seg .lbl{font-size:11px;color:var(--text-faint);align-self:center;margin-right:2px;letter-spacing:.04em}
+  .seg button{flex:1;padding:7px 4px;border-radius:7px;border:1px solid var(--border-strong);background:var(--bg-2);
+    color:var(--text-dim);font-size:12px;font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums}
+  .seg button.on{border-color:var(--accent-2);color:var(--accent-2);background:#10202c}
+
+  .opacity-row{display:flex;align-items:center;gap:8px;margin-top:12px}
+  .opacity-row .lbl{font-size:11px;color:var(--text-faint);letter-spacing:.04em;flex:0 0 auto;width:54px}
+
+  .legend{display:flex;gap:14px;margin-top:13px;padding-top:11px;border-top:1px solid var(--border)}
+  .legend .it{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim)}
+  .legend .sw{width:14px;height:14px;border-radius:3px;border:1px solid rgba(255,255,255,.15)}
+  .legend .sw.red{background:rgba(240,60,60,.7)}
+  .legend .sw.amb{background:rgba(255,176,32,.65)}
+  .legend .sw.clr{background:transparent;border-style:dashed}
+
+  .maxline{margin-top:11px;font-size:12px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:baseline}
+  .maxline b{font-family:var(--mono);color:var(--text);font-variant-numeric:tabular-nums}
+
+  .advisory{margin-top:11px;font-size:10px;line-height:1.5;color:var(--text-faint);border-top:1px solid var(--border);padding-top:9px}
+  .advisory b{color:var(--accent)}
+
+  .toast{position:absolute;top:54px;left:50%;transform:translateX(-50%);z-index:700;max-width:90vw;
+    background:#2a1a1f;border:1px solid #5a2833;color:#ffd0d8;font-size:12px;line-height:1.5;
+    padding:10px 14px;border-radius:10px;display:none}
+  .toast.show{display:block}
+
+  @media (hover:none) and (pointer:coarse){
+    input[type=text],input[type=number]{font-size:16px}
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="titlebar"><span class="tag">NM·PLOTTER</span> &nbsp;Terrain <span class="proto">PROTOTYPE</span></div>
+
+<div class="toast" id="toast"></div>
+
+<div class="panel">
+  <h2>My altitude</h2>
+  <div class="alt-readout"><span class="val" id="altVal">9,000</span><span class="u">ft</span></div>
+  <div class="alt-row">
+    <button class="step" id="altDown" aria-label="Lower">−</button>
+    <input type="range" id="altSlider" min="0" max="16000" step="100" value="9000">
+    <button class="step" id="altUp" aria-label="Raise">+</button>
+  </div>
+
+  <div class="seg" id="marginSeg">
+    <span class="lbl">Amber margin</span>
+    <button data-m="500">500</button>
+    <button data-m="1000" class="on">1000</button>
+    <button data-m="2000">2000</button>
+  </div>
+
+  <div class="opacity-row">
+    <span class="lbl">Opacity</span>
+    <input type="range" id="opSlider" min="20" max="100" step="5" value="80">
+  </div>
+
+  <div class="maxline">Highest terrain in view <b id="maxView">—</b></div>
+
+  <div class="legend">
+    <div class="it"><span class="sw red"></span>At/above</div>
+    <div class="it"><span class="sw amb"></span>Within margin</div>
+    <div class="it"><span class="sw clr"></span>Below</div>
+  </div>
+
+  <div class="advisory"><b>Advisory only.</b> Open elevation data — carries vertical error and excludes towers, wires &amp; trees. Not a terrain warning system. Cross-check charts &amp; Garmin.</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ============================ CONFIG ============================ */
+const CFG = {
+  // Open-data Terrarium terrain-RGB tiles (AWS Open Data, free, no key).
+  terrainURL: 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
+  maxNativeZoom: 14,            // terrarium resolution tops out around here
+  // Dark basemap (same family the main app uses).
+  baseURL: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  colorAbove: [240, 60, 60],    // terrain at/above your altitude  -> red
+  colorNear:  [255, 176, 32],   // terrain within the amber margin -> amber
+  start: { center: [-6.05, 145.4], zoom: 9 },   // PNG highlands (Goroka area)
+  defaultAltFt: 9000,
+  defaultMarginFt: 1000,
+  defaultOpacity: 0.80,
+};
+const M_TO_FT = 3.28084;
+
+/* ====================== TerrainShadeLayer =======================
+   A GridLayer that decodes terrain-RGB tiles once and repaints them
+   against the current altitude. Heights are cached per tile so moving
+   the altitude slider only repaints (fast), never re-downloads.
+   ================================================================ */
+const TerrainShadeLayer = L.GridLayer.extend({
+  initialize: function (opts) {
+    L.GridLayer.prototype.initialize.call(this, opts);
+    this._altFt = CFG.defaultAltFt;
+    this._marginFt = CFG.defaultMarginFt;
+    this._tiles2 = {};       // key -> { canvas, elev:Float32Array, maxFt:Number }
+    this.on('tileunload', e => { delete this._tiles2[this._key(e.coords)]; this._emitMax(); });
+  },
+
+  _key: function (c) { return c.x + ':' + c.y + ':' + c.z; },
+
+  setAltitude: function (ft) { this._altFt = ft; this._repaintAll(); },
+  setMargin:   function (ft) { this._marginFt = ft; this._repaintAll(); },
+
+  createTile: function (coords, done) {
+    const size = this.getTileSize();
+    const canvas = L.DomUtil.create('canvas', 'leaflet-tile');
+    canvas.width = size.x; canvas.height = size.y;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';   // required so we can read pixels
+    img.onload = () => {
+      try {
+        // Decode heights once.
+        const tmp = document.createElement('canvas');
+        tmp.width = size.x; tmp.height = size.y;
+        const tctx = tmp.getContext('2d', { willReadFrequently: true });
+        tctx.drawImage(img, 0, 0, size.x, size.y);
+        const src = tctx.getImageData(0, 0, size.x, size.y).data;
+        const n = size.x * size.y;
+        const elev = new Float32Array(n);
+        let maxFt = -Infinity;
+        for (let i = 0; i < n; i++) {
+          const o = i * 4;
+          const m = (src[o] * 256 + src[o + 1] + src[o + 2] / 256) - 32768; // metres
+          elev[i] = m;
+          const ft = m * M_TO_FT;
+          if (ft > maxFt) maxFt = ft;
+        }
+        this._tiles2[this._key(coords)] = { canvas, elev, maxFt };
+        this._paint(canvas, elev);
+        this._emitMax();
+        done(null, canvas);
+      } catch (err) {
+        // Almost always a CORS / tainted-canvas problem on the tile host.
+        TerrainApp.toast('Terrain tiles blocked (CORS) on this host — they\u2019ll need a proxy, like the METAR worker. The shading code is fine.');
+        done(err, canvas);
+      }
+    };
+    img.onerror = () => done(new Error('tile load failed'), canvas);
+    img.src = this.getTileUrl ? this._url(coords) : '';
+    return canvas;
+  },
+
+  _url: function (coords) {
+    const z = this._getZoomForUrl ? this._getZoomForUrl() : coords.z;
+    return CFG.terrainURL
+      .replace('{z}', Math.min(z, CFG.maxNativeZoom))
+      .replace('{x}', coords.x).replace('{y}', coords.y);
+  },
+
+  // Paint one tile's canvas from its cached heights + current altitude.
+  _paint: function (canvas, elev) {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const img = ctx.createImageData(canvas.width, canvas.height);
+    const d = img.data;
+    const alt = this._altFt, lo = alt - this._marginFt;
+    const A = CFG.colorAbove, N = CFG.colorNear;
+    for (let i = 0; i < elev.length; i++) {
+      const ft = elev[i] * M_TO_FT;
+      const o = i * 4;
+      if (ft >= alt)      { d[o]=A[0]; d[o+1]=A[1]; d[o+2]=A[2]; d[o+3]=205; }
+      else if (ft >= lo)  { d[o]=N[0]; d[o+1]=N[1]; d[o+2]=N[2]; d[o+3]=165; }
+      else                { d[o+3]=0; }
+    }
+    ctx.putImageData(img, 0, 0);
+  },
+
+  _repaintAll: function () {
+    for (const k in this._tiles2) { const t = this._tiles2[k]; this._paint(t.canvas, t.elev); }
+  },
+
+  // Highest terrain among currently loaded tiles -> for the readout.
+  _emitMax: function () {
+    let mx = -Infinity;
+    for (const k in this._tiles2) if (this._tiles2[k].maxFt > mx) mx = this._tiles2[k].maxFt;
+    if (this._onMax) this._onMax(isFinite(mx) ? mx : null);
+  },
+});
+
+/* Override tile URL building to clamp at native zoom (overzoom past 14). */
+TerrainShadeLayer.prototype.getTileUrl = function (coords) {
+  return CFG.terrainURL
+    .replace('{z}', Math.min(coords.z, CFG.maxNativeZoom))
+    .replace('{x}', coords.x).replace('{y}', coords.y);
+};
+// Use the standard URL builder inside createTile.
+TerrainShadeLayer.prototype._url = function (coords) { return this.getTileUrl(coords); };
+
+/* ============================== APP ============================== */
+const TerrainApp = (function () {
+  let map, terrain, toastEl, toastTimer;
+
+  function fmt(ft) { return Math.round(ft).toLocaleString(); }
+
+  function toast(msg) {
+    if (!toastEl) toastEl = document.getElementById('toast');
+    toastEl.textContent = msg; toastEl.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 6000);
+  }
+
+  function init() {
+    map = L.map('map', { zoomControl: true, attributionControl: false })
+      .setView(CFG.start.center, CFG.start.zoom);
+
+    L.tileLayer(CFG.baseURL, { maxZoom: 18, subdomains: 'abcd' }).addTo(map);
+
+    terrain = new TerrainShadeLayer({ maxZoom: 18, maxNativeZoom: CFG.maxNativeZoom, opacity: CFG.defaultOpacity });
+    terrain._onMax = (ft) => {
+      document.getElementById('maxView').textContent = ft == null ? '—' : (fmt(ft) + ' ft');
+    };
+    terrain.addTo(map);
+
+    wireControls();
+  }
+
+  function wireControls() {
+    const slider = document.getElementById('altSlider');
+    const val = document.getElementById('altVal');
+    const setAlt = (ft) => {
+      ft = Math.max(0, Math.min(16000, Math.round(ft / 100) * 100));
+      slider.value = ft; val.textContent = fmt(ft);
+      terrain.setAltitude(ft);
+    };
+    slider.addEventListener('input', () => { val.textContent = fmt(+slider.value); scheduleAlt(+slider.value); });
+    document.getElementById('altUp').addEventListener('click', () => setAlt(+slider.value + 500));
+    document.getElementById('altDown').addEventListener('click', () => setAlt(+slider.value - 500));
+
+    // debounce the slider repaint to one per frame
+    let raf = 0, pending = null;
+    function scheduleAlt(ft) {
+      pending = ft;
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; terrain.setAltitude(pending); });
+    }
+
+    document.querySelectorAll('#marginSeg button').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('#marginSeg button').forEach(x => x.classList.toggle('on', x === b));
+        terrain.setMargin(+b.dataset.m);
+      });
+    });
+
+    document.getElementById('opSlider').addEventListener('input', e => {
+      terrain.setOpacity(+e.target.value / 100);
+    });
+
+    setAlt(CFG.defaultAltFt);
+  }
+
+  return { init, toast };
+})();
+
+document.addEventListener('DOMContentLoaded', TerrainApp.init);
+</script>
+</body>
+</html>
