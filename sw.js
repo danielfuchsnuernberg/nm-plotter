@@ -1,25 +1,22 @@
 /* ============================================================
    NM Plotter — Service Worker
    Makes the tool work with no signal:
-     - Precaches the app shell (index.html) + the CDN libraries
-       (Leaflet, protomaps-leaflet, jsPDF, html2canvas).
+     - Precaches the app shell (index.html). All libraries (Leaflet,
+       protomaps-leaflet, jsPDF, html2canvas) are now inlined INTO
+       index.html, so caching the shell is all that's needed for the
+       app to open and the map to draw offline — no CDN dependency.
      - Caches png.pmtiles (the offline map) if present, and serves
        HTTP Range requests for it from cache (PMTiles reads tiles
        by byte range, so we slice the cached file -> 206 responses).
-   Bump CACHE when you change index.html or the library versions, so
-   devices pull the new copy instead of an old cached one.
+   Bump CACHE when you change index.html, so devices pull the new
+   copy instead of an old cached one.
    ============================================================ */
-const CACHE = 'nmplotter-v99';
+const CACHE = 'nmplotter-v100';
 const TERRAIN_CACHE = 'nmplotter-terrain';
 
 const SHELL = [
   './',
   './index.html',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js',
   './png.pmtiles'   // optional — install won't fail if it isn't there yet
 ];
 
