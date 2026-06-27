@@ -10,6 +10,10 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-06-27  v97: Cache bump so the service worker re-downloads a wider png.pmtiles
+                (extended west to cover Moro/Komo/Tari, which sat just outside the old
+                143.5E edge and rendered black). No code change; the SW must re-cache or
+                it keeps serving the previous narrower archive.
     2026-06-27  v96: Vector map no longer vanishes when you zoom in close. Set
                 maxDataZoom:13 so protomaps scales the zoom-13 tiles up past their
                 native level (roads get slightly chunky but the map stays) instead of

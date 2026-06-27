@@ -9,7 +9,7 @@
    Bump CACHE when you change index.html or the library versions, so
    devices pull the new copy instead of an old cached one.
    ============================================================ */
-const CACHE = 'nmplotter-v96';
+const CACHE = 'nmplotter-v97';
 const TERRAIN_CACHE = 'nmplotter-terrain';
 
 const SHELL = [
