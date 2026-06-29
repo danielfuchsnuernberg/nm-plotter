@@ -3124,7 +3124,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rt-load{color:var(--accent)}
 
   /* ============================================================
-     [IPAD] iPad-portrait layout band — search: keep chrome, upper-middle, keyboard, close-on-select (v111)
+     [IPAD] iPad-portrait layout band — dismiss-anywhere, measure-amber, layers-menu, terrain-stack (v112)
      ------------------------------------------------------------
      Range 541–900px ONLY. iPhone (<=540) and desktop / iPad-
      landscape (>900) fall outside this band by construction, so
@@ -3186,6 +3186,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     }
     .gps-freqcard .gps-ctaf-row .cf{ font-size:23px }
     .gps-freqcard .gps-ctaf{ padding:10px 13px }
+    /* #4 — Terrain "My altitude" panel sits top-right, ABOVE the freq box.
+       The freq box drops below it, shifting with the panel's open/collapsed
+       height (terrPanel precedes .gps-freqcard in the DOM, so ~ works). */
+    .terr-panel{ top:calc(12px + env(safe-area-inset-top, 0px)); right:12px; left:auto; bottom:auto;
+                 width:322px; max-width:none; z-index:560 }
+    .terr-panel.show.collapsed ~ .gps-freqcard{ top:calc(70px + env(safe-area-inset-top, 0px)) }
+    .terr-panel.show:not(.collapsed) ~ .gps-freqcard{ top:calc(300px + env(safe-area-inset-top, 0px)) }
     /* RECENTER -> full-width cool-outline button (demo look) */
     .gps-freqcard .gps-recenter{
       margin-top:10px; padding:9px; border-radius:9px;
@@ -3248,8 +3255,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     .ipad-tools-open #ipadSearchBtn{ display:inline-flex; bottom:calc(286px + env(safe-area-inset-bottom, 0px)) }
     #overlaysBtn svg, #measureToggle svg, #ipadSearchBtn svg, .header-strip #settingsBtn svg{ width:20px; height:20px }
     /* Layers menu opens upward from the stack instead of top-right */
-    .ov-menu{ top:auto; right:14px; bottom:calc(70px + env(safe-area-inset-bottom, 0px));
+    .ov-menu{ top:auto; right:72px; bottom:calc(70px + env(safe-area-inset-bottom, 0px));
       max-height:calc(100dvh - env(safe-area-inset-top,0px) - 180px); overflow-y:auto }
+    /* #2 — measuring active: surround the ruler button in amber (it flags via
+       the .measuring class on the map, a sibling that precedes this button) */
+    #map.measuring ~ #measureToggle{ background:rgba(255,176,32,.16); border-color:var(--accent-2); color:var(--accent-2) }
 
     /* Search folds into the Tools group: the top-centre bar is hidden until the
        search icon reveals it; its clear (X) is forced visible as the dismiss. */
@@ -3260,6 +3270,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     /* Darken + blur the map behind it (the chrome stays sharp on top) and make
        the map inert while searching. */
     .ipad-search-open #map{ filter:blur(4px) brightness(.5); pointer-events:none }
+    /* Transparent full-screen catcher: tap anywhere (outside the bar) to dismiss.
+       Sits just under the search bar, over everything else — chrome stays visible. */
+    .ipad-search-scrim{ position:fixed; inset:0; z-index:1390; pointer-events:none }
+    .ipad-search-open .ipad-search-scrim{ pointer-events:auto }
 
     /* #2 — drop the leading glyph on the Plan tabs (iPad only) */
     .mobile-tabs .mtab-ico{ display:none }
@@ -3422,6 +3436,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     <button class="rec-pill" id="recPill" type="button" title="Record the flown track"><span class="rec-dot"></span><span class="rec-label" id="recLabel">Record</span></button>
     <button class="ipad-tools-toggle" id="ipadToolsToggle" type="button" title="Tools" aria-label="Tools"><svg viewBox="0 0 24 24"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"/><circle cx="15" cy="8" r="2.2"/><circle cx="9" cy="16" r="2.2"/></svg></button>
     <button id="ipadSearchBtn" type="button" title="Search airport" aria-label="Search airport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+    <div class="ipad-search-scrim" id="ipadSearchScrim"></div>
     <button class="ov-btn" id="overlaysBtn" type="button" title="Map layers">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 12l10 5 10-5"/><path d="M2 17l10 5 10-5"/></svg></button>
     <div class="ov-menu" id="overlaysMenu">
@@ -6291,6 +6306,11 @@ window.NMPlotter = {
     searchResults.addEventListener('click', function(e){
       if(e.target.closest('.ap-item')) app.classList.remove('ipad-search-open');
     });
+  }
+  // Tapping anywhere outside the bar (the transparent catcher) dismisses search
+  var searchScrim = document.getElementById('ipadSearchScrim');
+  if(searchScrim){
+    searchScrim.addEventListener('click', function(){ app.classList.remove('ipad-search-open'); });
   }
 })();
 
