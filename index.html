@@ -3124,7 +3124,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rt-load{color:var(--accent)}
 
   /* ============================================================
-     [IPAD] iPad-portrait layout band — unify sizes + fix overlap + GPS blue (v109)
+     [IPAD] iPad-portrait layout band — bigger boxes, no tab glyphs, search scrim (v110)
      ------------------------------------------------------------
      Range 541–900px ONLY. iPhone (<=540) and desktop / iPad-
      landscape (>900) fall outside this band by construction, so
@@ -3170,22 +3170,22 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       box-shadow:0 8px 26px rgba(0,0,0,.45);
     }
     .gps-readout .gps-strip-row{ gap:0; }
-    .gps-readout .gps-sc{ padding:7px 13px 8px; min-width:58px; border-right:1px solid rgba(127,179,213,.10); }
+    .gps-readout .gps-sc{ padding:9px 17px 10px; min-width:66px; border-right:1px solid rgba(127,179,213,.10); }
     .gps-readout .gps-strip-row .gps-sc:last-child{ border-right:0; }
-    .gps-readout .gps-sc .sl{ font-size:8.5px; letter-spacing:.12em; }
-    .gps-readout .gps-sc .sv{ font-size:17px; }
-    .gps-readout .gps-status, .gps-readout .gps-err{ display:block; padding:8px 12px }
+    .gps-readout .gps-sc .sl{ font-size:9.5px; letter-spacing:.12em; }
+    .gps-readout .gps-sc .sv{ font-size:20px; }
+    .gps-readout .gps-status, .gps-readout .gps-err{ display:block; padding:9px 14px }
 
     /* Top-right: freq box — CTAF + next freq + RECENTER + ACC note (glass card) */
     .gps-freqcard{
       top:calc(12px + env(safe-area-inset-top, 0px)); right:12px; left:auto; bottom:auto;
-      width:292px; max-height:calc(100dvh - env(safe-area-inset-top, 0px) - 96px); overflow-y:auto;
+      width:322px; max-height:calc(100dvh - env(safe-area-inset-top, 0px) - 96px); overflow-y:auto;
       background:rgba(13,18,25,.86); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
       border:1px solid rgba(255,176,32,.30); border-radius:12px;
-      padding:15px 17px 16px; box-shadow:0 8px 26px rgba(0,0,0,.45);
+      padding:17px 19px 18px; box-shadow:0 8px 26px rgba(0,0,0,.45);
     }
-    .gps-freqcard .gps-ctaf-row .cf{ font-size:21px }
-    .gps-freqcard .gps-ctaf{ padding:9px 12px }
+    .gps-freqcard .gps-ctaf-row .cf{ font-size:23px }
+    .gps-freqcard .gps-ctaf{ padding:10px 13px }
     /* RECENTER -> full-width cool-outline button (demo look) */
     .gps-freqcard .gps-recenter{
       margin-top:10px; padding:9px; border-radius:9px;
@@ -3254,12 +3254,16 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     /* Search folds into the Tools group: the top-centre bar is hidden until the
        search icon reveals it; its clear (X) is forced visible as the dismiss. */
     .map-search{ display:none }
-    .ipad-search-open .map-search{ display:block; top:calc(8px + env(safe-area-inset-top, 0px)) }
+    .ipad-search-open .map-search{ display:block; top:calc(8px + env(safe-area-inset-top, 0px)); z-index:1391 }
     .ipad-search-open .map-search-x{ display:inline-flex }
-    /* While searching, clear the top overlays so the bar owns the top strip
-       (no overlap/bleed with instruments or freq box). They return on dismiss. */
-    .ipad-search-open .gps-readout,
-    .ipad-search-open .gps-freqcard{ display:none !important }
+    /* Fuel-Calc-style modal: blurred + darkened scrim behind the search bar */
+    .ipad-search-scrim{ position:fixed; inset:0; z-index:1390;
+      background:rgba(3,5,8,.55); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+      opacity:0; pointer-events:none; transition:opacity .18s; }
+    .ipad-search-open .ipad-search-scrim{ opacity:1; pointer-events:auto }
+
+    /* #2 — drop the leading glyph on the Plan tabs (iPad only) */
+    .mobile-tabs .mtab-ico{ display:none }
 
     /* ----- Bottom clusters (v105): Record bottom-centre, Fuel bottom-right,
        zoom restyled to glass bottom-left. CSS-only reposition of existing
@@ -3419,6 +3423,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     <button class="rec-pill" id="recPill" type="button" title="Record the flown track"><span class="rec-dot"></span><span class="rec-label" id="recLabel">Record</span></button>
     <button class="ipad-tools-toggle" id="ipadToolsToggle" type="button" title="Tools" aria-label="Tools"><svg viewBox="0 0 24 24"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"/><circle cx="15" cy="8" r="2.2"/><circle cx="9" cy="16" r="2.2"/></svg></button>
     <button id="ipadSearchBtn" type="button" title="Search airport" aria-label="Search airport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+    <div class="ipad-search-scrim" id="ipadSearchScrim"></div>
     <button class="ov-btn" id="overlaysBtn" type="button" title="Map layers">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 12l10 5 10-5"/><path d="M2 17l10 5 10-5"/></svg></button>
     <div class="ov-menu" id="overlaysMenu">
@@ -3453,8 +3458,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
   <!-- Mobile-only tab strip: switches which panel is visible below the map -->
   <div class="mobile-tabs" id="mobileTabs">
-    <button data-mtab="waypoints" class="active">⊙ Waypoints</button>
-    <button data-mtab="readout">⊟ Readout / Fuel</button>
+    <button data-mtab="waypoints" class="active"><span class="mtab-ico">⊙ </span>Waypoints</button>
+    <button data-mtab="readout"><span class="mtab-ico">⊟ </span>Readout / Fuel</button>
   </div>
 
   <aside class="panel right">
@@ -6280,6 +6285,10 @@ window.NMPlotter = {
   if(clearBtn){
     // X clears text (existing handler) and also closes the iPad search overlay
     clearBtn.addEventListener('click', function(){ app.classList.remove('ipad-search-open'); });
+  }
+  var searchScrim = document.getElementById('ipadSearchScrim');
+  if(searchScrim){
+    searchScrim.addEventListener('click', function(){ app.classList.remove('ipad-search-open'); });
   }
 })();
 
