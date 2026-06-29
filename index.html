@@ -3124,7 +3124,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rt-load{color:var(--accent)}
 
   /* ============================================================
-     [IPAD] iPad-portrait layout band — + Tools group (v104)
+     [IPAD] iPad-portrait layout band — + bottom clusters (v105)
      ------------------------------------------------------------
      Range 541–900px ONLY. iPhone (<=540) and desktop / iPad-
      landscape (>900) fall outside this band by construction, so
@@ -3134,7 +3134,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
      (max-width:900px / max-width:760px) blocks above when the
      reshape fills them in.
      Target = edge-to-edge map + floating chrome (combined demo).
-     Built so far: top zone + full-bleed, tap-to-open panels, Tools group.
+     Built so far: top zone, full-bleed, tap-to-open panels, Tools group, bottom clusters.
      ============================================================ */
   @media (min-width:541px) and (max-width:900px){
     /* ===== Zone 1 (v102) — full-bleed map + safe-area top + top zone =====
@@ -3246,9 +3246,34 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     .ov-menu{ top:auto; right:14px; bottom:calc(70px + env(safe-area-inset-bottom, 0px));
       max-height:calc(100dvh - env(safe-area-inset-top,0px) - 180px); overflow-y:auto }
 
-    /* Zone 2 — floating bottom chrome
-       (zoom bottom-left; Record + Plan tabs bottom-centre;
-        Tools-toggle + Fuel Calc icon bottom-right). */
+    /* ----- Bottom clusters (v105): Record bottom-centre, Fuel bottom-right,
+       zoom restyled to glass bottom-left. CSS-only reposition of existing
+       controls — handlers + iPhone/desktop layouts untouched. ----- */
+
+    /* Record -> bottom-centre, just left of the Plan-tabs pill */
+    .rec-pill{
+      left:auto; right:calc(50% + 130px);
+      bottom:calc(20px + env(safe-area-inset-bottom, 0px)); z-index:620;
+    }
+
+    /* Fuel Calc -> bottom-right icon beside the Tools toggle (icon only) */
+    .qf-fab{
+      left:auto; right:70px; bottom:calc(16px + env(safe-area-inset-bottom, 0px));
+      width:46px; height:46px; border-radius:12px; z-index:631;
+    }
+    .qf-fab .lbl{ display:none }
+
+    /* Zoom -> glass, larger touch targets, bottom-left (position set in Zone 1) */
+    .leaflet-bar{ border:1px solid rgba(127,179,213,.18); border-radius:12px; overflow:hidden;
+      box-shadow:0 8px 26px rgba(0,0,0,.45) }
+    .leaflet-bar a, .leaflet-touch .leaflet-bar a{
+      width:46px; height:46px; line-height:46px; font-size:22px;
+      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      color:var(--text); border-bottom:1px solid rgba(127,179,213,.12);
+    }
+    .leaflet-bar a:hover, .leaflet-bar a:focus{ background:rgba(20,28,38,.82); color:var(--accent-2) }
+    .leaflet-bar a:last-child{ border-bottom:none }
+    .leaflet-bar a.leaflet-disabled{ background:rgba(13,18,25,.5); color:var(--text-fainter) }
 
     /* Zone 3 — Waypoints / Readout-Fuel panels become
        tap-to-open overlays driven by the plan-tab icons. */
