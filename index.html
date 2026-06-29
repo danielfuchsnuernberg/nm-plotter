@@ -3124,7 +3124,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rt-load{color:var(--accent)}
 
   /* ============================================================
-     [IPAD] iPad-portrait layout band — Zone 1 built (v102)
+     [IPAD] iPad-portrait layout band — Zone 1 + panels tap-to-open (v103)
      ------------------------------------------------------------
      Range 541–900px ONLY. iPhone (<=540) and desktop / iPad-
      landscape (>900) fall outside this band by construction, so
@@ -3134,7 +3134,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
      (max-width:900px / max-width:760px) blocks above when the
      reshape fills them in.
      Target = edge-to-edge map + floating chrome (combined demo).
-     Filled one zone per round. Built so far: Zone 1.
+     Built so far: Zone 1 (top + full-bleed) and tap-to-open panels.
      ============================================================ */
   @media (min-width:541px) and (max-width:900px){
     /* ===== Zone 1 (v102) — full-bleed map + safe-area top + top zone =====
@@ -3200,7 +3200,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     .panel.left, .panel.right{
       position:absolute; left:0; right:0; z-index:610;
       bottom:calc(70px + env(safe-area-inset-bottom, 0px));
-      max-height:46dvh; border-top:1px solid var(--border);
+      max-height:56dvh; border-top:1px solid var(--border);
       box-shadow:0 -10px 30px rgba(0,0,0,.5);
     }
 
@@ -6094,13 +6094,28 @@ window.NMPlotter = {
   const leftPanel = document.querySelector('.panel.left');
   const rightPanel = document.querySelector('.panel.right');
 
+  // iPad portrait (541-900) gets tap-to-open panels (closed by default, so the
+  // map is clear); iPhone (<=540) and desktop keep the original behaviour where
+  // one panel is always shown.
+  const ipadPortrait = () => window.matchMedia('(min-width:541px) and (max-width:900px)').matches;
+  let ipadOpen = null; // which panel is open on iPad: 'waypoints' | 'readout' | null
+
   function show(which){
-    const showLeft = which === 'waypoints';
-    leftPanel.classList.toggle('m-hidden', !showLeft);
-    rightPanel.classList.toggle('m-hidden', showLeft);
-    tabs.querySelectorAll('button').forEach(b => {
-      b.classList.toggle('active', b.dataset.mtab === which);
-    });
+    if(ipadPortrait()){
+      ipadOpen = (ipadOpen === which) ? null : which;   // tapping the open tab closes it
+      leftPanel.classList.toggle('m-hidden',  ipadOpen !== 'waypoints');
+      rightPanel.classList.toggle('m-hidden', ipadOpen !== 'readout');
+      tabs.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('active', ipadOpen !== null && b.dataset.mtab === ipadOpen);
+      });
+    } else {
+      const showLeft = which === 'waypoints';
+      leftPanel.classList.toggle('m-hidden', !showLeft);
+      rightPanel.classList.toggle('m-hidden', showLeft);
+      tabs.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('active', b.dataset.mtab === which);
+      });
+    }
     // Tell Leaflet the container size may have changed
     setTimeout(() => {
       try { map.invalidateSize({ animate: false }); } catch(_){}
@@ -6114,7 +6129,14 @@ window.NMPlotter = {
   // Initial state on mobile: waypoints panel visible
   // (We use a media-query check so this doesn't affect desktop layout)
   function applyInitial(){
-    if(window.matchMedia('(max-width: 900px)').matches){
+    if(ipadPortrait()){
+      // iPad: start with the map clear — panels open on tap
+      ipadOpen = null;
+      leftPanel.classList.add('m-hidden');
+      rightPanel.classList.add('m-hidden');
+      tabs.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    } else if(window.matchMedia('(max-width: 900px)').matches){
+      // iPhone: waypoints panel visible (original always-on behaviour)
       rightPanel.classList.add('m-hidden');
       leftPanel.classList.remove('m-hidden');
       tabs.querySelectorAll('button').forEach(b => {
