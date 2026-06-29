@@ -3823,6 +3823,29 @@ const map = L.map('map', {
   attributionControl: false
 }).setView([-6.5, 145.5], 8);
 
+// --- Keep the map sized to its container (fixes blank map on iPad) ---------
+// Leaflet measures the container once at init. On iPad Safari the final size
+// settles slightly later (dynamic viewport / safe-area insets / the
+// edge-to-edge layout / web fonts), so the cached size is wrong and tiles
+// never paint. Desktop self-corrects because dragging the window fires a
+// 'resize'; the iPad never does. Watch the container and re-measure whenever
+// it actually changes, plus a few settle-time nudges after first paint.
+(function keepMapSized(){
+  function inval(){ try{ map.invalidateSize({ animate:false, pan:false }); }catch(_){ } }
+  try {
+    if (window.ResizeObserver) {
+      var el = document.getElementById('map'), t = null;
+      // Debounced (not per-frame) so a desktop window-drag doesn't thrash.
+      new ResizeObserver(function(){ clearTimeout(t); t = setTimeout(inval, 150); }).observe(el);
+    }
+  } catch(_){ }
+  // Backup nudges for the initial settle, and when returning to the PWA /
+  // rotating the iPad.
+  [60, 250, 600, 1500].forEach(function(ms){ setTimeout(inval, ms); });
+  window.addEventListener('orientationchange', function(){ setTimeout(inval, 250); });
+  window.addEventListener('pageshow', function(){ setTimeout(inval, 60); });
+})();
+
 // Keep a ref so we can pause/resume tile loading on offline.
 // errorTileUrl + a 1×1 transparent PNG prevents the browser from showing
 // broken-image markers when tiles fail.
