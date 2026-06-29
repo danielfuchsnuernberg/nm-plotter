@@ -3124,7 +3124,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rt-load{color:var(--accent)}
 
   /* ============================================================
-     [IPAD] iPad-portrait layout band — + search in Tools group (v106)
+     [IPAD] iPad-portrait layout band — + search clears top overlays (v107)
      ------------------------------------------------------------
      Range 541–900px ONLY. iPhone (<=540) and desktop / iPad-
      landscape (>900) fall outside this band by construction, so
@@ -3252,6 +3252,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     .map-search{ display:none }
     .ipad-search-open .map-search{ display:block; top:calc(8px + env(safe-area-inset-top, 0px)) }
     .ipad-search-open .map-search-x{ display:inline-flex }
+    /* While searching, clear the top overlays so the bar owns the top strip
+       (no overlap/bleed with instruments or freq box). They return on dismiss. */
+    .ipad-search-open .gps-readout,
+    .ipad-search-open .gps-freqcard{ display:none !important }
 
     /* ----- Bottom clusters (v105): Record bottom-centre, Fuel bottom-right,
        zoom restyled to glass bottom-left. CSS-only reposition of existing
