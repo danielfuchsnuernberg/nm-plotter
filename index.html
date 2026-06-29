@@ -3122,6 +3122,32 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .flog-item .wplib-co{white-space:nowrap}
   .flog-item .wplib-acts{flex-wrap:wrap}
   .rt-load{color:var(--accent)}
+
+  /* ============================================================
+     [IPAD] iPad-portrait layout band — Zone 0 scaffold (v101)
+     ------------------------------------------------------------
+     Range 541–900px ONLY. iPhone (<=540) and desktop / iPad-
+     landscape (>900) fall outside this band by construction, so
+     they are physically untouched by anything added here.
+     Kept LAST in the stylesheet on purpose: at equal specificity
+     later source wins, so these rules override the shared mobile
+     (max-width:900px / max-width:760px) blocks above when the
+     reshape fills them in.
+     Target = edge-to-edge map + floating chrome (combined demo).
+     Filled one zone per round; empty now => zero visual change.
+     ============================================================ */
+  @media (min-width:541px) and (max-width:900px){
+    /* Zone 1 — full-bleed map + safe-area top + top zone
+       (GS/TRK/ALT/ACC boxed top-left; freq box top-right
+        carrying the contextual RECENTER). */
+
+    /* Zone 2 — floating bottom chrome
+       (zoom bottom-left; Record + Plan tabs bottom-centre;
+        Tools-toggle + Fuel Calc icon bottom-right). */
+
+    /* Zone 3 — Waypoints / Readout-Fuel panels become
+       tap-to-open overlays driven by the plan-tab icons. */
+  }
 </style>
 </head>
 <body>
