@@ -3124,7 +3124,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rt-load{color:var(--accent)}
 
   /* ============================================================
-     [IPAD] iPad-portrait layout band — bottom row + freq box polish (v108)
+     [IPAD] iPad-portrait layout band — unify sizes + fix overlap + GPS blue (v109)
      ------------------------------------------------------------
      Range 541–900px ONLY. iPhone (<=540) and desktop / iPad-
      landscape (>900) fall outside this band by construction, so
@@ -3181,7 +3181,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       top:calc(12px + env(safe-area-inset-top, 0px)); right:12px; left:auto; bottom:auto;
       width:292px; max-height:calc(100dvh - env(safe-area-inset-top, 0px) - 96px); overflow-y:auto;
       background:rgba(13,18,25,.86); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-      border:1px solid rgba(255,176,32,.30); border-radius:14px;
+      border:1px solid rgba(255,176,32,.30); border-radius:12px;
       padding:15px 17px 16px; box-shadow:0 8px 26px rgba(0,0,0,.45);
     }
     .gps-freqcard .gps-ctaf-row .cf{ font-size:21px }
@@ -3200,7 +3200,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:620;
       width:auto; margin:0; padding:5px; gap:4px;
       background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-      border:1px solid rgba(127,179,213,.18); border-radius:14px;
+      border:1px solid rgba(127,179,213,.18); border-radius:12px;
     }
     .mobile-tabs button{ flex:0 0 auto; background:transparent; border:none; border-radius:10px; padding:11px 16px }
     .mobile-tabs button.active{ background:var(--accent); border:none; color:#0a0e13 }
@@ -3234,13 +3234,15 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
        toggle. Square 44px glass icons, bottom-right, stepped by 54px. */
     #overlaysBtn, #gpsToggle, #measureToggle, #ipadSearchBtn, .header-strip #settingsBtn{
       display:none; position:absolute; right:14px; left:auto; top:auto;
-      width:44px; height:44px; padding:0; border-radius:12px;
+      width:46px; height:46px; padding:0; border-radius:12px;
       align-items:center; justify-content:center; z-index:630;
       background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
       border:1px solid rgba(127,179,213,.18); color:var(--text-2); pointer-events:auto;
     }
     .ipad-tools-open #overlaysBtn{   display:inline-flex; bottom:calc(232px + env(safe-area-inset-bottom, 0px)) }
     .ipad-tools-open #gpsToggle{     display:inline-flex; bottom:calc(178px + env(safe-area-inset-bottom, 0px)) }
+    /* keep the blue "tracking on" state (the ID-level glass bg would otherwise win) */
+    .ipad-tools-open #gpsToggle.active{ background:#2b8cff; border-color:#2b8cff; color:#fff }
     .ipad-tools-open #measureToggle{ display:inline-flex; bottom:calc(124px + env(safe-area-inset-bottom, 0px)) }
     .ipad-tools-open .header-strip #settingsBtn{ display:inline-flex; bottom:calc(70px + env(safe-area-inset-bottom, 0px)) }
     .ipad-tools-open #ipadSearchBtn{ display:inline-flex; bottom:calc(286px + env(safe-area-inset-bottom, 0px)) }
@@ -3266,9 +3268,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     /* Record -> bottom-centre, just left of the Plan-tabs pill; glass pill
        sized to match the rest of the bottom row (no longer skinny). */
     .rec-pill{
-      left:auto; right:calc(50% + 130px);
+      left:auto; right:calc(50% + 160px);
       bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:620;
-      height:46px; padding:0 16px; gap:9px; border-radius:13px;
+      height:46px; padding:0 16px; gap:9px; border-radius:12px;
       background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
       border:1px solid rgba(127,179,213,.18);
     }
@@ -3284,8 +3286,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     .qf-fab .lbl{ display:none }
 
     /* Zoom -> glass, larger touch targets, bottom-left (position set in Zone 1) */
-    .leaflet-bar{ border:1px solid rgba(127,179,213,.18); border-radius:12px; overflow:hidden;
-      box-shadow:0 8px 26px rgba(0,0,0,.45) }
+    .leaflet-bar{ border:1px solid rgba(127,179,213,.18); border-radius:12px; overflow:hidden }
     .leaflet-bar a, .leaflet-touch .leaflet-bar a{
       width:46px; height:46px; line-height:46px; font-size:22px;
       background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
