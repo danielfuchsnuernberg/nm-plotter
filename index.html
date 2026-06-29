@@ -3124,7 +3124,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rt-load{color:var(--accent)}
 
   /* ============================================================
-     [IPAD] iPad-portrait layout band — + bottom clusters (v105)
+     [IPAD] iPad-portrait layout band — + search in Tools group (v106)
      ------------------------------------------------------------
      Range 541–900px ONLY. iPhone (<=540) and desktop / iPad-
      landscape (>900) fall outside this band by construction, so
@@ -3134,7 +3134,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
      (max-width:900px / max-width:760px) blocks above when the
      reshape fills them in.
      Target = edge-to-edge map + floating chrome (combined demo).
-     Built so far: top zone, full-bleed, tap-to-open panels, Tools group, bottom clusters.
+     Full iPad reshape: top zone, full-bleed, tap-to-open panels, Tools group (incl. search), bottom clusters.
      ============================================================ */
   @media (min-width:541px) and (max-width:900px){
     /* ===== Zone 1 (v102) — full-bleed map + safe-area top + top zone =====
@@ -3230,7 +3230,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
     /* Stack members: hidden until the group is open, then stacked above the
        toggle. Square 44px glass icons, bottom-right, stepped by 54px. */
-    #overlaysBtn, #gpsToggle, #measureToggle, .header-strip #settingsBtn{
+    #overlaysBtn, #gpsToggle, #measureToggle, #ipadSearchBtn, .header-strip #settingsBtn{
       display:none; position:absolute; right:14px; left:auto; top:auto;
       width:44px; height:44px; padding:0; border-radius:12px;
       align-items:center; justify-content:center; z-index:630;
@@ -3241,10 +3241,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     .ipad-tools-open #gpsToggle{     display:inline-flex; bottom:calc(178px + env(safe-area-inset-bottom, 0px)) }
     .ipad-tools-open #measureToggle{ display:inline-flex; bottom:calc(124px + env(safe-area-inset-bottom, 0px)) }
     .ipad-tools-open .header-strip #settingsBtn{ display:inline-flex; bottom:calc(70px + env(safe-area-inset-bottom, 0px)) }
-    #overlaysBtn svg, #measureToggle svg, .header-strip #settingsBtn svg{ width:20px; height:20px }
+    .ipad-tools-open #ipadSearchBtn{ display:inline-flex; bottom:calc(286px + env(safe-area-inset-bottom, 0px)) }
+    #overlaysBtn svg, #measureToggle svg, #ipadSearchBtn svg, .header-strip #settingsBtn svg{ width:20px; height:20px }
     /* Layers menu opens upward from the stack instead of top-right */
     .ov-menu{ top:auto; right:14px; bottom:calc(70px + env(safe-area-inset-bottom, 0px));
       max-height:calc(100dvh - env(safe-area-inset-top,0px) - 180px); overflow-y:auto }
+
+    /* Search folds into the Tools group: the top-centre bar is hidden until the
+       search icon reveals it; its clear (X) is forced visible as the dismiss. */
+    .map-search{ display:none }
+    .ipad-search-open .map-search{ display:block; top:calc(8px + env(safe-area-inset-top, 0px)) }
+    .ipad-search-open .map-search-x{ display:inline-flex }
 
     /* ----- Bottom clusters (v105): Record bottom-centre, Fuel bottom-right,
        zoom restyled to glass bottom-left. CSS-only reposition of existing
@@ -3397,6 +3404,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     <button class="map-toggle" id="measureToggle" type="button" title="Measure distance — tap two points on the map"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15 15 3l6 6L9 21z"/><path d="M7.5 10.5l1.5 1.5M11 7l1.5 1.5M14.5 10.5l1.5 1.5"/></svg></button>
     <button class="rec-pill" id="recPill" type="button" title="Record the flown track"><span class="rec-dot"></span><span class="rec-label" id="recLabel">Record</span></button>
     <button class="ipad-tools-toggle" id="ipadToolsToggle" type="button" title="Tools" aria-label="Tools"><svg viewBox="0 0 24 24"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"/><circle cx="15" cy="8" r="2.2"/><circle cx="9" cy="16" r="2.2"/></svg></button>
+    <button id="ipadSearchBtn" type="button" title="Search airport" aria-label="Search airport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
     <button class="ov-btn" id="overlaysBtn" type="button" title="Map layers">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 12l10 5 10-5"/><path d="M2 17l10 5 10-5"/></svg></button>
     <div class="ov-menu" id="overlaysMenu">
@@ -6240,6 +6248,25 @@ window.NMPlotter = {
     var open = app.classList.toggle('ipad-tools-open');
     t.classList.toggle('open', open);
   });
+
+  // Search lives in the Tools group: its icon reveals the top-centre bar
+  // (and collapses the stack for a clean screen); the bar's X dismisses it.
+  var searchBtn = document.getElementById('ipadSearchBtn');
+  var clearBtn  = document.getElementById('mapSearchClear');
+  if(searchBtn){
+    searchBtn.addEventListener('click', function(){
+      var nowOpen = !app.classList.contains('ipad-search-open');
+      app.classList.toggle('ipad-search-open', nowOpen);
+      if(nowOpen){
+        app.classList.remove('ipad-tools-open'); t.classList.remove('open');
+        setTimeout(function(){ try{ document.getElementById('mapSearchInput').focus(); }catch(_){} }, 60);
+      }
+    });
+  }
+  if(clearBtn){
+    // X clears text (existing handler) and also closes the iPad search overlay
+    clearBtn.addEventListener('click', function(){ app.classList.remove('ipad-search-open'); });
+  }
 })();
 
 function updateUseRouteButton(){
