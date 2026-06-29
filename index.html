@@ -3124,7 +3124,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rt-load{color:var(--accent)}
 
   /* ============================================================
-     [IPAD] iPad-portrait layout band — Zone 1 + panels tap-to-open (v103)
+     [IPAD] iPad-portrait layout band — + Tools group (v104)
      ------------------------------------------------------------
      Range 541–900px ONLY. iPhone (<=540) and desktop / iPad-
      landscape (>900) fall outside this band by construction, so
@@ -3134,7 +3134,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
      (max-width:900px / max-width:760px) blocks above when the
      reshape fills them in.
      Target = edge-to-edge map + floating chrome (combined demo).
-     Built so far: Zone 1 (top + full-bleed) and tap-to-open panels.
+     Built so far: top zone + full-bleed, tap-to-open panels, Tools group.
      ============================================================ */
   @media (min-width:541px) and (max-width:900px){
     /* ===== Zone 1 (v102) — full-bleed map + safe-area top + top zone =====
@@ -3147,7 +3147,12 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
        sheet here; Zone 2 reshapes the tab cluster, Zone 3 makes panels
        tap-to-open. */
     .app{ display:block; position:relative; height:100dvh; }
-    .header-strip{ display:none; }                 /* Decision 1a: no header on iPad (settings gear moves to Tools in Z2) */
+    /* Header is hidden as a bar (Decision 1a), but kept as a pointer-events
+       passthrough so its Settings gear can be repositioned into the Tools
+       stack below — no DOM move, handler stays intact. */
+    .header-strip{ position:absolute; inset:0; height:auto; padding:0; margin:0;
+      border:0; background:none; pointer-events:none; z-index:640; display:block; }
+    .header-strip > span{ display:none; }          /* brand / sep / status text */
     .map-wrap{ position:absolute; inset:0; min-height:0; }
     #map{ height:100%; width:100%; }
     .map-resize-handle{ display:none; }            /* nothing to drag when full-bleed */
@@ -3203,6 +3208,43 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       max-height:56dvh; border-top:1px solid var(--border);
       box-shadow:0 -10px 30px rgba(0,0,0,.5);
     }
+
+    /* ===== Zone 2 (v104) — bottom-right Tools group =====
+       A toggle (bottom-right) reveals the map controls as an upward icon
+       stack: layers, locate, measure, settings. Empties the top-right so the
+       freq box owns that corner, and restores Settings access (Decision 1a).
+       Controls are repositioned, not moved in the DOM, so their handlers and
+       the iPhone/desktop layouts are untouched. (Search stays top-centre this
+       round; it folds into the group next. Record + Fuel relocate next round.) */
+
+    /* The toggle itself — always visible bottom-right on iPad */
+    .ipad-tools-toggle{
+      display:flex; align-items:center; justify-content:center;
+      position:absolute; right:14px; bottom:calc(16px + env(safe-area-inset-bottom, 0px));
+      z-index:631; width:46px; height:46px; border-radius:12px; cursor:pointer;
+      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      border:1px solid rgba(127,179,213,.18); color:var(--text-2); padding:0;
+    }
+    .ipad-tools-toggle svg{ width:22px; height:22px; stroke:currentColor; stroke-width:1.8; fill:none }
+    .ipad-tools-toggle.open{ color:var(--accent); border-color:rgba(255,176,32,.5) }
+
+    /* Stack members: hidden until the group is open, then stacked above the
+       toggle. Square 44px glass icons, bottom-right, stepped by 54px. */
+    #overlaysBtn, #gpsToggle, #measureToggle, .header-strip #settingsBtn{
+      display:none; position:absolute; right:14px; left:auto; top:auto;
+      width:44px; height:44px; padding:0; border-radius:12px;
+      align-items:center; justify-content:center; z-index:630;
+      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      border:1px solid rgba(127,179,213,.18); color:var(--text-2); pointer-events:auto;
+    }
+    .ipad-tools-open #overlaysBtn{   display:inline-flex; bottom:calc(232px + env(safe-area-inset-bottom, 0px)) }
+    .ipad-tools-open #gpsToggle{     display:inline-flex; bottom:calc(178px + env(safe-area-inset-bottom, 0px)) }
+    .ipad-tools-open #measureToggle{ display:inline-flex; bottom:calc(124px + env(safe-area-inset-bottom, 0px)) }
+    .ipad-tools-open .header-strip #settingsBtn{ display:inline-flex; bottom:calc(70px + env(safe-area-inset-bottom, 0px)) }
+    #overlaysBtn svg, #measureToggle svg, .header-strip #settingsBtn svg{ width:20px; height:20px }
+    /* Layers menu opens upward from the stack instead of top-right */
+    .ov-menu{ top:auto; right:14px; bottom:calc(70px + env(safe-area-inset-bottom, 0px));
+      max-height:calc(100dvh - env(safe-area-inset-top,0px) - 180px); overflow-y:auto }
 
     /* Zone 2 — floating bottom chrome
        (zoom bottom-left; Record + Plan tabs bottom-centre;
@@ -3329,6 +3371,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     <button class="map-toggle gps-toggle" id="gpsToggle" type="button" title="Track my GPS position (works offline on GPS-equipped devices)">◉</button>
     <button class="map-toggle" id="measureToggle" type="button" title="Measure distance — tap two points on the map"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15 15 3l6 6L9 21z"/><path d="M7.5 10.5l1.5 1.5M11 7l1.5 1.5M14.5 10.5l1.5 1.5"/></svg></button>
     <button class="rec-pill" id="recPill" type="button" title="Record the flown track"><span class="rec-dot"></span><span class="rec-label" id="recLabel">Record</span></button>
+    <button class="ipad-tools-toggle" id="ipadToolsToggle" type="button" title="Tools" aria-label="Tools"><svg viewBox="0 0 24 24"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"/><circle cx="15" cy="8" r="2.2"/><circle cx="9" cy="16" r="2.2"/></svg></button>
     <button class="ov-btn" id="overlaysBtn" type="button" title="Map layers">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 12l10 5 10-5"/><path d="M2 17l10 5 10-5"/></svg></button>
     <div class="ov-menu" id="overlaysMenu">
@@ -6159,6 +6202,18 @@ window.NMPlotter = {
       applyInitial();
       try { map.invalidateSize({ animate: false }); } catch(_){}
     }, 150);
+  });
+})();
+
+/* iPad Tools group: the bottom-right toggle opens/closes the control stack.
+   Button is display:none off the iPad band, so this is inert elsewhere. */
+(function setupIpadTools(){
+  var t = document.getElementById('ipadToolsToggle');
+  if(!t) return;
+  var app = document.querySelector('.app');
+  t.addEventListener('click', function(){
+    var open = app.classList.toggle('ipad-tools-open');
+    t.classList.toggle('open', open);
   });
 })();
 
