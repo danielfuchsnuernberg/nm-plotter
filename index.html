@@ -3124,7 +3124,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rt-load{color:var(--accent)}
 
   /* ============================================================
-     [IPAD] iPad-portrait layout band — + search clears top overlays (v107)
+     [IPAD] iPad-portrait layout band — bottom row + freq box polish (v108)
      ------------------------------------------------------------
      Range 541–900px ONLY. iPhone (<=540) and desktop / iPad-
      landscape (>900) fall outside this band by construction, so
@@ -3179,11 +3179,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     /* Top-right: freq box — CTAF + next freq + RECENTER + ACC note (glass card) */
     .gps-freqcard{
       top:calc(12px + env(safe-area-inset-top, 0px)); right:12px; left:auto; bottom:auto;
-      width:236px; max-height:calc(100dvh - env(safe-area-inset-top, 0px) - 96px); overflow-y:auto;
+      width:292px; max-height:calc(100dvh - env(safe-area-inset-top, 0px) - 96px); overflow-y:auto;
       background:rgba(13,18,25,.86); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
       border:1px solid rgba(255,176,32,.30); border-radius:14px;
-      padding:11px 13px 12px; box-shadow:0 8px 26px rgba(0,0,0,.45);
+      padding:15px 17px 16px; box-shadow:0 8px 26px rgba(0,0,0,.45);
     }
+    .gps-freqcard .gps-ctaf-row .cf{ font-size:21px }
+    .gps-freqcard .gps-ctaf{ padding:9px 12px }
     /* RECENTER -> full-width cool-outline button (demo look) */
     .gps-freqcard .gps-recenter{
       margin-top:10px; padding:9px; border-radius:9px;
@@ -3195,13 +3197,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
        so it clears the bottom-left zoom, with the active panel as a sheet above. */
     .mobile-tabs{
       display:flex; position:absolute; left:50%; transform:translateX(-50%);
-      bottom:calc(14px + env(safe-area-inset-bottom, 0px)); z-index:620;
-      width:auto; margin:0; padding:7px;
+      bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:620;
+      width:auto; margin:0; padding:5px; gap:4px;
       background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-      border:1px solid rgba(127,179,213,.18); border-top:1px solid rgba(127,179,213,.18);
-      border-bottom:1px solid rgba(127,179,213,.18); border-radius:14px;
+      border:1px solid rgba(127,179,213,.18); border-radius:14px;
     }
-    .mobile-tabs button{ flex:0 0 auto }
+    .mobile-tabs button{ flex:0 0 auto; background:transparent; border:none; border-radius:10px; padding:11px 16px }
+    .mobile-tabs button.active{ background:var(--accent); border:none; color:#0a0e13 }
     .panel.left, .panel.right{
       position:absolute; left:0; right:0; z-index:610;
       bottom:calc(70px + env(safe-area-inset-bottom, 0px));
@@ -3261,16 +3263,23 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
        zoom restyled to glass bottom-left. CSS-only reposition of existing
        controls — handlers + iPhone/desktop layouts untouched. ----- */
 
-    /* Record -> bottom-centre, just left of the Plan-tabs pill */
+    /* Record -> bottom-centre, just left of the Plan-tabs pill; glass pill
+       sized to match the rest of the bottom row (no longer skinny). */
     .rec-pill{
       left:auto; right:calc(50% + 130px);
-      bottom:calc(20px + env(safe-area-inset-bottom, 0px)); z-index:620;
+      bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:620;
+      height:46px; padding:0 16px; gap:9px; border-radius:13px;
+      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      border:1px solid rgba(127,179,213,.18);
     }
 
-    /* Fuel Calc -> bottom-right icon beside the Tools toggle (icon only) */
+    /* Fuel Calc -> bottom-right icon; same glass material as Tools/settings,
+       with amber kept only as the icon + a subtle border (its identity). */
     .qf-fab{
       left:auto; right:70px; bottom:calc(16px + env(safe-area-inset-bottom, 0px));
       width:46px; height:46px; border-radius:12px; z-index:631;
+      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      border:1px solid rgba(255,176,32,.38); color:var(--accent); box-shadow:none;
     }
     .qf-fab .lbl{ display:none }
 
