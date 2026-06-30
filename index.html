@@ -4681,7 +4681,7 @@ async function cloudDelete(id){ var r = await cloudFetch('/routes/' + encodeURIC
 })();
 
 /* ===== Cloud library settings (key + test connection) ===== */
-(function cloudSettings(){
+function cloudSettings(){
   var inp = document.getElementById('cloudKeyInput'),
       saveB = document.getElementById('cloudKeySave'),
       testB = document.getElementById('cloudKeyTest'),
@@ -4708,7 +4708,8 @@ async function cloudDelete(id){ var r = await cloudFetch('/routes/' + encodeURIC
       .then(function(rs){ setStatus('\u2713 Connected \u00b7 ' + plural(rs.length), 'ok'); })
       .catch(function(e){ setStatus('\u2717 ' + cloudErr(e), 'bad'); });
   });
-})();
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', cloudSettings); else cloudSettings();
 
 /* ===== Flight recorder =====
    Records the flown GPS track (fixes already arrive via the map's onPos hook),
