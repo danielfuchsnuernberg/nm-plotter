@@ -3145,6 +3145,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rt-cloud-add{display:flex;gap:6px;margin:8px 0 4px}
   .rt-cloud-add #rtlibCloudSave{flex:1}
   .rt-cloud-add #rtlibCloudRefresh{flex:0 0 auto;min-width:34px;font-size:13px;line-height:1}
+  .rt-cloud-add #flCloudSave{flex:1}
+  .rt-cloud-add #flCloudRefresh{flex:0 0 auto;min-width:34px;font-size:13px;line-height:1}
   .set-cloud-row{display:flex;gap:8px;margin-top:8px}
   .set-cloud-input{flex:1;min-width:0;background:var(--bg-2);border:1px solid var(--border-strong);border-radius:4px;color:var(--text);padding:8px 10px;font-size:13px;font-family:var(--sans)}
   .set-cloud-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
@@ -3451,7 +3453,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <button class="flog-import" id="flogImport" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Import GPX</button>
             <input type="file" id="flogImportFile" accept=".gpx,.xml,application/gpx+xml,application/xml,text/xml" hidden>
           </div>
+          <div class="rt-cloud-add">
+            <button class="ghost small" id="flCloudSave" type="button">&#9729; Save to Cloud</button>
+            <button class="ghost small" id="flCloudRefresh" type="button" title="Refresh cloud flights" aria-label="Refresh cloud flights">&#10227;</button>
+          </div>
           <div class="wplib-list" id="flogList"></div>
+          <div class="wplib-grp" style="margin-top:10px"><span class="wplib-grp-l">&#9729; Cloud Flights</span></div>
+          <div class="wplib-list" id="flCloudList"></div>
         </div>
       </div>
     </div>
@@ -4567,10 +4575,10 @@ async function cloudFetch(path, opts){
   if(!r.ok){ var msg; try{ msg = (await r.json()).error; }catch(_){} throw new Error(msg || ('HTTP ' + r.status)); }
   return r;
 }
-async function cloudList(){ var r = await cloudFetch('/routes'); var j = await r.json(); return j.routes || []; }
-async function cloudGet(id){ var r = await cloudFetch('/routes/' + encodeURIComponent(id)); return await r.json(); }
-async function cloudPut(id, obj){ var r = await cloudFetch('/routes/' + encodeURIComponent(id), { method:'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(obj) }); return await r.json(); }
-async function cloudDelete(id){ var r = await cloudFetch('/routes/' + encodeURIComponent(id), { method:'DELETE' }); return await r.json(); }
+async function cloudList(col){ var r = await cloudFetch('/' + (col||'routes')); var j = await r.json(); return j.items || j.routes || []; }
+async function cloudGet(col, id){ var r = await cloudFetch('/' + (col||'routes') + '/' + encodeURIComponent(id)); return await r.json(); }
+async function cloudPut(col, id, obj){ var r = await cloudFetch('/' + (col||'routes') + '/' + encodeURIComponent(id), { method:'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(obj) }); return await r.json(); }
+async function cloudDelete(col, id){ var r = await cloudFetch('/' + (col||'routes') + '/' + encodeURIComponent(id), { method:'DELETE' }); return await r.json(); }
 
 /* ===== Saved Routes ===== */
 (function(){
@@ -4668,12 +4676,12 @@ async function cloudDelete(id){ var r = await cloudFetch('/routes/' + encodeURIC
     var nf = document.getElementById('routeNotes');
     var obj = { name:nm, savedAt:Date.now(), pts:pts, notes:(nf ? nf.value : '') || '' };
     cloudMsgOnBtn(cloudSaveBtn, 'Saving\u2026');
-    try{ await cloudPut(cloudSlug(nm), obj); cloudMsgOnBtn(cloudSaveBtn, '\u2601 Saved \u2713'); renderCloud(); }
+    try{ await cloudPut('routes', cloudSlug(nm), obj); cloudMsgOnBtn(cloudSaveBtn, '\u2601 Saved \u2713'); renderCloud(); }
     catch(e){ cloudMsgOnBtn(cloudSaveBtn, '\u2717 ' + cloudErr(e)); }
   }
   async function pullCloud(id, name){
     var rt;
-    try{ rt = await cloudGet(id); }
+    try{ rt = await cloudGet('routes', id); }
     catch(e){ flashCloudList('Pull failed \u2014 ' + cloudErr(e)); return; }
     // GUARD: pulling is the only cloud->device touch, and never silent.
     if(currentPts().length > 0){
@@ -4693,7 +4701,7 @@ async function cloudDelete(id){ var r = await cloudFetch('/routes/' + encodeURIC
     if(!cloudKey()){ flashCloudList('Set a library key in Settings to pull routes.'); return; }
     flashCloudList('Loading\u2026');
     var routes;
-    try{ routes = await cloudList(); }
+    try{ routes = await cloudList('routes'); }
     catch(e){ flashCloudList('Couldn\u2019t reach cloud \u2014 ' + cloudErr(e)); return; }
     if(!routes.length){ flashCloudList('No cloud routes yet. Build a route, then \u2601 Save to Cloud.'); return; }
     cloudListEl.innerHTML = '';
@@ -4713,7 +4721,7 @@ async function cloudDelete(id){ var r = await cloudFetch('/routes/' + encodeURIC
       xB.addEventListener('click', function(){
         if(!armed){ armed = true; xB.textContent = 'Delete?'; xB.classList.add('arm'); t = setTimeout(function(){ armed = false; xB.textContent = '\u2715'; xB.classList.remove('arm'); }, 2500); return; }
         clearTimeout(t); xB.textContent = '\u2026';
-        cloudDelete(r.id).then(renderCloud).catch(function(e){ flashCloudList('Delete failed \u2014 ' + cloudErr(e)); });
+        cloudDelete('routes', r.id).then(renderCloud).catch(function(e){ flashCloudList('Delete failed \u2014 ' + cloudErr(e)); });
       });
       cloudListEl.appendChild(it);
     });
@@ -4745,7 +4753,7 @@ function cloudSettings(){
     try{ localStorage.setItem(CLOUD_KEY_LS, v); }catch(_){}
     if(!v){ setStatus('Key cleared.', ''); return; }
     setStatus('Saved \u00b7 checking\u2026', '');
-    cloudList()
+    cloudList('routes')
       .then(function(rs){ setStatus('\u2713 Connected \u00b7 ' + plural(rs.length), 'ok'); if(window.NMCloudRefresh) window.NMCloudRefresh(); })
       .catch(function(e){ setStatus('Saved, but couldn\u2019t connect \u2014 ' + cloudErr(e), 'bad'); });
   }
@@ -4754,7 +4762,7 @@ function cloudSettings(){
   if(testB) testB.addEventListener('click', function(){
     if(!cloudKey()){ setStatus('Enter a key, then Save first.', 'bad'); return; }
     setStatus('Testing\u2026', '');
-    cloudList()
+    cloudList('routes')
       .then(function(rs){ setStatus('\u2713 Connected \u00b7 ' + plural(rs.length), 'ok'); })
       .catch(function(e){ setStatus('\u2717 ' + cloudErr(e), 'bad'); });
   });
@@ -4834,6 +4842,7 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
   let wakeLock = null, flushTimer = null, tickTimer = null, shownId = null;
 
   let pill, pillLabel, flog, flogHead, flogList, flogCount, flogHint, seg;
+  let flCloudSave, flCloudRefresh, flCloudList;
 
   function gpsOn(){ const t = document.getElementById('gpsToggle'); return !!(t && t.classList.contains('active')); }
 
@@ -5099,6 +5108,84 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
     it.querySelector('.sv').addEventListener('click', ()=>{ f.name=(nm.value.trim()||f.name).slice(0,48); idbPut(f).then(renderLog); });
     setTimeout(()=>{ try{ nm.focus(); nm.select(); }catch(_){} }, 40);
   }
+  // ---- Cloud push / pull for flight logs (explicit; pull = add/merge, never
+  // destructive; deduped by the flight's start-time id, same as the seeds) ----
+  function flDate(ts){ try{ return new Date(ts).toLocaleDateString(undefined,{day:'numeric',month:'short'}); }catch(_){ return ''; } }
+  function flCloudMsg(btn, txt){
+    if(!btn) return;
+    if(!btn.getAttribute('data-lbl')) btn.setAttribute('data-lbl', btn.innerHTML);
+    btn.textContent = txt;
+    clearTimeout(btn._t);
+    btn._t = setTimeout(function(){ btn.innerHTML = btn.getAttribute('data-lbl'); }, 1900);
+  }
+  function flFlash(txt){ if(flCloudList) flCloudList.innerHTML = '<div class="wplib-empty">' + escapeHtml(txt) + '</div>'; }
+  async function pushFlightsToCloud(){
+    if(!cloudKey()){ flCloudMsg(flCloudSave, 'Set key in Settings'); return; }
+    var local;
+    try{ local = (await idbAll()).filter(function(f){ return f.status==='done' && f.points && f.points.length; }); }
+    catch(e){ flCloudMsg(flCloudSave, 'Storage error'); return; }
+    if(!local.length){ flCloudMsg(flCloudSave, 'No flights yet'); return; }
+    flCloudMsg(flCloudSave, 'Checking\u2026');
+    var have;
+    try{ have = new Set((await cloudList('flights')).map(function(x){ return String(x.id); })); }
+    catch(e){ flCloudMsg(flCloudSave, '\u2717 ' + cloudErr(e)); return; }
+    var todo = local.filter(function(f){ return !have.has(String(f.id)); });
+    if(!todo.length){ flCloudMsg(flCloudSave, 'All up to date \u2713'); renderCloudFlights(); return; }
+    var ok = 0, bad = 0;
+    for(var i=0;i<todo.length;i++){
+      flCloudMsg(flCloudSave, 'Uploading ' + (i+1) + '/' + todo.length + '\u2026');
+      try{ await cloudPut('flights', String(todo[i].id), todo[i]); ok++; }
+      catch(e){ bad++; }
+    }
+    flCloudMsg(flCloudSave, bad ? ('\u2601 ' + ok + ' up \u00b7 ' + bad + ' failed') : ('\u2601 Uploaded ' + ok + ' \u2713'));
+    renderCloudFlights();
+  }
+  async function pullFlight(id, name){
+    var already = null;
+    try{ already = await idbGet(Number(id)); }catch(_){}
+    if(already){ flFlash('\u201c' + (name || ('Flight ' + id)) + '\u201d is already on this device.'); return; }
+    var rec;
+    try{ rec = await cloudGet('flights', id); }
+    catch(e){ flFlash('Pull failed \u2014 ' + cloudErr(e)); return; }
+    if(!rec || !rec.points || !rec.points.length){ flFlash('Pull failed \u2014 empty flight'); return; }
+    rec.status = 'done';
+    try{ await idbPut(rec); }
+    catch(e){ flFlash('Couldn\u2019t save \u2014 ' + ((e&&e.message)||'storage')); return; }
+    if(flog) flog.classList.remove('collapsed');
+    renderLog();
+    renderCloudFlights();
+  }
+  async function renderCloudFlights(){
+    if(!flCloudList) return;
+    if(!cloudKey()){ flFlash('Set a library key in Settings to pull flights.'); return; }
+    flFlash('Loading\u2026');
+    var flights;
+    try{ flights = await cloudList('flights'); }
+    catch(e){ flFlash('Couldn\u2019t reach cloud \u2014 ' + cloudErr(e)); return; }
+    if(!flights.length){ flFlash('No cloud flights yet. Tap \u2601 Save to Cloud.'); return; }
+    flights.sort(function(a,b){ return Number(b.id) - Number(a.id); });
+    flCloudList.innerHTML = '';
+    flights.forEach(function(r){
+      var it = document.createElement('div'); it.className = 'wplib-item rt-item flog-item';
+      var when = flDate(Number(r.id));
+      it.innerHTML = '<div class="wplib-info">'
+        + '<div class="wplib-name">' + escapeHtml(r.name || ('Flight ' + r.id)) + '</div>'
+        + '<div class="wplib-co">cloud' + (when ? (' \u00b7 ' + escapeHtml(when)) : '') + '</div>'
+        + '</div>'
+        + '<div class="wplib-acts">'
+        + '<button class="r fl-pull" type="button" title="Add this flight to this device">Pull</button>'
+        + '<button class="x" type="button" title="Delete from cloud" aria-label="Delete from cloud">\u2715</button>'
+        + '</div>';
+      it.querySelector('.fl-pull').addEventListener('click', function(){ pullFlight(r.id, r.name); });
+      var xB = it.querySelector('.x'); var armed = false, t;
+      xB.addEventListener('click', function(){
+        if(!armed){ armed = true; xB.textContent = 'Delete?'; xB.classList.add('arm'); t = setTimeout(function(){ armed = false; xB.textContent = '\u2715'; xB.classList.remove('arm'); }, 2500); return; }
+        clearTimeout(t); xB.textContent = '\u2026';
+        cloudDelete('flights', r.id).then(renderCloudFlights).catch(function(e){ flFlash('Delete failed \u2014 ' + cloudErr(e)); });
+      });
+      flCloudList.appendChild(it);
+    });
+  }
   // ---- init (runs once the DOM exists — this script sits above some of its
   // own markup, e.g. the Settings panel) ----
   function init(){
@@ -5106,10 +5193,16 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
     flog = document.getElementById('flog'); flogHead = document.getElementById('flogHead');
     flogList = document.getElementById('flogList'); flogCount = document.getElementById('flogCount');
     flogHint = document.getElementById('flogHint');
+    flCloudSave = document.getElementById('flCloudSave');
+    flCloudRefresh = document.getElementById('flCloudRefresh');
+    flCloudList = document.getElementById('flCloudList');
+    if(flCloudSave) flCloudSave.addEventListener('click', pushFlightsToCloud);
+    if(flCloudRefresh) flCloudRefresh.addEventListener('click', renderCloudFlights);
+    if(flCloudList) flFlash(cloudKey() ? 'Tap \u27f3 to load your cloud flights.' : 'Set a library key in Settings to pull flights.');
     seg = document.getElementById('setRecMode');
 
     if(pill) pill.addEventListener('click', ()=>{ recording ? stop() : start(); });
-    if(flogHead) flogHead.addEventListener('click', ()=>{ flog.classList.toggle('collapsed'); });
+    if(flogHead) flogHead.addEventListener('click', ()=>{ const c = flog.classList.toggle('collapsed'); if(!c) renderCloudFlights(); });
     const impBtn = document.getElementById('flogImport'), impFile = document.getElementById('flogImportFile');
     if(impBtn && impFile){ impBtn.addEventListener('click', ()=>impFile.click()); impFile.addEventListener('change', ()=>{ importGpxFile(impFile.files && impFile.files[0]); impFile.value=''; }); }
     if(seg){
