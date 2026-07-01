@@ -2682,6 +2682,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ap-icao{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent);min-width:50px;letter-spacing:.02em}
   .ap-iata{font-family:var(--mono);font-size:11px;color:var(--text-faint);min-width:30px}
   .ap-name{font-family:var(--sans);font-size:12px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ap-add{flex:0 0 auto;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;margin-left:8px;background:transparent;border:1px solid var(--border-strong);border-radius:5px;color:var(--accent);font-family:var(--sans);font-size:15px;font-weight:700;line-height:1;cursor:pointer;padding:0}
+  .ap-add:hover{border-color:var(--accent);background:rgba(255,176,32,.08)}
+  .ap-add.added{border-color:var(--good);color:var(--good);background:rgba(52,211,153,.1)}
   .ap-type{font-size:8px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
 
   ::-webkit-scrollbar{width:8px;height:8px}
@@ -5372,7 +5375,7 @@ const processDebounced = debounce(process, 300);
     return '<div class="ap-item'+(i===active?' active':'')+'" data-id="'+escapeAttr(a.ident)+'">'
       + '<span class="ap-icao">'+escapeHtml(a.ident)+'</span>'
       + '<span class="ap-iata">'+escapeHtml(a.iata||'')+'</span>'
-      + '<span class="ap-name">'+escapeHtml(a.name)+(a.muni?(' \u00b7 '+escapeHtml(a.muni)):'')+'</span>'+dot+'</div>';
+      + '<span class="ap-name">'+escapeHtml(a.name)+(a.muni?(' \u00b7 '+escapeHtml(a.muni)):'')+'</span>'+dot+'<button type="button" class="ap-add" data-add="'+escapeAttr(a.ident)+'" title="Add to route" aria-label="Add to route">+</button></div>';
   }
   function paint(){
     const v = input.value;
@@ -5406,7 +5409,20 @@ const processDebounced = debounce(process, 300);
     else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick) go(byId(pick.dataset.id)); }
     else if(e.key==='Escape'){ e.preventDefault(); input.value=''; results.innerHTML=''; clearBtn.hidden=true; input.blur(); box.classList.remove('focused'); if(window.NMClearPin) window.NMClearPin(); }
   });
-  results.addEventListener('click', e => { const it=e.target.closest('.ap-item'); if(it) go(byId(it.dataset.id)); });
+  results.addEventListener('click', e => {
+    const addBtn = e.target.closest('.ap-add');
+    if(addBtn){                              // "+" drops the field straight into the route
+      const a = byId(addBtn.dataset.add);
+      if(a && typeof window.addFieldToRoute === 'function'){
+        window.addFieldToRoute(a.ident, a.lat.toFixed(6) + ', ' + a.lon.toFixed(6));
+        addBtn.textContent = '\u2713'; addBtn.classList.add('added');
+        setTimeout(() => { addBtn.textContent = '+'; addBtn.classList.remove('added'); }, 1200);
+      }
+      return;                                // don't fly to it or open its card
+    }
+    const it = e.target.closest('.ap-item');
+    if(it) go(byId(it.dataset.id));
+  });
   clearBtn.addEventListener('click', () => { input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; input.focus(); if(window.NMClearPin) window.NMClearPin(); });
   // Don't let clicks/scroll on the search reach the map (measure, etc.).
   if(window.L && L.DomEvent){ L.DomEvent.disableClickPropagation(box); L.DomEvent.disableScrollPropagation(box); }
@@ -6363,6 +6379,9 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   els.countBadge.textContent = '0 PTS';
   els.status.textContent = 'READY';
   els.status.style.color = 'var(--text-dim)';
+  // Clear the route notes too (task/pax/remarks) — they belong to the plan being cleared.
+  const _nf = document.getElementById('routeNotes');
+  if(_nf){ _nf.value=''; _nf.dispatchEvent(new Event('input')); }  // input handler persists '' + syncs the note dot
 });
 
 /* ===== Init ===== */
@@ -6725,6 +6744,7 @@ window.NMPlotter = {
   var searchResults = document.getElementById('mapSearchResults');
   if(searchResults){
     searchResults.addEventListener('click', function(e){
+      if(e.target.closest('.ap-add')) return;   // +Add keeps the search open
       if(e.target.closest('.ap-item')) app.classList.remove('ipad-search-open');
     });
   }
