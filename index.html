@@ -9297,17 +9297,12 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
         (w.note?('<div class="wplib-note">'+escapeHtml(w.note)+'</div>'):'')+
       '</div>'+
       '<div class="wplib-acts">'+
-        '<button class="v'+((w.kind==='village')?' on':'')+'" type="button" title="'+((w.kind==='village')?'Move to My Waypoints':'Mark as Village')+'" aria-label="Toggle village"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg></button>'+
         '<button class="loc" type="button" title="Show on map" aria-label="Show on map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>'+
         '<button class="r" type="button" title="Add to current route">&#8594; Route</button>'+
         '<button class="e" type="button" title="Edit">Edit</button>'+
         '<button class="x" type="button" title="Delete" aria-label="Delete">&#10005;</button>'+
       '</div>';
     it.querySelector('.loc').addEventListener('click',function(){ libFlyTo(w); });
-    it.querySelector('.v').addEventListener('click',function(){
-      if(w.kind==='village') delete w.kind; else w.kind='village';
-      saveWpts(); renderLib();
-    });
     it.querySelector('.r').addEventListener('click',function(){
       if(window.addFieldToRoute) window.addFieldToRoute(libNameOf(w), w.lat.toFixed(6)+', '+w.lon.toFixed(6));
     });
