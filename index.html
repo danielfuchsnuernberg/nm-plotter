@@ -9959,10 +9959,13 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var lat = parseComp($('nmPhotoLat').value, true);
     var lon = parseComp($('nmPhotoLon').value, false);
     if(!(isFinite(lat) && Math.abs(lat)<=90 && isFinite(lon) && Math.abs(lon)<=180)) return;
-    if(typeof window.NMSaveVillage==='function') window.NMSaveVillage(name||'Village', lat, lon);
+    var nm = name || 'Village';
+    var coord = lat.toFixed(6) + ', ' + lon.toFixed(6);
+    // Bank it in Saved Waypoints (Villages) for reuse + cloud sync,
+    if(typeof window.NMSaveVillage==='function') window.NMSaveVillage(nm, lat, lon);
+    // and drop it straight into the route list at the top, ready to plot.
+    if(typeof window.addFieldToRoute==='function') window.addFieldToRoute(nm, coord);
     close();
-    var lib=document.getElementById('wplib');
-    if(lib){ lib.classList.remove('collapsed'); try{ lib.scrollIntoView({block:'nearest'}); }catch(_){} }
   }
 
   function init(){
