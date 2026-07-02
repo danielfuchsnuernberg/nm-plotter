@@ -9844,6 +9844,46 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   }
   function fmtDec(v){ return (Math.round(v*1e6)/1e6).toFixed(6); }
 
+  // Post the image to the Worker /ocr endpoint, surfacing the real error detail
+  // (the shared cloud helper hides it). Reuses the stored library key.
+  async function ocrPost(blob, mime){
+    var key = (typeof cloudKey==='function') ? cloudKey() : '';
+    if(!key) throw new Error('no-key');
+    var r = await fetch(CLOUD_BASE + '/ocr', { method:'POST', headers:{ 'X-Library-Key': key, 'Content-Type': mime||'image/jpeg' }, body: blob });
+    var j = null; try{ j = await r.json(); }catch(_){}
+    if(!r.ok){
+      var msg = (j && (j.error || j.detail)) ? [j.error, j.detail].filter(Boolean).join(' \u2014 ') : ('HTTP ' + r.status);
+      throw new Error(msg);
+    }
+    return j;
+  }
+
+  // Shrink big photos before upload: keeps monitor text legible while cutting bytes,
+  // latency and Neuron cost. Falls back to the original file on any failure.
+  function downscale(file){
+    return new Promise(function(resolve){
+      var fallback = { blob:file, mime:file.type||'image/jpeg' };
+      try{
+        var url = URL.createObjectURL(file);
+        var img = new Image();
+        img.onload = function(){
+          try{
+            var maxEdge = 1600, w = img.naturalWidth, h = img.naturalHeight;
+            var scale = Math.min(1, maxEdge / Math.max(w, h));
+            if(scale >= 1 && file.size <= 1200000){ URL.revokeObjectURL(url); resolve(fallback); return; }
+            var cw = Math.max(1, Math.round(w*scale)), ch = Math.max(1, Math.round(h*scale));
+            var c = document.createElement('canvas'); c.width = cw; c.height = ch;
+            c.getContext('2d').drawImage(img, 0, 0, cw, ch);
+            URL.revokeObjectURL(url);
+            c.toBlob(function(b){ resolve(b ? { blob:b, mime:'image/jpeg' } : fallback); }, 'image/jpeg', 0.85);
+          }catch(_){ try{ URL.revokeObjectURL(url); }catch(__){} resolve(fallback); }
+        };
+        img.onerror = function(){ try{ URL.revokeObjectURL(url); }catch(__){} resolve(fallback); };
+        img.src = url;
+      }catch(_){ resolve(fallback); }
+    });
+  }
+
   function setState(txt, isErr, spin){
     var el=$('nmPhotoState'); if(!el) return;
     el.style.display = txt ? '' : 'none';
@@ -9887,8 +9927,8 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     setState('Reading photo\u2026', false, true);
     ov.classList.add('active');
     try{
-      var r = await cloudFetch('/ocr', { method:'POST', headers:{ 'Content-Type': file.type||'image/jpeg' }, body: file });
-      var j = await r.json();
+      var up = await downscale(file);
+      var j = await ocrPost(up.blob, up.mime);
       busy = false;
       if(j && j.ok){
         $('nmPhotoName').value = j.name || '';
@@ -9907,7 +9947,8 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       }
     }catch(e){
       busy = false;
-      setState('Couldn\u2019t reach the reader: ' + cloudErr(e) + '. Check your connection and try again.', true, false);
+      var m = cloudErr(e);
+      setState(m==='no library key set' ? 'Set a library key in Settings to read photos.' : ('Reader error: ' + m), true, false);
       showFields(false);
     }
   }
