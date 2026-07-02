@@ -2752,6 +2752,31 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .nm-confirm-msg{font-size:13px;line-height:1.55;color:var(--text);white-space:pre-line}
   .nm-confirm-modal .cr-actions{margin-top:16px}
   .nm-confirm-modal .cr-actions .danger{background:var(--bad);border-color:var(--bad);color:#0a0e13}
+  /* ===== Photo -> coordinates (OCR) ===== */
+  .wplib-ocr{margin:2px 0 10px}
+  .wplib-ocr .ocr-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:8px 10px;font-size:11px;letter-spacing:.05em}
+  .wplib-ocr .ocr-btn svg{width:14px;height:14px;flex:0 0 auto}
+  .nm-photo-modal{width:660px}
+  .nm-photo-grid{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+  .nm-photo-imgwrap{flex:1 1 240px;min-width:200px;align-self:stretch;background:var(--bg);border:1px solid var(--border-strong);border-radius:5px;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:180px;max-height:52vh}
+  .nm-photo-imgwrap img{max-width:100%;max-height:52vh;display:block;object-fit:contain}
+  .nm-photo-side{flex:1 1 260px;min-width:220px;display:flex;flex-direction:column;gap:12px}
+  .nm-photo-state{font-size:12px;color:var(--text-dim);line-height:1.5;padding:6px 0}
+  .nm-photo-state.err{color:var(--accent-2)}
+  .nm-photo-raw{margin-top:6px;font-family:var(--mono);font-size:10.5px;color:var(--text-faint);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 8px;max-height:80px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  .nm-photo-fld label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;font-weight:600}
+  .nm-photo-fld input{width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border-strong);border-radius:5px;padding:8px 10px;font-family:var(--mono);font-size:13px}
+  .nm-photo-fld input:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);outline:none}
+  .nm-photo-fld input.name{font-family:var(--sans)}
+  .nm-photo-fld .dec{margin-top:4px;font-family:var(--mono);font-size:10.5px;color:var(--text-faint);font-variant-numeric:tabular-nums}
+  .nm-photo-fld .dec.bad{color:var(--accent-2)}
+  #nmPhotoOk:disabled{opacity:.45;cursor:not-allowed}
+  .nm-photo-spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--accent);display:inline-block;vertical-align:-2px;margin-right:7px;animation:nmphotospin .7s linear infinite}
+  @keyframes nmphotospin{to{transform:rotate(360deg)}}
+  #nmDropHint{position:fixed;inset:0;z-index:1500;display:none;align-items:center;justify-content:center;background:rgba(3,5,8,.6);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);pointer-events:none}
+  #nmDropHint.active{display:flex}
+  #nmDropHint .box{border:2px dashed var(--accent);border-radius:10px;padding:26px 40px;background:rgba(13,18,25,.92);color:var(--text);font-size:14px;letter-spacing:.03em;text-align:center}
+  #nmDropHint .box svg{width:26px;height:26px;display:block;margin:0 auto 10px;color:var(--accent)}
   .cr-hint{
     background:#0e1f15;border:1px solid #1f5837;
     border-radius:3px;padding:8px 12px;
@@ -3428,6 +3453,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <input class="name" id="wplibName" type="text" maxlength="16" placeholder="Name">
             <input class="coord" id="wplibCoord" type="text" placeholder="-6.7531, 146.1058">
             <button class="ghost small" id="wplibAdd" type="button">Save</button>
+          </div>
+          <div class="wplib-ocr">
+            <button class="ghost small ocr-btn" id="wplibPhoto" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Read coordinates from photo</button>
+            <input type="file" id="wplibPhotoInput" accept="image/*" style="display:none">
           </div>
           <div class="wplib-list" id="wplibList"></div>
           <div class="rt-cloud-add">
@@ -9789,6 +9818,147 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initWx); else initWx();
 })();
 
+/* ===== Photo -> coordinates (OCR) =====
+   Drop or pick a photo (usually a phone photo of a Google Earth "Edit Placemark"
+   dialog). Posts the image to the Worker /ocr endpoint, shows a confirm card with
+   the read-back name + coordinates (editable), and on confirm saves it as a village
+   waypoint via NMSaveVillage. Online-only by nature; advisory/backup only. */
+(function(){
+  function $(id){ return document.getElementById(id); }
+  var curUrl = null, busy = false;
+
+  // Deterministic component parser (mirrors the Worker): DMS with hemisphere, or decimal.
+  function parseComp(raw, isLat){
+    if(raw==null) return NaN;
+    var s = String(raw).trim();
+    if(!s) return NaN;
+    var hemi = 0, hm = s.match(/[NSEWnsew]/);
+    if(hm){ var h=hm[0].toUpperCase(); hemi = (h==='S'||h==='W') ? -1 : 1; }
+    var nums = (s.replace(/[NSEWnsew]/g,' ').match(/-?\d+(?:\.\d+)?/g)||[]).map(Number);
+    if(!nums.length) return NaN;
+    var val;
+    if(nums.length===1){ val = nums[0]; }
+    else { var d=Math.abs(nums[0]), mi=nums[1]||0, se=nums[2]||0; val = d + mi/60 + se/3600; if(nums[0]<0) val=-val; }
+    if(hemi!==0) val = Math.abs(val)*hemi;
+    return val;
+  }
+  function fmtDec(v){ return (Math.round(v*1e6)/1e6).toFixed(6); }
+
+  function setState(txt, isErr, spin){
+    var el=$('nmPhotoState'); if(!el) return;
+    el.style.display = txt ? '' : 'none';
+    el.className = 'nm-photo-state' + (isErr?' err':'');
+    el.innerHTML = (spin ? '<span class="nm-photo-spin"></span>' : '') + escapeHtml(txt||'');
+  }
+  function showFields(show){
+    ['nmPhotoNameWrap','nmPhotoLatWrap','nmPhotoLonWrap'].forEach(function(id){
+      var el=$(id); if(el) el.style.display = show ? '' : 'none';
+    });
+  }
+  function recalc(){
+    var okAll = true;
+    [['nmPhotoLat','nmPhotoLatDec',true,90],['nmPhotoLon','nmPhotoLonDec',false,180]].forEach(function(t){
+      var inp=$(t[0]), dec=$(t[1]); if(!inp||!dec) return;
+      var v = parseComp(inp.value, t[2]);
+      if(isFinite(v) && Math.abs(v) <= t[3]){ dec.textContent = '= '+fmtDec(v); dec.className='dec'; }
+      else { dec.textContent = 'unreadable \u2014 check this value'; dec.className='dec bad'; okAll=false; }
+    });
+    var nm = ($('nmPhotoName').value||'').trim();
+    var ok = okAll && !!nm && !busy;
+    $('nmPhotoOk').disabled = !ok;
+    return ok;
+  }
+  function close(){
+    var ov=$('nmPhotoOverlay'); if(ov) ov.classList.remove('active');
+    if(curUrl){ try{ URL.revokeObjectURL(curUrl); }catch(_){} curUrl=null; }
+  }
+
+  async function run(file){
+    if(!file || !/^image\//.test(file.type||'')) return;
+    var ov=$('nmPhotoOverlay'); if(!ov) return;
+    if(curUrl){ try{ URL.revokeObjectURL(curUrl); }catch(_){} }
+    curUrl = URL.createObjectURL(file);
+    $('nmPhotoImg').src = curUrl;
+    $('nmPhotoName').value=''; $('nmPhotoLat').value=''; $('nmPhotoLon').value='';
+    $('nmPhotoRaw').style.display='none'; $('nmPhotoRaw').textContent='';
+    showFields(false);
+    $('nmPhotoOk').disabled = true;
+    busy = true;
+    setState('Reading photo\u2026', false, true);
+    ov.classList.add('active');
+    try{
+      var r = await cloudFetch('/ocr', { method:'POST', headers:{ 'Content-Type': file.type||'image/jpeg' }, body: file });
+      var j = await r.json();
+      busy = false;
+      if(j && j.ok){
+        $('nmPhotoName').value = j.name || '';
+        $('nmPhotoLat').value  = (j.lat_raw!=null && String(j.lat_raw).trim()) ? j.lat_raw : (isFinite(j.lat)? fmtDec(j.lat):'');
+        $('nmPhotoLon').value  = (j.lon_raw!=null && String(j.lon_raw).trim()) ? j.lon_raw : (isFinite(j.lon)? fmtDec(j.lon):'');
+        setState('Check the read-out against the photo, then confirm.', false, false);
+        showFields(true);
+        recalc();
+        try{ $('nmPhotoName').focus(); }catch(_){}
+      } else {
+        setState('Could not read coordinates from this photo. Type them in below, or try a clearer photo.', true, false);
+        showFields(true);
+        var raw = j && (j.raw || j.error);
+        if(raw){ var rw=$('nmPhotoRaw'); rw.style.display=''; rw.textContent = String(raw).slice(0,600); }
+        recalc();
+      }
+    }catch(e){
+      busy = false;
+      setState('Couldn\u2019t reach the reader: ' + cloudErr(e) + '. Check your connection and try again.', true, false);
+      showFields(false);
+    }
+  }
+
+  function onConfirm(){
+    if(!recalc()) return;
+    var name = ($('nmPhotoName').value||'').trim();
+    var lat = parseComp($('nmPhotoLat').value, true);
+    var lon = parseComp($('nmPhotoLon').value, false);
+    if(!(isFinite(lat) && Math.abs(lat)<=90 && isFinite(lon) && Math.abs(lon)<=180)) return;
+    if(typeof window.NMSaveVillage==='function') window.NMSaveVillage(name||'Village', lat, lon);
+    close();
+    var lib=document.getElementById('wplib');
+    if(lib){ lib.classList.remove('collapsed'); try{ lib.scrollIntoView({block:'nearest'}); }catch(_){} }
+  }
+
+  function init(){
+    var btn=$('wplibPhoto'), inp=$('wplibPhotoInput');
+    if(btn && inp){
+      btn.addEventListener('click', function(){ inp.value=''; inp.click(); });
+      inp.addEventListener('change', function(){ var f=inp.files && inp.files[0]; if(f) run(f); });
+    }
+    var ok=$('nmPhotoOk'), cx=$('nmPhotoCancel'), cl=$('nmPhotoClose'), ov=$('nmPhotoOverlay');
+    if(ok) ok.addEventListener('click', onConfirm);
+    if(cx) cx.addEventListener('click', close);
+    if(cl) cl.addEventListener('click', close);
+    if(ov) ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+    ['nmPhotoName','nmPhotoLat','nmPhotoLon'].forEach(function(id){ var el=$(id); if(el) el.addEventListener('input', recalc); });
+    document.addEventListener('keydown', function(e){
+      var o=$('nmPhotoOverlay'); if(!o || !o.classList.contains('active')) return;
+      if(e.key==='Escape') close();
+    });
+    // Desktop: drag an image file anywhere onto the app.
+    var hint=$('nmDropHint'), dragDepth=0;
+    function hasFiles(e){ try{ return Array.prototype.indexOf.call(e.dataTransfer.types||[], 'Files') !== -1; }catch(_){ return false; } }
+    function modalOpen(){ var o=$('nmPhotoOverlay'); return !!(o && o.classList.contains('active')); }
+    window.addEventListener('dragenter', function(e){ if(!hasFiles(e) || modalOpen()) return; dragDepth++; if(hint) hint.classList.add('active'); });
+    window.addEventListener('dragover', function(e){ if(hasFiles(e) && !modalOpen()) e.preventDefault(); });
+    window.addEventListener('dragleave', function(e){ if(!hasFiles(e)) return; dragDepth--; if(dragDepth<=0){ dragDepth=0; if(hint) hint.classList.remove('active'); } });
+    window.addEventListener('drop', function(e){
+      if(!hasFiles(e)) return;
+      e.preventDefault();
+      dragDepth=0; if(hint) hint.classList.remove('active');
+      if(modalOpen()) return;
+      var f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if(f && /^image\//.test(f.type||'')) run(f);
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+
 if ('serviceWorker' in navigator && window.isSecureContext) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js')
@@ -10008,6 +10178,42 @@ if (navigator.storage && navigator.storage.persist) {
       <div class="cr-body" id="terrDlBody"></div>
     </div>
   </div>
+  <div class="cr-overlay" id="nmPhotoOverlay">
+    <div class="cr-modal nm-photo-modal">
+      <div class="cr-head">
+        <h3>Read from photo</h3>
+        <button class="cr-close" id="nmPhotoClose" type="button" aria-label="Close">&#215;</button>
+      </div>
+      <div class="cr-body">
+        <div class="nm-photo-grid">
+          <div class="nm-photo-imgwrap"><img id="nmPhotoImg" alt="Selected photo"></div>
+          <div class="nm-photo-side">
+            <div class="nm-photo-state" id="nmPhotoState"><span class="nm-photo-spin"></span>Reading photo&#8230;</div>
+            <div class="nm-photo-fld" id="nmPhotoNameWrap" style="display:none">
+              <label for="nmPhotoName">Name</label>
+              <input class="name" id="nmPhotoName" type="text" maxlength="24" autocomplete="off">
+            </div>
+            <div class="nm-photo-fld" id="nmPhotoLatWrap" style="display:none">
+              <label for="nmPhotoLat">Latitude (as read)</label>
+              <input id="nmPhotoLat" type="text" autocomplete="off" spellcheck="false">
+              <div class="dec" id="nmPhotoLatDec"></div>
+            </div>
+            <div class="nm-photo-fld" id="nmPhotoLonWrap" style="display:none">
+              <label for="nmPhotoLon">Longitude (as read)</label>
+              <input id="nmPhotoLon" type="text" autocomplete="off" spellcheck="false">
+              <div class="dec" id="nmPhotoLonDec"></div>
+            </div>
+            <div class="nm-photo-raw" id="nmPhotoRaw" style="display:none"></div>
+          </div>
+        </div>
+        <div class="cr-actions">
+          <button class="ghost" id="nmPhotoCancel" type="button">Cancel</button>
+          <button class="primary" id="nmPhotoOk" type="button" disabled>Confirm &amp; save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="nmDropHint"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Drop photo to read coordinates</div></div>
   <div class="cr-overlay" id="nmConfirmOverlay">
     <div class="cr-modal nm-confirm-modal">
       <div class="cr-head"><h3 id="nmConfirmTitle">Confirm</h3></div>
