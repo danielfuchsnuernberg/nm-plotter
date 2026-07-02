@@ -2754,7 +2754,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .nm-confirm-modal .cr-actions .danger{background:var(--bad);border-color:var(--bad);color:#0a0e13}
   /* ===== Photo -> coordinates (OCR) ===== */
   .wplib-ocr{margin:2px 0 10px}
-  .wplib-ocr .ocr-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:8px 10px;font-size:11px;letter-spacing:.05em}
+  .wplib-ocr .ocr-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:8px 10px;font-size:10px;letter-spacing:.08em}
   .wplib-ocr .ocr-btn svg{width:14px;height:14px;flex:0 0 auto}
   .nm-photo-modal{width:660px}
   .nm-photo-grid{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
@@ -3181,7 +3181,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rt-cloud-add #flCloudSave{flex:1}
   .rt-cloud-add #flCloudRefresh{flex:0 0 auto;min-width:34px;font-size:13px;line-height:1}
   .rt-cloud-add #wpCloudSave{flex:1}
-  .rt-cloud-add #wpCloudRefresh{flex:0 0 auto;min-width:34px;font-size:13px;line-height:1}
+  .rt-cloud-add #wpCloudRefresh{flex:1}
   .set-cloud-row{display:flex;gap:8px;margin-top:8px}
   .set-cloud-input{flex:1;min-width:0;background:var(--bg-2);border:1px solid var(--border-strong);border-radius:4px;color:var(--text);padding:8px 10px;font-size:13px;font-family:var(--sans)}
   .set-cloud-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
@@ -3199,6 +3199,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-vtog svg{width:12px;height:12px;flex:0 0 auto}
   .wplib-vtog:hover{border-color:var(--accent-2);color:var(--text)}
   .wplib-vtog[aria-pressed="true"]{background:var(--bg-2);border-color:var(--accent-2);color:var(--accent-2)}
+  .wplib-saveas{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .wplib-saveas .lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
+  .wplib-seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:5px;overflow:hidden}
+  .wplib-seg button{padding:5px 12px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;background:transparent;border:none;color:var(--text-dim);cursor:pointer}
+  .wplib-seg button+button{border-left:1px solid var(--border-strong)}
+  .wplib-seg button.on{background:var(--bg-2);color:var(--accent)}
+  .wplib-seg #wplibModeVil.on{color:var(--accent-2)}
   .wplib-acts .v{padding:4px 6px;color:var(--text-faint)}
   .wplib-acts .v svg{width:14px;height:14px;display:block}
   .wplib-acts .v:hover{border-color:var(--accent-2);color:var(--accent-2)}
@@ -3482,7 +3489,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <input class="coord" id="wplibCoord" type="text" placeholder="-6.7531, 146.1058">
             <button class="ghost small" id="wplibAdd" type="button">Save</button>
           </div>
-          <div class="wplib-savemode"><span class="lbl">Save as</span><button class="wplib-vtog" id="wplibVillageTog" type="button" aria-pressed="false" title="When on, Save adds the point to Villages instead of My Waypoints"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Village</button></div>
+          <div class="wplib-saveas">
+            <span class="lbl">Save as</span>
+            <span class="wplib-seg" role="group" aria-label="Save as category">
+              <button class="on" id="wplibModeWpt" type="button">Waypoint</button>
+              <button id="wplibModeVil" type="button">Village</button>
+            </span>
+          </div>
           <div class="wplib-ocr">
             <button class="ghost small ocr-btn" id="wplibPhoto" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Read coordinates from photo</button>
             <input type="file" id="wplibPhotoInput" accept="image/*" style="display:none">
@@ -9319,6 +9332,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     return it;
   }
   var VILL_OPEN_KEY='nmplotter_lib_villages_open';
+  var MINE_OPEN_KEY='nmplotter_lib_mine_open';
   function renderLib(){
     if(!libList) return;
     if(libCount) libCount.textContent=wpts.length;
@@ -9327,11 +9341,20 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var mine=wpts.filter(function(w){return (w.kind||'wpt')!=='village';}).sort(byName);
     var vill=wpts.filter(function(w){return (w.kind||'wpt')==='village';}).sort(byName);
     libList.innerHTML='';
-    var h1=document.createElement('div'); h1.className='wplib-grp';
-    h1.innerHTML='<span class="wplib-grp-l">My Waypoints</span><span class="wplib-grp-n">'+mine.length+'</span>';
+    var mopen=localStorage.getItem(MINE_OPEN_KEY)!=='0';
+    var h1=document.createElement('div'); h1.className='wplib-grp wplib-grp-toggle'+(mopen?' open':'');
+    h1.innerHTML='<span class="wplib-grp-l">My Waypoints</span><span class="wplib-grp-n">'+mine.length+'</span><span class="wplib-grp-chev">\u25BE</span>';
     libList.appendChild(h1);
-    if(mine.length){ mine.forEach(function(w){ libList.appendChild(makeLibItem(w)); }); }
-    else { var e1=document.createElement('div'); e1.className='wplib-empty sm'; e1.textContent='None yet — right-click / long-press the map to add one.'; libList.appendChild(e1); }
+    var mbox=document.createElement('div'); mbox.className='wplib-vbox'; if(!mopen) mbox.style.display='none';
+    if(mine.length){ mine.forEach(function(w){ mbox.appendChild(makeLibItem(w)); }); }
+    else { var e1=document.createElement('div'); e1.className='wplib-empty sm'; e1.textContent='None yet — right-click / long-press the map to add one.'; mbox.appendChild(e1); }
+    libList.appendChild(mbox);
+    h1.addEventListener('click',function(){
+      var nowOpen=mbox.style.display==='none';
+      mbox.style.display=nowOpen?'':'none';
+      h1.classList.toggle('open',nowOpen);
+      try{ localStorage.setItem(MINE_OPEN_KEY, nowOpen?'1':'0'); }catch(_){}
+    });
     if(vill.length){
       var open=localStorage.getItem(VILL_OPEN_KEY)!=='0';
       var h2=document.createElement('div'); h2.className='wplib-grp wplib-grp-toggle'+(open?' open':'');
@@ -9372,15 +9395,18 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var p=parseCoordinatePair(libCoord.value);
     if(!p){ libCoord.classList.add('invalid'); libCoord.focus(); return; }
     var w={id:++wptSeq, name:(libName.value.trim()||('WP '+wptSeq)), note:'', lat:+(+p.lat).toFixed(6), lon:+(+p.lon).toFixed(6)};
-    var vtog=document.getElementById('wplibVillageTog');
-    if(vtog && vtog.getAttribute('aria-pressed')==='true') w.kind='village';
+    var vil=document.getElementById('wplibModeVil');
+    if(vil && vil.classList.contains('on')) w.kind='village';
     wpts.push(w); saveWpts(); renderWpts();
     libName.value=''; libCoord.value=''; libCoord.classList.remove('invalid'); libName.focus();
   }
   if(libAdd){
     libAdd.addEventListener('click',libAddNew);
-    var vtog0=document.getElementById('wplibVillageTog');
-    if(vtog0) vtog0.addEventListener('click',function(){ vtog0.setAttribute('aria-pressed', vtog0.getAttribute('aria-pressed')==='true'?'false':'true'); });
+    var mWpt=document.getElementById('wplibModeWpt'), mVil=document.getElementById('wplibModeVil');
+    if(mWpt && mVil){
+      mWpt.addEventListener('click',function(){ mWpt.classList.add('on'); mVil.classList.remove('on'); });
+      mVil.addEventListener('click',function(){ mVil.classList.add('on'); mWpt.classList.remove('on'); });
+    }
     libCoord.addEventListener('input',function(){ libCoord.classList.remove('invalid'); });
     libCoord.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); libAddNew(); } });
     libName.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); libAddNew(); } });
