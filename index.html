@@ -4680,7 +4680,7 @@ async function cloudFetch(path, opts){
   if(!r.ok){ var msg; try{ msg = (await r.json()).error; }catch(_){} throw new Error(msg || ('HTTP ' + r.status)); }
   return r;
 }
-async function cloudList(col){ var r = await cloudFetch('/' + (col||'routes')); var j = await r.json(); return j.items || j.routes || []; }
+async function cloudList(col, full){ var r = await cloudFetch('/' + (col||'routes') + (full?'?full=1':'')); var j = await r.json(); return j.items || j.routes || []; }
 async function cloudGet(col, id){ var r = await cloudFetch('/' + (col||'routes') + '/' + encodeURIComponent(id)); return await r.json(); }
 async function cloudPut(col, id, obj){ var r = await cloudFetch('/' + (col||'routes') + '/' + encodeURIComponent(id), { method:'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(obj) }); return await r.json(); }
 async function cloudDelete(col, id){ var r = await cloudFetch('/' + (col||'routes') + '/' + encodeURIComponent(id), { method:'DELETE' }); return await r.json(); }
@@ -9486,7 +9486,10 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   }
   async function wlibToggleKind(r){
     var next = (r.kind==='village') ? 'wpt' : 'village';
-    var rec = {}; for(var k in r){ if(Object.prototype.hasOwnProperty.call(r,k)) rec[k]=r[k]; }
+    var rec;
+    try{ rec = await cloudGet('waypoints', r.id); }
+    catch(e){ wlibMsg('Update failed \u2014 ' + cloudErr(e)); return; }
+    if(!rec || typeof rec!=='object' || rec.error){ wlibMsg('Update failed \u2014 record not found'); return; }
     rec.kind = next;
     try{ await cloudPut('waypoints', String(r.id), rec); }
     catch(e){ wlibMsg('Update failed \u2014 ' + cloudErr(e)); return; }
@@ -9498,7 +9501,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   async function wlibLoad(){
     if(!cloudKey()){ wlibMsg('Set a library key in Settings to use the cloud library.'); return; }
     wlibMsg('Loading\u2026');
-    try{ wlibItems = await cloudList('waypoints'); }
+    try{ wlibItems = await cloudList('waypoints', true); }
     catch(e){ wlibItems=[]; wlibMsg('Couldn\u2019t reach cloud \u2014 ' + cloudErr(e)); return; }
     wlibItems.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
     wlibRender();
