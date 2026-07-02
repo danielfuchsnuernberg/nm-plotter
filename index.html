@@ -3112,6 +3112,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-head:hover{border:none;color:inherit}
   .wplib-ttl{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim)}
   .wplib-meta{display:flex;align-items:center;gap:8px}
+  .wplib-meta .badge{background:transparent;border:none;padding:0 2px;color:var(--text-faint);font-family:var(--mono)}
   .wplib-chev{font-size:10px;color:var(--text-dim);transition:transform .15s ease}
   .wplib.collapsed .wplib-chev{transform:rotate(-90deg)}
   .wplib.collapsed .wplib-body{display:none}
@@ -3123,25 +3124,27 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-add input.name{flex:0 0 33%}
   .wplib-add input.coord{flex:1}
   .wplib-add button{flex:0 0 auto}
-  .wplib-list{display:flex;flex-direction:column;gap:6px}
+  .wplib-list{display:flex;flex-direction:column;gap:0}
   .wplib-empty{font-size:11px;color:var(--text-faint);line-height:1.5;padding:2px 0}
-  .wplib-item{display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--border-strong);border-radius:3px;padding:7px 9px}
+  .wplib-item{display:flex;align-items:center;gap:8px;background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:9px 4px}
+  .wplib-item:last-child{border-bottom:none}
   .wplib-info{flex:1;min-width:0}
   .wplib-name{font-family:var(--sans);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .wplib-co{font-family:var(--mono);font-size:10.5px;color:var(--text-faint);font-variant-numeric:tabular-nums;margin-top:1px}
   .wplib-note{font-size:10.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
   .wplib-acts{display:flex;gap:4px;flex:0 0 auto}
-  .wplib-acts button{padding:4px 7px;font-size:10px;letter-spacing:.05em;border-radius:3px}
+  .wplib-acts button{padding:4px 7px;font-size:10px;letter-spacing:.05em;border-radius:5px;background:transparent;border:1px solid transparent;color:var(--text-dim)}
+  .wplib-acts button:hover{background:var(--bg-2);border-color:var(--border-strong);color:var(--text)}
   .wplib-acts .r{color:var(--accent-2)}
   .wplib-acts .loc{padding:4px 6px}
   .wplib-acts .loc svg{width:13px;height:13px;display:block}
-  .wplib-acts .x{color:var(--bad);border-color:#5a2833;min-width:26px}
+  .wplib-acts .x{color:var(--bad);border-color:transparent;min-width:26px}
   .wplib-acts .x:hover{border-color:var(--bad);color:var(--bad)}
   .wplib-acts .x.arm{background:#2a151a}
   .wplib-grp{display:flex;align-items:center;gap:8px;padding:6px 2px 3px;margin-top:4px}
   .wplib-grp:first-child{margin-top:0}
   .wplib-grp-l{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim);font-weight:700}
-  .wplib-grp-n{font-family:var(--mono);font-size:10px;color:var(--text-faint);background:var(--bg-2);border:1px solid var(--border);border-radius:9px;padding:0 7px;line-height:16px}
+  .wplib-grp-n{font-family:var(--mono);font-size:10px;color:var(--text-faint);background:transparent;border:none;border-radius:0;padding:0 2px;line-height:16px}
   .wplib-grp-toggle{cursor:pointer;border-radius:5px}
   .wplib-grp-toggle:hover{background:var(--bg-2)}
   .wplib-grp-chev{margin-left:auto;color:var(--text-faint);font-size:10px;transition:transform .15s;transform:rotate(-90deg)}
@@ -3157,7 +3160,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .set-cloud-status.ok{color:#7fcf9f}
   .set-cloud-status.bad{color:var(--bad)}
   .wplib-grp-toggle.open .wplib-grp-chev{transform:rotate(0)}
-  .wplib-vbox{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .wplib-vbox{display:flex;flex-direction:column;gap:0;margin-top:2px}
   .wplib-item.wplib-village{border-left:2px solid var(--accent-2)}
   .wplib-item.wplib-village .wplib-name{color:var(--accent-2)}
   .wplib-empty.sm{padding:2px 2px 4px;font-size:10.5px}
