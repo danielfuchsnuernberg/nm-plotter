@@ -3192,6 +3192,30 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-vbox{display:flex;flex-direction:column;gap:0;margin-top:2px}
   .wplib-item.wplib-village{border-left:2px solid var(--accent-2)}
   .wplib-item.wplib-village .wplib-name{color:var(--accent-2)}
+  /* Village toggles: save-box "Save as" chip + per-item house toggle */
+  .wplib-savemode{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .wplib-savemode .lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
+  .wplib-vtog{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;border-radius:5px;background:transparent;border:1px solid var(--border-strong);color:var(--text-dim);cursor:pointer}
+  .wplib-vtog svg{width:12px;height:12px;flex:0 0 auto}
+  .wplib-vtog:hover{border-color:var(--accent-2);color:var(--text)}
+  .wplib-vtog[aria-pressed="true"]{background:var(--bg-2);border-color:var(--accent-2);color:var(--accent-2)}
+  .wplib-acts .v{padding:4px 6px;color:var(--text-faint)}
+  .wplib-acts .v svg{width:14px;height:14px;display:block}
+  .wplib-acts .v:hover{border-color:var(--accent-2);color:var(--accent-2)}
+  .wplib-acts .v.on{color:var(--accent-2)}
+  /* Cloud Waypoint Library modal */
+  .nm-wlib-modal{width:640px}
+  .nm-wlib-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .nm-wlib-tools input[type=search]{flex:1 1 180px;min-width:0;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border-strong);border-radius:5px;padding:8px 10px;font-family:var(--sans);font-size:13px}
+  .nm-wlib-tools input[type=search]:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);outline:none}
+  .nm-wlib-filter{display:flex;gap:4px;flex:0 0 auto}
+  .nm-wlib-filter button{padding:6px 9px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;border-radius:5px;background:transparent;border:1px solid var(--border-strong);color:var(--text-dim);cursor:pointer}
+  .nm-wlib-filter button:hover{color:var(--text)}
+  .nm-wlib-filter button.on{background:var(--bg-2);border-color:var(--accent);color:var(--accent)}
+  .nm-wlib-count{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:4px}
+  .nm-wlib-list{max-height:52vh;overflow-y:auto;margin:0 -4px}
+  .nm-wlib-list .wplib-item{padding-left:8px;padding-right:8px}
+  .wplib-acts .ondev{color:var(--text-faint);cursor:default;border-color:transparent;opacity:.7}
   .wplib-empty.sm{padding:2px 2px 4px;font-size:10.5px}
   .wplib-edit{display:flex;flex-direction:column;gap:6px;width:100%}
   .wplib-erow{display:flex;gap:6px}
@@ -3454,6 +3478,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <input class="coord" id="wplibCoord" type="text" placeholder="-6.7531, 146.1058">
             <button class="ghost small" id="wplibAdd" type="button">Save</button>
           </div>
+          <div class="wplib-savemode"><span class="lbl">Save as</span><button class="wplib-vtog" id="wplibVillageTog" type="button" aria-pressed="false" title="When on, Save adds the point to Villages instead of My Waypoints"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Village</button></div>
           <div class="wplib-ocr">
             <button class="ghost small ocr-btn" id="wplibPhoto" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Read coordinates from photo</button>
             <input type="file" id="wplibPhotoInput" accept="image/*" style="display:none">
@@ -3461,10 +3486,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
           <div class="wplib-list" id="wplibList"></div>
           <div class="rt-cloud-add">
             <button class="ghost small" id="wpCloudSave" type="button">&#9729; Save to Cloud</button>
-            <button class="ghost small" id="wpCloudRefresh" type="button" title="Refresh cloud points" aria-label="Refresh cloud points">&#10227;</button>
+            <button class="ghost small" id="wpCloudRefresh" type="button" title="Open your cloud waypoint library">&#9729; Library</button>
           </div>
-          <div class="wplib-grp" style="margin-top:10px"><span class="wplib-grp-l">&#9729; Cloud Waypoints</span></div>
-          <div class="wplib-list" id="wpCloudList"></div>
         </div>
       </div>
       <div class="wplib" id="rtlib">
@@ -9274,12 +9297,17 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
         (w.note?('<div class="wplib-note">'+escapeHtml(w.note)+'</div>'):'')+
       '</div>'+
       '<div class="wplib-acts">'+
+        '<button class="v'+((w.kind==='village')?' on':'')+'" type="button" title="'+((w.kind==='village')?'Move to My Waypoints':'Mark as Village')+'" aria-label="Toggle village"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg></button>'+
         '<button class="loc" type="button" title="Show on map" aria-label="Show on map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>'+
         '<button class="r" type="button" title="Add to current route">&#8594; Route</button>'+
         '<button class="e" type="button" title="Edit">Edit</button>'+
         '<button class="x" type="button" title="Delete" aria-label="Delete">&#10005;</button>'+
       '</div>';
     it.querySelector('.loc').addEventListener('click',function(){ libFlyTo(w); });
+    it.querySelector('.v').addEventListener('click',function(){
+      if(w.kind==='village') delete w.kind; else w.kind='village';
+      saveWpts(); renderLib();
+    });
     it.querySelector('.r').addEventListener('click',function(){
       if(window.addFieldToRoute) window.addFieldToRoute(libNameOf(w), w.lat.toFixed(6)+', '+w.lon.toFixed(6));
     });
@@ -9345,11 +9373,15 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var p=parseCoordinatePair(libCoord.value);
     if(!p){ libCoord.classList.add('invalid'); libCoord.focus(); return; }
     var w={id:++wptSeq, name:(libName.value.trim()||('WP '+wptSeq)), note:'', lat:+(+p.lat).toFixed(6), lon:+(+p.lon).toFixed(6)};
+    var vtog=document.getElementById('wplibVillageTog');
+    if(vtog && vtog.getAttribute('aria-pressed')==='true') w.kind='village';
     wpts.push(w); saveWpts(); renderWpts();
     libName.value=''; libCoord.value=''; libCoord.classList.remove('invalid'); libName.focus();
   }
   if(libAdd){
     libAdd.addEventListener('click',libAddNew);
+    var vtog0=document.getElementById('wplibVillageTog');
+    if(vtog0) vtog0.addEventListener('click',function(){ vtog0.setAttribute('aria-pressed', vtog0.getAttribute('aria-pressed')==='true'?'false':'true'); });
     libCoord.addEventListener('input',function(){ libCoord.classList.remove('invalid'); });
     libCoord.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); libAddNew(); } });
     libName.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); libAddNew(); } });
@@ -9372,7 +9404,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     try{ have = new Set((await cloudList('waypoints')).map(function(x){ return String(x.id); })); }
     catch(e){ wpCloudMsg(wpCloudSave, '\u2717 ' + cloudErr(e)); return; }
     var todo = wpts.filter(function(w){ return w && w.id!=null && !have.has(String(w.id)); });
-    if(!todo.length){ wpCloudMsg(wpCloudSave, 'All up to date \u2713'); renderCloudWaypoints(); return; }
+    if(!todo.length){ wpCloudMsg(wpCloudSave, 'All up to date \u2713'); wlibReloadIfOpen(); return; }
     var ok=0, bad=0;
     for(var i=0;i<todo.length;i++){
       wpCloudMsg(wpCloudSave, 'Uploading ' + (i+1) + '/' + todo.length + '\u2026');
@@ -9380,7 +9412,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       catch(e){ bad++; }
     }
     wpCloudMsg(wpCloudSave, bad ? ('\u2601 ' + ok + ' up \u00b7 ' + bad + ' failed') : ('\u2601 Uploaded ' + ok + ' \u2713'));
-    renderCloudWaypoints();
+    wlibReloadIfOpen();
   }
   function pullWaypointMerge(rec){
     if(!rec || rec.id==null || typeof rec.lat!=='number' || typeof rec.lon!=='number') return 'bad';
@@ -9401,46 +9433,110 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     if(r==='bad'){ wpFlash('Pull failed \u2014 empty point'); return; }
     if(!ov.mywpts){ ov.mywpts=true; saveOv(); applyLayers(); syncMenu(); }
     renderWpts();
-    renderCloudWaypoints();
+    wlibRender();
   }
-  async function renderCloudWaypoints(){
-    if(!wpCloudList) return;
-    if(!cloudKey()){ wpFlash('Set a library key in Settings to pull points.'); return; }
-    wpFlash('Loading\u2026');
-    var items;
-    try{ items = await cloudList('waypoints'); }
-    catch(e){ wpFlash('Couldn\u2019t reach cloud \u2014 ' + cloudErr(e)); return; }
-    if(!items.length){ wpFlash('No cloud points yet. Tap \u2601 Save to Cloud.'); return; }
-    items.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
+  /* ===== Cloud Waypoint Library (modal browser) ===== */
+  var wlibItems = [], wlibKind = 'all', wlibQuery = '';
+  function $w(id){ return document.getElementById(id); }
+  function wlibOpen(){ var o=$w('nmWlibOverlay'); return !!(o && o.classList.contains('active')); }
+  function wlibMsg(txt){ var l=$w('nmWlibList'); if(l) l.innerHTML = '<div class="wplib-empty">' + escapeHtml(txt) + '</div>'; var c=$w('nmWlibCount'); if(c) c.textContent=''; }
+  function wlibRender(){
+    var list=$w('nmWlibList'); if(!list) return;
     var local = new Set(wpts.map(function(w){ return String(w.id); }));
-    wpCloudList.innerHTML = '';
-    items.forEach(function(r){
+    var q = wlibQuery.trim().toLowerCase();
+    var rows = wlibItems.filter(function(r){
+      var k = (r.kind==='village')?'village':'wpt';
+      if(wlibKind!=='all' && k!==wlibKind) return false;
+      if(q && String(r.name||'').toLowerCase().indexOf(q)<0) return false;
+      return true;
+    });
+    var c=$w('nmWlibCount');
+    if(c) c.textContent = rows.length + ' of ' + wlibItems.length + ' point' + (wlibItems.length===1?'':'s');
+    if(!rows.length){ list.innerHTML = '<div class="wplib-empty">' + (wlibItems.length? 'No matches.' : 'No cloud points yet. Tap \u2601 Save to Cloud.') + '</div>'; return; }
+    list.innerHTML = '';
+    rows.forEach(function(r){
       var here = local.has(String(r.id));
-      var it = document.createElement('div'); it.className = 'wplib-item';
+      var isVil = (r.kind==='village');
+      var it = document.createElement('div'); it.className = 'wplib-item' + (isVil?' wplib-village':'');
       it.innerHTML = '<div class="wplib-info">'
         + '<div class="wplib-name">' + escapeHtml(r.name || ('WP ' + r.id)) + '</div>'
-        + '<div class="wplib-co">cloud' + (r.kind==='village' ? ' \u00b7 village' : '') + (here ? ' \u00b7 on device' : '') + '</div>'
+        + '<div class="wplib-co">' + escapeHtml(toDms(+r.lat,true)+'  '+toDms(+r.lon,false)) + '</div>'
+        + '<div class="wplib-note">' + (isVil?'Village':'Waypoint') + (here?' \u00b7 on this device':' \u00b7 cloud only') + '</div>'
         + '</div>'
         + '<div class="wplib-acts">'
-        + (here ? '' : '<button class="r wp-pull" type="button" title="Add this point to this device">Pull</button>')
+        + '<button class="v'+(isVil?' on':'')+'" type="button" title="'+(isVil?'Make a regular waypoint':'Mark as village')+'" aria-label="Toggle village"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg></button>'
+        + (here ? '<button class="ondev" type="button" disabled title="Already on this device">On device</button>' : '<button class="r wp-pull" type="button" title="Add this point to this device">Pull</button>')
         + '<button class="x" type="button" title="Delete from cloud" aria-label="Delete from cloud">\u2715</button>'
         + '</div>';
-      var pb = it.querySelector('.wp-pull'); if(pb) pb.addEventListener('click', function(){ pullWaypoint(r.id, r.name); });
+      var pb = it.querySelector('.wp-pull'); if(pb) pb.addEventListener('click', function(){ wlibPull(r); });
+      var vb = it.querySelector('.v'); if(vb) vb.addEventListener('click', function(){ wlibToggleKind(r); });
       var xB = it.querySelector('.x'); var armed=false, t;
       xB.addEventListener('click', function(){
         if(!armed){ armed=true; xB.textContent='Delete?'; xB.classList.add('arm'); t=setTimeout(function(){ armed=false; xB.textContent='\u2715'; xB.classList.remove('arm'); }, 2500); return; }
         clearTimeout(t); xB.textContent='\u2026';
-        cloudDelete('waypoints', r.id).then(renderCloudWaypoints).catch(function(e){ wpFlash('Delete failed \u2014 ' + cloudErr(e)); });
+        cloudDelete('waypoints', r.id).then(function(){ wlibItems = wlibItems.filter(function(x){ return String(x.id)!==String(r.id); }); wlibRender(); }).catch(function(e){ wlibMsg('Delete failed \u2014 ' + cloudErr(e)); });
       });
-      wpCloudList.appendChild(it);
+      list.appendChild(it);
     });
   }
+  async function wlibPull(r){
+    var rec;
+    try{ rec = await cloudGet('waypoints', r.id); }
+    catch(e){ wlibMsg('Pull failed \u2014 ' + cloudErr(e)); return; }
+    var res = pullWaypointMerge(rec);
+    if(res==='bad'){ wlibMsg('Pull failed \u2014 empty point'); return; }
+    if(!ov.mywpts){ ov.mywpts=true; saveOv(); applyLayers(); syncMenu(); }
+    renderWpts();
+    wlibRender();
+  }
+  async function wlibToggleKind(r){
+    var next = (r.kind==='village') ? 'wpt' : 'village';
+    var rec = {}; for(var k in r){ if(Object.prototype.hasOwnProperty.call(r,k)) rec[k]=r[k]; }
+    rec.kind = next;
+    try{ await cloudPut('waypoints', String(r.id), rec); }
+    catch(e){ wlibMsg('Update failed \u2014 ' + cloudErr(e)); return; }
+    r.kind = next;
+    var localW = wpts.filter(function(w){ return String(w.id)===String(r.id); })[0];
+    if(localW){ if(next==='village') localW.kind='village'; else delete localW.kind; saveWpts(); renderWpts(); }
+    wlibRender();
+  }
+  async function wlibLoad(){
+    if(!cloudKey()){ wlibMsg('Set a library key in Settings to use the cloud library.'); return; }
+    wlibMsg('Loading\u2026');
+    try{ wlibItems = await cloudList('waypoints'); }
+    catch(e){ wlibItems=[]; wlibMsg('Couldn\u2019t reach cloud \u2014 ' + cloudErr(e)); return; }
+    wlibItems.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
+    wlibRender();
+  }
+  function wlibReloadIfOpen(){ if(wlibOpen()) wlibLoad(); }
+  function openWlib(){
+    var o=$w('nmWlibOverlay'); if(!o) return;
+    var s=$w('nmWlibSearch'); if(s) s.value=''; wlibQuery='';
+    o.classList.add('active');
+    wlibLoad();
+  }
+  function closeWlib(){ var o=$w('nmWlibOverlay'); if(o) o.classList.remove('active'); }
   wpCloudSave = document.getElementById('wpCloudSave');
   wpCloudRefresh = document.getElementById('wpCloudRefresh');
-  wpCloudList = document.getElementById('wpCloudList');
   if(wpCloudSave) wpCloudSave.addEventListener('click', pushWaypointsToCloud);
-  if(wpCloudRefresh) wpCloudRefresh.addEventListener('click', renderCloudWaypoints);
-  if(wpCloudList) wpFlash(cloudKey() ? 'Tap \u27f3 to load your cloud points.' : 'Set a library key in Settings to pull points.');
+  if(wpCloudRefresh) wpCloudRefresh.addEventListener('click', openWlib);
+  function wlibInit(){
+    var cl=$w('nmWlibClose'), cl2=$w('nmWlibClose2'), rf=$w('nmWlibRefresh'), ovv=$w('nmWlibOverlay'), s=$w('nmWlibSearch');
+    if(cl) cl.addEventListener('click', closeWlib);
+    if(cl2) cl2.addEventListener('click', closeWlib);
+    if(rf) rf.addEventListener('click', wlibLoad);
+    if(ovv) ovv.addEventListener('click', function(e){ if(e.target===ovv) closeWlib(); });
+    if(s) s.addEventListener('input', function(){ wlibQuery = s.value||''; wlibRender(); });
+    Array.prototype.forEach.call(document.querySelectorAll('.nm-wlib-filter [data-k]'), function(b){
+      b.addEventListener('click', function(){
+        wlibKind = b.getAttribute('data-k')||'all';
+        Array.prototype.forEach.call(document.querySelectorAll('.nm-wlib-filter [data-k]'), function(x){ x.classList.toggle('on', x===b); });
+        wlibRender();
+      });
+    });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape' && wlibOpen()) closeWlib(); });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', wlibInit); else wlibInit();
   if(libHead){
     var LIB_OPEN='nmplotter_lib_open';
     try{ if(localStorage.getItem(LIB_OPEN)==='0') libEl.classList.add('collapsed'); }catch(_){}
@@ -10220,6 +10316,30 @@ if (navigator.storage && navigator.storage.persist) {
     <div class="cr-modal terrdl-modal">
       <div class="cr-head"><h3>Offline terrain</h3><button class="cr-close" id="terrDlClose" type="button" aria-label="Close">&times;</button></div>
       <div class="cr-body" id="terrDlBody"></div>
+    </div>
+  </div>
+  <div class="cr-overlay" id="nmWlibOverlay">
+    <div class="cr-modal nm-wlib-modal">
+      <div class="cr-head">
+        <h3>Waypoint Library</h3>
+        <button class="cr-close" id="nmWlibClose" type="button" aria-label="Close">&#215;</button>
+      </div>
+      <div class="cr-body">
+        <div class="nm-wlib-tools">
+          <input id="nmWlibSearch" type="search" autocomplete="off" placeholder="Search by name">
+          <div class="nm-wlib-filter">
+            <button type="button" data-k="all" class="on">All</button>
+            <button type="button" data-k="wpt">Waypoints</button>
+            <button type="button" data-k="village">Villages</button>
+          </div>
+        </div>
+        <div class="nm-wlib-count" id="nmWlibCount"></div>
+        <div class="nm-wlib-list" id="nmWlibList"></div>
+        <div class="cr-actions">
+          <button class="ghost" id="nmWlibRefresh" type="button">Refresh</button>
+          <button class="ghost" id="nmWlibClose2" type="button">Close</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="cr-overlay" id="nmPhotoOverlay">
