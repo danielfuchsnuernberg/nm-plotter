@@ -2909,10 +2909,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rwy-num{display:inline-block;transform:translate(-50%,-50%);background:#eef2f7;color:#0a0e13;font-family:var(--mono);
     font-size:10px;font-weight:800;line-height:1;padding:2px 4px;border-radius:3px;border:1px solid #0a0e13;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.5)}
   .uw-edit{min-width:196px;max-width:226px}
-  .uw-edit input{width:100%;background:var(--bg-2);border:1px solid var(--border-strong);border-radius:6px;color:var(--text);font-size:16px;padding:8px 9px;margin-bottom:7px;outline:none}
+  .uw-edit input{width:100%;background:var(--bg-2);border:1px solid var(--border-strong);border-radius:5px;color:var(--text);font-size:13px;padding:7px 9px;margin-bottom:6px;outline:none}
   .uw-edit input:focus{border-color:var(--accent-2)}
   .uw-row{display:flex;gap:6px;align-items:stretch}
-  .uw-edit button{border:1px solid var(--border-strong);background:var(--bg-2);color:var(--text-dim);border-radius:6px;padding:9px 8px;font-size:13px;font-weight:700;cursor:pointer}
+  .uw-edit button{border:1px solid var(--border-strong);background:var(--bg-2);color:var(--text-dim);border-radius:5px;padding:8px;font-size:12px;font-weight:600;cursor:pointer}
   .uw-edit .save{flex:1;color:#0a0e13;background:var(--accent);border-color:var(--accent)}
   .uw-edit .route{flex:1;color:var(--accent-2)}
   .uw-edit .del{flex:0 0 auto;width:40px;padding:9px 0;color:var(--bad);border-color:#5a2833;display:inline-flex;align-items:center;justify-content:center}
@@ -3204,7 +3204,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-acts .v:hover{border-color:var(--accent-2);color:var(--accent-2)}
   .wplib-acts .v.on{color:var(--accent-2)}
   /* Cloud Waypoint Library modal */
-  .nm-wlib-modal{width:640px}
+  .nm-wlib-modal{width:640px;height:min(80vh,600px)}
+  .nm-wlib-modal .cr-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .nm-wlib-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
   .nm-wlib-tools input[type=search]{flex:1 1 180px;min-width:0;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border-strong);border-radius:5px;padding:8px 10px;font-family:var(--sans);font-size:13px}
   .nm-wlib-tools input[type=search]:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);outline:none}
@@ -3213,11 +3214,14 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .nm-wlib-filter button:hover{color:var(--text)}
   .nm-wlib-filter button.on{background:var(--bg-2);border-color:var(--accent);color:var(--accent)}
   .nm-wlib-count{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:4px}
-  .nm-wlib-list{max-height:52vh;overflow-y:auto;margin:0 -4px}
+  .nm-wlib-sort{padding:6px 9px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;border-radius:5px;background:transparent;border:1px solid var(--border-strong);color:var(--text-dim);cursor:pointer;flex:0 0 auto;display:inline-flex;align-items:center;gap:4px}
+  .nm-wlib-sort:hover{color:var(--text)}
+  .nm-wlib-list{flex:1;min-height:0;overflow-y:auto;margin:0 -4px}
   .nm-wlib-list .wplib-item{padding-left:8px;padding-right:8px}
   .wplib-acts .ondev{color:var(--text-faint);cursor:default;border-color:transparent;opacity:.7}
   .wplib-empty.sm{padding:2px 2px 4px;font-size:10.5px}
-  .wplib-edit{display:flex;flex-direction:column;gap:6px;width:100%}
+  .wplib-edit{display:flex;flex-direction:column;gap:5px;width:100%}
+  .wplib-edit input{font-size:13px;border-radius:5px;padding:7px 9px}
   .wplib-erow{display:flex;gap:6px}
   .wplib-erow button{flex:1}
   .rt-add input.name{flex:1}
@@ -9431,7 +9435,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     wlibRender();
   }
   /* ===== Cloud Waypoint Library (modal browser) ===== */
-  var wlibItems = [], wlibKind = 'all', wlibQuery = '';
+  var wlibItems = [], wlibKind = 'all', wlibQuery = '', wlibSort = 'az';
   function $w(id){ return document.getElementById(id); }
   function wlibOpen(){ var o=$w('nmWlibOverlay'); return !!(o && o.classList.contains('active')); }
   function wlibMsg(txt){ var l=$w('nmWlibList'); if(l) l.innerHTML = '<div class="wplib-empty">' + escapeHtml(txt) + '</div>'; var c=$w('nmWlibCount'); if(c) c.textContent=''; }
@@ -9445,6 +9449,8 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       if(q && String(r.name||'').toLowerCase().indexOf(q)<0) return false;
       return true;
     });
+    rows.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
+    if(wlibSort==='za') rows.reverse();
     var c=$w('nmWlibCount');
     if(c) c.textContent = rows.length + ' of ' + wlibItems.length + ' point' + (wlibItems.length===1?'':'s');
     if(!rows.length){ list.innerHTML = '<div class="wplib-empty">' + (wlibItems.length? 'No matches.' : 'No cloud points yet. Tap \u2601 Save to Cloud.') + '</div>'; return; }
@@ -9525,6 +9531,8 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     if(rf) rf.addEventListener('click', wlibLoad);
     if(ovv) ovv.addEventListener('click', function(e){ if(e.target===ovv) closeWlib(); });
     if(s) s.addEventListener('input', function(){ wlibQuery = s.value||''; wlibRender(); });
+    var sb=$w('nmWlibSort');
+    if(sb) sb.addEventListener('click', function(){ wlibSort = (wlibSort==='az')?'za':'az'; sb.textContent = (wlibSort==='az')?'A\u2013Z':'Z\u2013A'; wlibRender(); });
     Array.prototype.forEach.call(document.querySelectorAll('.nm-wlib-filter [data-k]'), function(b){
       b.addEventListener('click', function(){
         wlibKind = b.getAttribute('data-k')||'all';
@@ -10330,6 +10338,7 @@ if (navigator.storage && navigator.storage.persist) {
             <button type="button" data-k="wpt">Waypoints</button>
             <button type="button" data-k="village">Villages</button>
           </div>
+          <button class="nm-wlib-sort" id="nmWlibSort" type="button" title="Toggle sort direction">A&#8211;Z</button>
         </div>
         <div class="nm-wlib-count" id="nmWlibCount"></div>
         <div class="nm-wlib-list" id="nmWlibList"></div>
