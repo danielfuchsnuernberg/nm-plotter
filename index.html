@@ -3537,6 +3537,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <button class="wplib-iconbtn" id="rtlibCloudSave" type="button" title="Save to cloud" aria-label="Save to cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
             <button class="wplib-iconbtn" id="rtlibCloudRefresh" type="button" title="Open library" aria-label="Open library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
           </div>
+          <div class="wplib-cmsg" id="rtCloudMsg"></div>
           <div class="wplib-list" id="rtlibList"></div>
         </div>
       </div>
@@ -3554,6 +3555,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <button class="wplib-iconbtn" id="flCloudSave" type="button" title="Save to cloud" aria-label="Save to cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
             <button class="wplib-iconbtn" id="flCloudRefresh" type="button" title="Open library" aria-label="Open library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
           </div>
+          <div class="wplib-cmsg" id="flCloudMsgLine"></div>
           <div class="wplib-list" id="flogList"></div>
         </div>
       </div>
@@ -4804,11 +4806,9 @@ async function cloudDelete(col, id){ var r = await cloudFetch('/' + (col||'route
       cloudRefreshBtn = document.getElementById('rtlibCloudRefresh'),
       cloudListEl = document.getElementById('rtCloudList');
   function cloudMsgOnBtn(btn, txt){
-    if(!btn) return;
-    if(!btn.getAttribute('data-lbl')) btn.setAttribute('data-lbl', btn.innerHTML);
-    btn.textContent = txt;
-    clearTimeout(btn._t);
-    btn._t = setTimeout(function(){ btn.innerHTML = btn.getAttribute('data-lbl'); }, 1700);
+    var el=document.getElementById('rtCloudMsg'); if(!el) return;
+    el.textContent = txt; el.style.display='block';
+    clearTimeout(el._t); el._t = setTimeout(function(){ el.textContent=''; el.style.display='none'; }, 2600);
   }
   function flashCloudList(txt){ if(cloudListEl) cloudListEl.innerHTML = '<div class="wplib-empty">' + escapeHtml(txt) + '</div>'; }
   async function cloudSaveCurrent(){
@@ -5259,11 +5259,9 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
   // destructive; deduped by the flight's start-time id, same as the seeds) ----
   function flDate(ts){ try{ return new Date(ts).toLocaleDateString(undefined,{day:'numeric',month:'short'}); }catch(_){ return ''; } }
   function flCloudMsg(btn, txt){
-    if(!btn) return;
-    if(!btn.getAttribute('data-lbl')) btn.setAttribute('data-lbl', btn.innerHTML);
-    btn.textContent = txt;
-    clearTimeout(btn._t);
-    btn._t = setTimeout(function(){ btn.innerHTML = btn.getAttribute('data-lbl'); }, 1900);
+    var el=document.getElementById('flCloudMsgLine'); if(!el) return;
+    el.textContent = txt; el.style.display='block';
+    clearTimeout(el._t); el._t = setTimeout(function(){ el.textContent=''; el.style.display='none'; }, 2600);
   }
   function flFlash(txt){ if(flCloudList) flCloudList.innerHTML = '<div class="wplib-empty">' + escapeHtml(txt) + '</div>'; }
   async function pushFlightsToCloud(){
