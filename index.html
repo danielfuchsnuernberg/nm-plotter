@@ -3237,7 +3237,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-acts .ondev{color:var(--text-faint);cursor:default;border-color:transparent;opacity:.7}
   .wplib-empty.sm{padding:2px 2px 4px;font-size:10.5px}
   .wplib-edit{display:flex;flex-direction:column;gap:5px;width:100%}
-  .wplib-edit input{font-size:13px;border-radius:5px;padding:7px 9px}
+  .wplib-edit input{width:100%;box-sizing:border-box;background:var(--bg-2);color:var(--text);border:1px solid var(--border-strong);border-radius:5px;padding:7px 9px;font-family:var(--mono);font-size:13px;outline:none;color-scheme:dark}
+  .wplib-edit input:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .wplib-edit input.name{font-family:var(--sans);text-transform:uppercase;letter-spacing:.04em;color:var(--accent);font-weight:600}
+  .wplib-edit input.name::placeholder{color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0}
   .wplib-erow{display:flex;gap:6px}
   .wplib-erow button{flex:1}
   .wplib-sched{color:var(--accent);font-weight:600}
@@ -5198,13 +5201,14 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
         it.innerHTML = '<div class="wplib-info">'
           + '<div class="wplib-name">'+escapeHtml(f.name||'Flight')+'</div>'
           + '<div class="wplib-co">'+fmtDur(dur)+' \u00b7 '+nm.toFixed(1)+' NM'+(alt!=null?(' \u00b7 \u2191'+Math.round(alt).toLocaleString()+' ft'):'')+' \u00b7 '+f.points.length+' pts'+(gaps?(' \u00b7 '+gaps+' gap'+(gaps>1?'s':'')):'')+'</div>'
+          + (f.note?('<div class="wplib-note">'+escapeHtml(f.note)+'</div>'):'')
           + '</div>'
           + '<div class="wplib-acts">'
           + '<button class="r fl-show" type="button" title="Show flown track on the map">'+(shownId===f.id?'Hide':'Show')+'</button>'
           + '<button class="e fl-prof" type="button" title="Terrain profile of the flown track">Profile</button>'
           + '<button class="e fl-debrief" type="button" title="Debrief: map + scrubbable profile">Debrief</button>'
           + '<button class="e fl-gpx" type="button" title="Export GPX">GPX</button>'
-          + '<button class="e fl-ren" type="button" title="Rename">Rename</button>'
+          + '<button class="e fl-ren" type="button" title="Edit name &amp; remarks">Edit</button>'
           + '<button class="x" type="button" title="Delete" aria-label="Delete">\u2715</button>'
           + '</div>';
         it.querySelector('.fl-show').addEventListener('click', ()=>{
@@ -5231,12 +5235,26 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
     });
   }
   function renameInline(it, f){
-    it.innerHTML = '<div class="wplib-edit"><input class="name" type="text" maxlength="48" value="'+escapeAttr(f.name||'')+'"><div class="wplib-erow"><button class="ghost small sv" type="button">Save</button><button class="ghost small cx" type="button">Cancel</button></div></div>';
-    const nm = it.querySelector('.name');
+    it.innerHTML = '<div class="wplib-edit"><input class="name" type="text" maxlength="48" value="'+escapeAttr(f.name||'')+'" placeholder="Name"><input class="rmk" type="text" value="'+escapeAttr(f.note||'')+'" placeholder="Remarks (optional)"><div class="wplib-erow"><button class="ghost small sv" type="button">Save</button><button class="ghost small cx" type="button">Cancel</button></div></div>';
+    const nm = it.querySelector('.name'), rk = it.querySelector('.rmk');
     it.querySelector('.cx').addEventListener('click', renderLog);
-    it.querySelector('.sv').addEventListener('click', ()=>{ f.name=(nm.value.trim()||f.name).slice(0,48); idbPut(f).then(renderLog); });
+    it.querySelector('.sv').addEventListener('click', ()=>{ f.name=(nm.value.trim()||f.name||'Flight').slice(0,48); f.note=(rk.value||'').trim(); idbPut(f).then(renderLog); cloudFlightSync(f); });
     setTimeout(()=>{ try{ nm.focus(); nm.select(); }catch(_){} }, 40);
   }
+  // Push a flight's edited name/remarks to the cloud, but only if it already
+  // lives there (light metadata check first, so we never auto-upload a
+  // device-only flight or its whole track just to sync a note).
+  function cloudFlightSync(f){
+    if(typeof cloudList!=='function' || typeof cloudPut!=='function' || !cloudKey()) return;
+    cloudList('flights').then(function(items){
+      if(!items.some(function(x){ return String(x.id)===String(f.id); })) return;
+      return cloudPut('flights', String(f.id), f);
+    }).catch(function(){});
+  }
+  // Mirror a name/remarks edit made in the Library back onto the device record.
+  window.NMFlightUpdate = function(id, name, note){
+    return idbGet(Number(id)).then(function(f){ if(!f) return null; f.name=name; f.note=note; return idbPut(f).then(function(){ renderLog(); return f; }); }).catch(function(){ return null; });
+  };
   // ---- Cloud push / pull for flight logs (explicit; pull = add/merge, never
   // destructive; deduped by the flight's start-time id, same as the seeds) ----
   function flDate(ts){ try{ return new Date(ts).toLocaleDateString(undefined,{day:'numeric',month:'short'}); }catch(_){ return ''; } }
@@ -9661,7 +9679,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   function wlibRenderFlights(){
     var list=$w('nmWlibList'); if(!list) return;
     var q=wlibQuery.trim().toLowerCase();
-    var rows=wlibItems.filter(function(r){ return !q || String(r.name||('Flight '+r.id)).toLowerCase().indexOf(q)>=0; });
+    var rows=wlibItems.filter(function(r){ return !q || (String(r.name||('Flight '+r.id))+' '+(r.note||'')).toLowerCase().indexOf(q)>=0; });
     rows.sort(function(a,b){ return Number(b.id)-Number(a.id); });
     var c=$w('nmWlibCount'); if(c) c.textContent = rows.length+' of '+wlibItems.length+' flight'+(wlibItems.length===1?'':'s');
     if(!rows.length){ list.innerHTML='<div class="wplib-empty">'+(wlibItems.length?'No matches.':'No cloud flights yet. Save a flight to the cloud.')+'</div>'; return; }
@@ -9671,15 +9689,35 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       it.innerHTML='<div class="wplib-info">'
         +'<div class="wplib-name">'+escapeHtml(r.name||('Flight '+r.id))+'</div>'
         +'<div class="wplib-co">cloud'+escapeHtml(wlibWhen(r.id))+'</div>'
+        +(r.note?('<div class="wplib-note">'+escapeHtml(r.note)+'</div>'):'')
         +'</div>'
         +'<div class="wplib-acts">'
         +'<button class="r fl-pull" type="button" title="Add this flight to this device">Pull</button>'
         +'<button class="x" type="button" title="Delete from cloud" aria-label="Delete from cloud">\u2715</button>'
         +'</div>';
       it.querySelector('.fl-pull').addEventListener('click', function(){ if(window.NMFlightPull){ closeWlib(); window.NMFlightPull(r.id, r.name); } });
+      it.addEventListener('dblclick', function(e){ if(e.target.closest && e.target.closest('.wplib-acts')) return; e.preventDefault(); wlibFlightEdit(it, r); });
+      it.title='Double-click to edit remarks';
       wlibArmDelete(it.querySelector('.x'), 'flights', r);
       list.appendChild(it);
     });
+  }
+  function wlibFlightEdit(it, r){
+    it.innerHTML='<div class="wplib-edit">'
+      +'<input class="name" type="text" maxlength="48" value="'+escapeAttr(r.name||'')+'" placeholder="Name">'
+      +'<input class="rmk" type="text" value="'+escapeAttr(r.note||'')+'" placeholder="Remarks (optional)">'
+      +'<div class="wplib-erow"><button class="ghost small sv" type="button">Save</button><button class="ghost small cx" type="button">Cancel</button></div>'
+      +'</div>';
+    var nm=it.querySelector('.name'), rk=it.querySelector('.rmk');
+    it.querySelector('.cx').addEventListener('click', wlibRender);
+    it.querySelector('.sv').addEventListener('click', function(){ wlibSaveFlight(r, (nm.value.trim()||r.name||('Flight '+r.id)).slice(0,48), (rk.value||'').trim()); });
+    setTimeout(function(){ try{ nm.focus(); }catch(_){ } },40);
+  }
+  async function wlibSaveFlight(r, name, note){
+    r.name=name; r.note=note;
+    try{ await cloudPut('flights', String(r.id), r); }catch(e){ wlibMsg('Update failed \u2014 '+cloudErr(e)); return; }
+    if(window.NMFlightUpdate){ try{ await window.NMFlightUpdate(r.id, name, note); }catch(_){ } }
+    wlibRender();
   }
   function wlibRenameCloud(col, r, it){
     var isRt=(col==='routes');
@@ -9803,7 +9841,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     if(!cloudKey()){ wlibMsg('Set a library key in Settings to use the cloud library.'); return; }
     wlibMsg('Loading\u2026');
     var col = (wlibType==='routes')?'routes':(wlibType==='flights')?'flights':'waypoints';
-    var full = (wlibType==='waypoints' || wlibType==='routes');
+    var full = (wlibType==='waypoints' || wlibType==='routes' || wlibType==='flights');
     try{ wlibItems = await cloudList(col, full); }
     catch(e){ wlibItems=[]; wlibMsg('Couldn\u2019t reach cloud \u2014 ' + cloudErr(e)); return; }
     if(wlibType==='waypoints') wlibItems.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
