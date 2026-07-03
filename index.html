@@ -3134,6 +3134,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .af-route{flex:1;background:var(--accent);color:#0a0e13;border:none;border-radius:5px;padding:7px 10px;font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
   .af-route:hover{background:#ffc24a}
   .af-edit{flex:0 0 auto;background:transparent;border:none;color:var(--text-dim);font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.04em;cursor:pointer;padding:7px 2px}
+  .wpt-card .af-h .af-nm{font-size:13px;color:var(--text);font-weight:700}
+  .af-acts .wpt-del{color:var(--bad)}
   .af-edit:hover{color:var(--accent)}
 
   /* ===== Saved Waypoints library (left panel) ===== */
@@ -7601,6 +7603,7 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     document.addEventListener('keydown', onKey);
     document.body.appendChild(ov);
   }
+  window.NMDocView = openChartViewer;
   function wireCharts(root, f, pop){
     const wrap = root.querySelector('.af-charts'); if(!wrap) return;
     if(!window.NMCharts || !window.NMCharts.available){ wrap.remove(); if(pop) pop.update(); return; }
@@ -9305,8 +9308,84 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       });
     });
   }
+  function wptCardHtml(w){
+    var isVil=(w.kind==='village');
+    var chips='<span class="af-chip">'+(isVil?'Village':'Waypoint')+'</span>'+
+      '<span class="af-chip uw-elev">Elev&nbsp;<b>\u2026</b></span>';
+    var coord='<div class="af-coord"><span class="dms">'+escapeHtml(toDms(w.lat,true)+'  '+toDms(w.lon,false))+'</span><span class="dec">'+w.lat.toFixed(5)+', '+w.lon.toFixed(5)+'</span></div>';
+    var docs='<div class="af-charts"><div class="af-charts-h"><span>Docs</span><button type="button" class="af-charts-add">+ Add</button></div><div class="af-charts-list"></div><input type="file" class="af-charts-file" accept="image/*,application/pdf" multiple hidden></div>';
+    var notes='<div class="af-notes"><div class="af-notes-h"><span>My notes</span><span class="af-notes-saved">Saved</span></div><textarea class="af-notes-ta" rows="2" placeholder="Personal notes \u2014 hazards, contacts, approach tips\u2026"></textarea></div>';
+    return '<div class="af-card wpt-card">'+
+      '<div class="af-h"><span class="af-nm">'+escapeHtml(w.name||('WP '+w.id))+'</span></div>'+
+      '<div class="af-meta">'+chips+'</div>'+
+      coord+docs+notes+
+      '<div class="af-acts"><button type="button" class="af-route">+ Add to route</button><button type="button" class="af-edit wpt-del">Delete</button></div>'+
+      '</div>';
+  }
+  function wireWptDocs(root, key, pop){
+    var wrap=root.querySelector('.af-charts'); if(!wrap) return;
+    if(!window.NMCharts || !window.NMCharts.available){ wrap.remove(); if(pop) pop.update(); return; }
+    var listEl=wrap.querySelector('.af-charts-list'), addBtn=wrap.querySelector('.af-charts-add'),
+        fileIn=wrap.querySelector('.af-charts-file'), hSpan=wrap.querySelector('.af-charts-h span'), urls=[];
+    function clearUrls(){ urls.forEach(function(u){ try{ URL.revokeObjectURL(u); }catch(e){} }); urls=[]; }
+    function render(){
+      clearUrls();
+      window.NMCharts.list(key).then(function(items){
+        items.sort(function(a,b){ return a.addedAt-b.addedAt; });
+        if(hSpan) hSpan.textContent='Docs'+(items.length?' ('+items.length+')':'');
+        if(!items.length){ listEl.innerHTML='<div class="af-charts-none">None yet \u2014 add a photo, PDF or document for offline use.</div>'; if(pop) pop.update(); return; }
+        listEl.innerHTML='';
+        items.forEach(function(it){
+          var url=URL.createObjectURL(it.blob); urls.push(url);
+          var cell=document.createElement('div'); cell.className='af-chart';
+          var thumb=(it.type==='pdf')?'<div class="af-chart-pdf">PDF</div>':'<img class="af-chart-thumb" src="'+url+'" alt="">';
+          cell.innerHTML=thumb+'<div class="af-chart-nm">'+escapeHtml(it.name||'')+'</div><button type="button" class="af-chart-del" title="Delete">\u00d7</button>';
+          cell.addEventListener('click',function(e){ if(e.target.classList.contains('af-chart-del')) return; if(window.NMDocView) window.NMDocView(it); });
+          cell.querySelector('.af-chart-del').addEventListener('click',function(e){ e.stopPropagation(); if(!confirm('Delete \u201c'+(it.name||'this file')+'\u201d?')) return; window.NMCharts.del(it.id).then(render).catch(render); });
+          listEl.appendChild(cell);
+        });
+        if(pop) pop.update();
+      }).catch(function(){ listEl.innerHTML='<div class="af-charts-none">Docs unavailable on this device.</div>'; if(pop) pop.update(); });
+    }
+    addBtn.addEventListener('click',function(){ fileIn.click(); });
+    L.DomEvent.disableClickPropagation(wrap);
+    fileIn.addEventListener('change',function(){
+      var files=Array.prototype.slice.call(fileIn.files||[]); if(!files.length) return;
+      listEl.innerHTML='<div class="af-chart-busy">Saving\u2026</div>'; if(pop) pop.update();
+      Promise.all(files.map(function(file){ return window.NMCharts.add(key,file); })).then(function(){ fileIn.value=''; render(); }).catch(function(){ render(); });
+    });
+    if(pop && pop.on) pop.on('remove', clearUrls);
+    render();
+  }
+  function openWptCard(w, latlng){
+    var el=document.createElement('div'); el.innerHTML=wptCardHtml(w);
+    var pop=L.popup({className:'map-add-popup',closeButton:true,autoPan:true,offset:[0,-6]}).setLatLng(latlng||[w.lat,w.lon]).setContent(el).openOn(map);
+    var elevB=el.querySelector('.uw-elev b');
+    if(elevB){
+      if(w.elevFt!==undefined && w.elevFt!==null){ elevB.textContent=w.elevFt.toLocaleString()+' ft'; }
+      else if(typeof window.NMElev==='function'){ window.NMElev(w.lat,w.lon).then(function(ft){ w.elevFt=(ft==null||!isFinite(ft))?null:Math.round(ft); elevB.textContent=(w.elevFt==null)?'\u2014':(w.elevFt.toLocaleString()+' ft'); }).catch(function(){ elevB.textContent='\u2014'; }); }
+      else { elevB.textContent='\u2014'; }
+    }
+    var ta=el.querySelector('.af-notes-ta');
+    if(ta){
+      ta.value=w.note||'';
+      var savedTag=el.querySelector('.af-notes-saved'), svT=null;
+      ta.addEventListener('input',function(){ w.note=ta.value; saveWpts(); if(savedTag){ savedTag.classList.add('show'); clearTimeout(svT); svT=setTimeout(function(){ savedTag.classList.remove('show'); },1200); } });
+      ['keydown','keyup','keypress'].forEach(function(ev){ ta.addEventListener(ev,function(e){ L.DomEvent.stopPropagation(e); }); });
+      L.DomEvent.disableScrollPropagation(ta);
+      ta.addEventListener('blur',function(){ if(typeof renderLib==='function') renderLib(); });
+    }
+    var rb=el.querySelector('.af-route');
+    if(rb) rb.addEventListener('click',function(){ if(window.addFieldToRoute) window.addFieldToRoute(w.name||('WP '+w.id), w.lat.toFixed(6)+', '+w.lon.toFixed(6)); map.closePopup(pop); });
+    var delB=el.querySelector('.wpt-del');
+    if(delB) delB.addEventListener('click',function(){ var i=wpts.indexOf(w); if(i>=0){ wpts.splice(i,1); saveWpts(); renderWpts(); } map.closePopup(pop); });
+    wireWptDocs(el, 'WPT:'+w.id, pop);
+    return pop;
+  }
   function openWptEditor(w,latlng){
-    var isNew=!w.id; if(isNew) w.id=++wptSeq;
+    var isNew=!w.id;
+    if(!isNew) return openWptCard(w,latlng);
+    w.id=++wptSeq;
     var el=document.createElement('div'); el.className='uw-edit';
     el.innerHTML='<input class="nm" placeholder="Name" value="'+escapeAttr(w.name||'')+'">'+
       '<div class="af-coord"><span class="dms">'+escapeHtml(toDms(w.lat,true)+'  '+toDms(w.lon,false))+'</span><span class="dec">'+w.lat.toFixed(5)+', '+w.lon.toFixed(5)+'</span></div>'+
@@ -9382,14 +9461,14 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       '<div class="wplib-acts">'+
         '<button class="loc" type="button" title="Show on map" aria-label="Show on map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>'+
         '<button class="r" type="button" title="Add to current route">&#8594; Route</button>'+
-        '<button class="e" type="button" title="Edit">Edit</button>'+
         '<button class="x" type="button" title="Delete" aria-label="Delete">&#10005;</button>'+
       '</div>';
     it.querySelector('.loc').addEventListener('click',function(){ libFlyTo(w); });
     it.querySelector('.r').addEventListener('click',function(){
       if(window.addFieldToRoute) window.addFieldToRoute(libNameOf(w), w.lat.toFixed(6)+', '+w.lon.toFixed(6));
     });
-    it.querySelector('.e').addEventListener('click',function(){ libEditInline(it,w); });
+    it.addEventListener('dblclick',function(e){ if(e.target.closest && e.target.closest('.wplib-acts')) return; e.preventDefault(); libEditInline(it,w); });
+    it.title='Double-click to edit';
     var xB=it.querySelector('.x'), armed=false, t;
     xB.addEventListener('click',function(){
       if(!armed){ armed=true; xB.textContent='Delete?'; xB.classList.add('arm'); t=setTimeout(function(){ armed=false; xB.textContent='\u2715'; xB.classList.remove('arm'); },2500); return; }
@@ -9557,12 +9636,12 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
         + '<div class="wplib-acts">'
         + '<button class="v'+(isVil?' on':'')+'" type="button" title="'+(isVil?'Make a regular waypoint':'Mark as village')+'" aria-label="Toggle village"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg></button>'
         + (here ? '<button class="ondev" type="button" disabled title="Already on this device">On device</button>' : '<button class="r wp-pull" type="button" title="Add this point to this device">Pull</button>')
-        + '<button class="e" type="button" title="Edit name & note">Edit</button>'
         + '<button class="x" type="button" title="Delete from cloud" aria-label="Delete from cloud">\u2715</button>'
         + '</div>';
       var pb = it.querySelector('.wp-pull'); if(pb) pb.addEventListener('click', function(){ wlibPull(r); });
       var vb = it.querySelector('.v'); if(vb) vb.addEventListener('click', function(){ wlibToggleKind(r); });
-      var eB = it.querySelector('.e'); if(eB) eB.addEventListener('click', function(){ wlibEditInline(it, r); });
+      it.addEventListener('dblclick', function(e){ if(e.target.closest && e.target.closest('.wplib-acts')) return; e.preventDefault(); wlibEditInline(it, r); });
+      it.title='Double-click to edit';
       var xB = it.querySelector('.x'); var armed=false, t;
       xB.addEventListener('click', function(){
         if(!armed){ armed=true; xB.textContent='Delete?'; xB.classList.add('arm'); t=setTimeout(function(){ armed=false; xB.textContent='\u2715'; xB.classList.remove('arm'); }, 2500); return; }
