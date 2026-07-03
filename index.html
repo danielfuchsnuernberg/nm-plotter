@@ -3201,11 +3201,18 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-vtog[aria-pressed="true"]{background:var(--bg-2);border-color:var(--accent-2);color:var(--accent-2)}
   .wplib-saveas{display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .wplib-saveas .lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
-  .wplib-seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:5px;overflow:hidden}
-  .wplib-seg button{padding:5px 12px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;background:transparent;border:none;color:var(--text-dim);cursor:pointer}
+  .wplib-seg{display:inline-flex;height:28px;border:1px solid var(--border-strong);border-radius:5px;overflow:hidden}
+  .wplib-seg button{display:inline-flex;align-items:center;justify-content:center;height:100%;padding:0 12px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;background:transparent;border:none;color:var(--text-dim);cursor:pointer}
   .wplib-seg button+button{border-left:1px solid var(--border-strong)}
   .wplib-seg button.on{background:var(--bg-2);color:var(--accent)}
   .wplib-seg #wplibModeVil.on{color:var(--accent-2)}
+  .wplib-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .wplib-toolbar .lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
+  .wplib-icons{display:inline-flex;gap:6px;margin-left:auto}
+  .wplib-iconbtn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:28px;padding:0;border:1px solid var(--border-strong);border-radius:5px;background:transparent;color:var(--text-dim);cursor:pointer}
+  .wplib-iconbtn:hover{color:var(--text);border-color:var(--accent)}
+  .wplib-iconbtn svg{width:15px;height:15px;display:block}
+  .wplib-cmsg{display:none;font-size:10px;letter-spacing:.04em;color:var(--text-dim);margin:-4px 2px 10px}
   .wplib-acts .v{padding:4px 6px;color:var(--text-faint)}
   .wplib-acts .v svg{width:14px;height:14px;display:block}
   .wplib-acts .v:hover{border-color:var(--accent-2);color:var(--accent-2)}
@@ -3489,22 +3496,21 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <input class="coord" id="wplibCoord" type="text" placeholder="-6.7531, 146.1058">
             <button class="ghost small" id="wplibAdd" type="button">Save</button>
           </div>
-          <div class="wplib-saveas">
+          <div class="wplib-toolbar">
             <span class="lbl">Save as</span>
             <span class="wplib-seg" role="group" aria-label="Save as category">
               <button class="on" id="wplibModeWpt" type="button">Waypoint</button>
               <button id="wplibModeVil" type="button">Village</button>
             </span>
-          </div>
-          <div class="wplib-ocr">
-            <button class="ghost small ocr-btn" id="wplibPhoto" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Read coordinates from photo</button>
+            <span class="wplib-icons">
+              <button class="wplib-iconbtn" id="wplibPhoto" type="button" title="Read coordinates from photo" aria-label="Read coordinates from photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+              <button class="wplib-iconbtn" id="wpCloudSave" type="button" title="Save to cloud" aria-label="Save to cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
+              <button class="wplib-iconbtn" id="wpCloudRefresh" type="button" title="Waypoint library" aria-label="Waypoint library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
+            </span>
             <input type="file" id="wplibPhotoInput" accept="image/*" style="display:none">
           </div>
+          <div class="wplib-cmsg" id="wpCloudMsg"></div>
           <div class="wplib-list" id="wplibList"></div>
-          <div class="rt-cloud-add">
-            <button class="ghost small" id="wpCloudSave" type="button">&#9729; Save to Cloud</button>
-            <button class="ghost small" id="wpCloudRefresh" type="button" title="Open your cloud waypoint library">&#9729; Library</button>
-          </div>
         </div>
       </div>
       <div class="wplib" id="rtlib">
@@ -4162,9 +4168,20 @@ let pmtilesLayer = null;
     // zoom in closer it scales the z13 tiles up (roads get a touch chunky) instead
     // of fetching empty z14+ tiles and drawing nothing. maxZoom lets the map keep
     // zooming to 18. Without maxDataZoom the map went blank past z13.
-    pmtilesLayer = protomapsL.leafletLayer({ url: NM_REGION.basemap.file, flavor: NM_REGION.basemap.flavor, lang: 'en', maxDataZoom: NM_REGION.basemap.maxDataZoom, maxZoom: NM_REGION.basemap.maxZoom });
-    map.removeLayer(tileLayer);          // CARTO off — not user-switchable anymore
-    pmtilesLayer.addTo(map);             // vector on, always
+    var bb = NM_REGION.basemap.bbox;
+    pmtilesLayer = protomapsL.leafletLayer({
+      url: NM_REGION.basemap.file, flavor: NM_REGION.basemap.flavor, lang: 'en',
+      maxDataZoom: NM_REGION.basemap.maxDataZoom, maxZoom: NM_REGION.basemap.maxZoom,
+      // Only render vector tiles within the PNG archive's coverage box. Outside
+      // it the vector paints nothing, so the CARTO dark base below shows through
+      // — a dark map worldwide when online, full PNG detail online & offline.
+      bounds: [[bb[1], bb[0]], [bb[3], bb[2]]],
+      zIndex: 3
+    });
+    // Keep CARTO as the worldwide dark base UNDER the vector (don't remove it),
+    // so anywhere outside PNG still shows a dark map when there's a connection.
+    tileLayer.setZIndex(1);
+    pmtilesLayer.addTo(map);             // vector on top, PNG only
   } catch(err){
     console.warn('PMTiles basemap unavailable — staying on CARTO:', err);
     if (!map.hasLayer(tileLayer)) tileLayer.addTo(map);
@@ -9414,11 +9431,9 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   /* ---- Saved Waypoints: cloud sync (mirrors Flight Log; merges by stable id, never clobbers local) ---- */
   var wpCloudSave, wpCloudRefresh, wpCloudList;
   function wpCloudMsg(btn, txt){
-    if(!btn) return;
-    if(!btn.getAttribute('data-lbl')) btn.setAttribute('data-lbl', btn.innerHTML);
-    btn.textContent = txt;
-    clearTimeout(btn._t);
-    btn._t = setTimeout(function(){ btn.innerHTML = btn.getAttribute('data-lbl'); }, 1900);
+    var el=document.getElementById('wpCloudMsg'); if(!el) return;
+    el.textContent = txt; el.style.display='block';
+    clearTimeout(el._t); el._t = setTimeout(function(){ el.textContent=''; el.style.display='none'; }, 2600);
   }
   function wpFlash(txt){ if(wpCloudList) wpCloudList.innerHTML = '<div class="wplib-empty">' + escapeHtml(txt) + '</div>'; }
   async function pushWaypointsToCloud(){
