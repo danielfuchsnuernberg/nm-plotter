@@ -2908,7 +2908,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .nav-name{background:rgba(13,18,25,.92);border:1px solid #6a4a8e;color:#c792ea;font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
   .rwy-num{display:inline-block;transform:translate(-50%,-50%);background:#eef2f7;color:#0a0e13;font-family:var(--mono);
     font-size:10px;font-weight:800;line-height:1;padding:2px 4px;border-radius:3px;border:1px solid #0a0e13;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.5)}
-  .uw-edit{min-width:196px;max-width:226px}
+  .uw-edit{min-width:208px;max-width:240px}
   .uw-edit input{width:100%;background:var(--bg-2);border:1px solid var(--border-strong);border-radius:5px;color:var(--text);font-size:13px;padding:7px 9px;margin-bottom:6px;outline:none}
   .uw-edit input:focus{border-color:var(--accent-2)}
   .uw-row{display:flex;gap:6px;align-items:stretch}
@@ -2916,6 +2916,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .uw-edit .save{flex:1;color:#0a0e13;background:var(--accent);border-color:var(--accent)}
   .uw-edit .route{flex:1;color:var(--accent-2)}
   .uw-edit .del{flex:0 0 auto;width:40px;padding:9px 0;color:var(--bad);border-color:#5a2833;display:inline-flex;align-items:center;justify-content:center}
+  .uw-edit .nm{font-family:var(--sans);font-weight:600;padding-right:26px}
+  .uw-edit .af-coord{margin-top:2px;margin-bottom:8px}
+  .uw-edit .af-meta{margin-bottom:8px}
   .uw-edit .del svg{width:15px;height:15px}
   .ap-item.ap-wpt .ap-icao{color:#e8f0f8}
   .ap-item.ap-wpt .ap-name{color:#e8f0f8;font-weight:700}
@@ -9272,6 +9275,11 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var isNew=!w.id; if(isNew) w.id=++wptSeq;
     var el=document.createElement('div'); el.className='uw-edit';
     el.innerHTML='<input class="nm" placeholder="Name" value="'+escapeAttr(w.name||'')+'">'+
+      '<div class="af-coord"><span class="dms">'+escapeHtml(toDms(w.lat,true)+'  '+toDms(w.lon,false))+'</span><span class="dec">'+w.lat.toFixed(5)+', '+w.lon.toFixed(5)+'</span></div>'+
+      '<div class="af-meta">'+
+        (w.kind==='village' ? '<span class="af-chip">Village</span>' : '')+
+        '<span class="af-chip uw-elev">Elev&nbsp;<b>\u2026</b></span>'+
+      '</div>'+
       '<input class="nt" placeholder="Note (optional)" value="'+escapeAttr(w.note||'')+'">'+
       '<div class="uw-row">'+
         '<button class="save" type="button">Save</button>'+
@@ -9280,6 +9288,12 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       '</div>';
     var pop=L.popup({className:'map-add-popup',closeButton:true,autoPan:true}).setLatLng(latlng).setContent(el).openOn(map);
     var nm=el.querySelector('.nm'), nt=el.querySelector('.nt');
+    var elevB=el.querySelector('.uw-elev b');
+    if(elevB){
+      if(typeof window.NMElev==='function'){
+        window.NMElev(w.lat,w.lon).then(function(ft){ elevB.textContent=(ft==null||!isFinite(ft))?'\u2014':(Math.round(ft).toLocaleString()+' ft'); }).catch(function(){ elevB.textContent='\u2014'; });
+      } else { elevB.textContent='\u2014'; }
+    }
     function commit(){ w.name=(nm.value.trim()||('WP '+w.id)); w.note=nt.value.trim(); if(isNew && wpts.indexOf(w)<0) wpts.push(w); saveWpts(); renderWpts(); }
     el.querySelector('.save').addEventListener('click',function(){ commit(); map.closePopup(pop); });
     el.querySelector('.route').addEventListener('click',function(){ commit(); if(window.addFieldToRoute) window.addFieldToRoute(w.name, w.lat.toFixed(6)+', '+w.lon.toFixed(6)); map.closePopup(pop); });
