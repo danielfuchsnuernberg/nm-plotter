@@ -9960,9 +9960,12 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     if(raw==null) return NaN;
     var s = String(raw).trim();
     if(!s) return NaN;
-    var hemi = 0, hm = s.match(/[NSEWnsew]/);
+    // Strip DMS unit words and symbols first, so their letters (e.g. the "e" in
+    // "deg", or "degrees") can't be mistaken for a hemisphere and flip the sign.
+    var t = s.replace(/degrees?|deg|minutes?|min|seconds?|sec/gi,' ').replace(/[\u00B0'"\u2032\u2033]/g,' ');
+    var hemi = 0, hm = t.match(/[NSEWnsew]/);
     if(hm){ var h=hm[0].toUpperCase(); hemi = (h==='S'||h==='W') ? -1 : 1; }
-    var nums = (s.replace(/[NSEWnsew]/g,' ').match(/-?\d+(?:\.\d+)?/g)||[]).map(Number);
+    var nums = (t.replace(/[NSEWnsew]/g,' ').match(/-?\d+(?:\.\d+)?/g)||[]).map(Number);
     if(!nums.length) return NaN;
     var val;
     if(nums.length===1){ val = nums[0]; }
