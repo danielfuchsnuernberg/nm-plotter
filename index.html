@@ -2908,7 +2908,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .nav-name{background:rgba(13,18,25,.92);border:1px solid #6a4a8e;color:#c792ea;font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
   .rwy-num{display:inline-block;transform:translate(-50%,-50%);background:#eef2f7;color:#0a0e13;font-family:var(--mono);
     font-size:10px;font-weight:800;line-height:1;padding:2px 4px;border-radius:3px;border:1px solid #0a0e13;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.5)}
-  .uw-edit{min-width:208px;max-width:240px}
+  .uw-edit{min-width:208px;max-width:240px;padding-top:16px}
   .uw-edit input{width:100%;background:var(--bg-2);border:1px solid var(--border-strong);border-radius:5px;color:var(--text);font-size:13px;padding:7px 9px;margin-bottom:6px;outline:none}
   .uw-edit input:focus{border-color:var(--accent-2)}
   .uw-row{display:flex;gap:6px;align-items:stretch}
@@ -2916,7 +2916,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .uw-edit .save{flex:1;color:#0a0e13;background:var(--accent);border-color:var(--accent)}
   .uw-edit .route{flex:1;color:var(--accent-2)}
   .uw-edit .del{flex:0 0 auto;width:40px;padding:9px 0;color:var(--bad);border-color:#5a2833;display:inline-flex;align-items:center;justify-content:center}
-  .uw-edit .nm{font-family:var(--sans);font-weight:600;padding-right:26px}
+  .uw-edit .nm{font-family:var(--sans);font-weight:600}
   .uw-edit .af-coord{margin-top:2px;margin-bottom:8px}
   .uw-edit .af-meta{margin-bottom:8px}
   .uw-edit .del svg{width:15px;height:15px}
@@ -3241,6 +3241,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-edit input{font-size:13px;border-radius:5px;padding:7px 9px}
   .wplib-erow{display:flex;gap:6px}
   .wplib-erow button{flex:1}
+  .wplib-item.wplib-hl{animation:wplibHl 1.6s ease-out}
+  @keyframes wplibHl{0%,15%{background:rgba(255,183,0,.28);box-shadow:inset 0 0 0 1px var(--accent)}100%{background:transparent;box-shadow:none}}
   .rt-add input.name{flex:1}
   .rt-add button{flex:0 0 auto}
   .rt-item .wplib-co{color:var(--text-faint)}
@@ -9248,12 +9250,44 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   var navDot=function(){return L.divIcon({className:'',html:'<div class="nav-dot"></div>',iconSize:[12,12],iconAnchor:[6,6]});};
   var navLabel=function(id){return L.divIcon({className:'',html:'<div class="nav-name">'+escapeHtml(id)+'</div>',iconSize:null,iconAnchor:[-9,7]});};
 
+  function wptTipHtml(w){
+    var sub=(w.kind==='village')?'Village':'Waypoint';
+    var elev=(w.elevFt===undefined)?'\u2026':(w.elevFt===null?'\u2014':(w.elevFt.toLocaleString()+' ft'));
+    return '<b>'+escapeHtml(w.name||('WP '+w.id))+'</b>'+
+      '<br><span style="color:#8a9bb0">'+sub+'</span>'+
+      '<br>'+escapeHtml(toDms(w.lat,true)+'  '+toDms(w.lon,false))+
+      '<br>Elev '+elev;
+  }
+  function highlightLibItem(w){
+    if(!libList||!w) return;
+    var it=libList.querySelector('.wplib-item[data-wpid="'+w.id+'"]');
+    if(!it) return;
+    var box=(it.closest?it.closest('.wplib-vbox'):null);
+    if(box && box.style.display==='none'){
+      box.style.display='';
+      var hdr=box.previousElementSibling;
+      if(hdr && hdr.classList.contains('wplib-grp-toggle')) hdr.classList.add('open');
+    }
+    try{ it.scrollIntoView({block:'nearest'}); }catch(_){ }
+    it.classList.remove('wplib-hl'); void it.offsetWidth; it.classList.add('wplib-hl');
+    setTimeout(function(){ it.classList.remove('wplib-hl'); }, 1600);
+  }
   function renderWpts(){
     wptLayer.clearLayers();
     wpts.forEach(function(w){
       var m=L.marker([w.lat,w.lon],{icon:dotIcon()}).addTo(wptLayer);
       L.marker([w.lat,w.lon],{icon:wptLabel(w.name),interactive:false}).addTo(wptLayer);
-      m.on('click',function(){ openWptEditor(w,[w.lat,w.lon]); });
+      m.bindTooltip(wptTipHtml(w),{direction:'top',offset:[0,-10]});
+      m.on('mouseover',function(){
+        if(w.elevFt===undefined && !w._elevPending && typeof window.NMElev==='function'){
+          w._elevPending=true;
+          window.NMElev(w.lat,w.lon).then(function(ft){
+            w.elevFt=(ft==null||!isFinite(ft))?null:Math.round(ft); w._elevPending=false;
+            try{ m.setTooltipContent(wptTipHtml(w)); }catch(_){ }
+          }).catch(function(){ w._elevPending=false; });
+        }
+      });
+      m.on('click',function(){ openWptEditor(w,[w.lat,w.lon]); highlightLibItem(w); });
     });
     if(typeof renderLib==='function') renderLib();
   }
@@ -9339,6 +9373,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   }
   function makeLibItem(w){
     var it=document.createElement('div'); it.className='wplib-item'+((w.kind==='village')?' wplib-village':'');
+    it.dataset.wpid=w.id;
     it.innerHTML='<div class="wplib-info">'+
         '<div class="wplib-name">'+escapeHtml(libNameOf(w))+'</div>'+
         '<div class="wplib-co">'+escapeHtml(toDms(w.lat,true)+'  '+toDms(w.lon,false))+'</div>'+
@@ -9522,10 +9557,12 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
         + '<div class="wplib-acts">'
         + '<button class="v'+(isVil?' on':'')+'" type="button" title="'+(isVil?'Make a regular waypoint':'Mark as village')+'" aria-label="Toggle village"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg></button>'
         + (here ? '<button class="ondev" type="button" disabled title="Already on this device">On device</button>' : '<button class="r wp-pull" type="button" title="Add this point to this device">Pull</button>')
+        + '<button class="e" type="button" title="Edit name & note">Edit</button>'
         + '<button class="x" type="button" title="Delete from cloud" aria-label="Delete from cloud">\u2715</button>'
         + '</div>';
       var pb = it.querySelector('.wp-pull'); if(pb) pb.addEventListener('click', function(){ wlibPull(r); });
       var vb = it.querySelector('.v'); if(vb) vb.addEventListener('click', function(){ wlibToggleKind(r); });
+      var eB = it.querySelector('.e'); if(eB) eB.addEventListener('click', function(){ wlibEditInline(it, r); });
       var xB = it.querySelector('.x'); var armed=false, t;
       xB.addEventListener('click', function(){
         if(!armed){ armed=true; xB.textContent='Delete?'; xB.classList.add('arm'); t=setTimeout(function(){ armed=false; xB.textContent='\u2715'; xB.classList.remove('arm'); }, 2500); return; }
@@ -9557,6 +9594,33 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     r.kind = next;
     var localW = wpts.filter(function(w){ return String(w.id)===String(r.id); })[0];
     if(localW){ if(next==='village') localW.kind='village'; else delete localW.kind; saveWpts(); renderWpts(); }
+    wlibRender();
+  }
+  function wlibEditInline(it, r){
+    it.innerHTML='<div class="wplib-edit">'
+      + '<input class="name" type="text" maxlength="24" value="'+escapeAttr(r.name||'')+'" placeholder="Name">'
+      + '<input class="en" type="text" value="'+escapeAttr(r.note||'')+'" placeholder="Note (optional)">'
+      + '<div class="wplib-erow"><button class="ghost small sv" type="button">Save</button><button class="ghost small cx" type="button">Cancel</button></div>'
+      + '</div>';
+    var nm=it.querySelector('.name'), nt=it.querySelector('.en');
+    it.querySelector('.cx').addEventListener('click', wlibRender);
+    it.querySelector('.sv').addEventListener('click', function(){
+      var nv=(nm.value||'').trim(); if(!nv){ try{ nm.focus(); }catch(_){ } return; }
+      wlibSaveEdit(r, nv, (nt.value||'').trim());
+    });
+    setTimeout(function(){ try{ nm.focus(); }catch(_){ } }, 40);
+  }
+  async function wlibSaveEdit(r, name, note){
+    var rec;
+    try{ rec = await cloudGet('waypoints', r.id); }
+    catch(e){ wlibMsg('Update failed \u2014 ' + cloudErr(e)); return; }
+    if(!rec || typeof rec!=='object' || rec.error){ wlibMsg('Update failed \u2014 record not found'); return; }
+    rec.name = name; rec.note = note;
+    try{ await cloudPut('waypoints', String(r.id), rec); }
+    catch(e){ wlibMsg('Update failed \u2014 ' + cloudErr(e)); return; }
+    r.name = name; r.note = note;
+    var localW = wpts.filter(function(w){ return String(w.id)===String(r.id); })[0];
+    if(localW){ localW.name = name; localW.note = note; saveWpts(); renderWpts(); }
     wlibRender();
   }
   async function wlibLoad(){
