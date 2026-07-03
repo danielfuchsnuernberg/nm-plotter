@@ -2518,8 +2518,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .seg button+button{border-left:1px solid var(--border-strong)}
   .seg button.on{background:var(--accent);color:#10141a}
   .flog-hint{font-size:11px;color:var(--text-faint);line-height:1.5;padding:4px 2px 8px}
-  .flog-tools{margin-bottom:8px}
-  .flog-import{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:var(--bg-2);border:1px dashed var(--border-strong);color:var(--accent-2);font-size:12px;font-weight:600;padding:8px 12px;border-radius:7px;cursor:pointer}
+  .flog-tools{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+  .flog-import{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;background:var(--bg-2);border:1px dashed var(--border-strong);color:var(--accent-2);font-size:12px;font-weight:600;padding:8px 12px;border-radius:7px;cursor:pointer}
   .flog-err{font-family:var(--sans);font-size:12px;color:var(--bad);line-height:1.4;padding:8px 4px}
   .flog-import:hover{background:var(--panel)}
   .flog-import svg{width:14px;height:14px}
@@ -3181,12 +3181,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-grp-toggle:hover{background:var(--bg-2)}
   .wplib-grp-chev{margin-left:auto;color:var(--text-faint);font-size:10px;transition:transform .15s;transform:rotate(-90deg)}
   .rt-cloud-add{display:flex;gap:6px;margin:8px 0 4px}
-  .rt-cloud-add #rtlibCloudSave{flex:1}
-  .rt-cloud-add #rtlibCloudRefresh{flex:0 0 auto;min-width:34px;font-size:13px;line-height:1}
-  .rt-cloud-add #flCloudSave{flex:1}
-  .rt-cloud-add #flCloudRefresh{flex:0 0 auto;min-width:34px;font-size:13px;line-height:1}
-  .rt-cloud-add #wpCloudSave{flex:1}
-  .rt-cloud-add #wpCloudRefresh{flex:1}
   .set-cloud-row{display:flex;gap:8px;margin-top:8px}
   .set-cloud-input{flex:1;min-width:0;background:var(--bg-2);border:1px solid var(--border-strong);border-radius:4px;color:var(--text);padding:8px 10px;font-size:13px;font-family:var(--sans)}
   .set-cloud-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
@@ -3226,6 +3220,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .nm-wlib-modal{width:640px;height:min(80vh,600px)}
   .nm-wlib-modal .cr-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .nm-wlib-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .nm-wlib-types{display:flex;gap:4px;flex:1 0 100%;margin-bottom:2px}
+  .nm-wlib-types button{padding:6px 12px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:700;border-radius:5px;background:transparent;border:1px solid var(--border-strong);color:var(--text-dim);cursor:pointer}
+  .nm-wlib-types button.on{background:var(--accent);border-color:var(--accent);color:#0a0e13}
   .nm-wlib-tools input[type=search]{flex:1 1 180px;min-width:0;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border-strong);border-radius:5px;padding:8px 10px;font-family:var(--sans);font-size:13px}
   .nm-wlib-tools input[type=search]:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);outline:none}
   .nm-wlib-filter{display:flex;gap:4px;flex:0 0 auto}
@@ -3243,6 +3240,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-edit input{font-size:13px;border-radius:5px;padding:7px 9px}
   .wplib-erow{display:flex;gap:6px}
   .wplib-erow button{flex:1}
+  .wplib-sched{color:var(--accent);font-weight:600}
+  .wplib-schrow{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);margin-top:2px}
+  .wplib-schrow input{flex:1}
   .wplib-item.wplib-hl{animation:wplibHl 1.6s ease-out}
   @keyframes wplibHl{0%,15%{background:rgba(255,183,0,.28);box-shadow:inset 0 0 0 1px var(--accent)}100%{background:transparent;box-shadow:none}}
   .rt-add input.name{flex:1}
@@ -3531,12 +3531,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <button class="ghost small" id="rtlibSave" type="button">Save current</button>
           </div>
           <div class="rt-cloud-add">
-            <button class="ghost small" id="rtlibCloudSave" type="button">&#9729; Save to Cloud</button>
-            <button class="ghost small" id="rtlibCloudRefresh" type="button" title="Refresh cloud list" aria-label="Refresh cloud list">&#10227;</button>
+            <button class="wplib-iconbtn" id="rtlibCloudSave" type="button" title="Save to cloud" aria-label="Save to cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
+            <button class="wplib-iconbtn" id="rtlibCloudRefresh" type="button" title="Open library" aria-label="Open library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
           </div>
           <div class="wplib-list" id="rtlibList"></div>
-          <div class="wplib-grp" style="margin-top:10px"><span class="wplib-grp-l">&#9729; Cloud Routes</span></div>
-          <div class="wplib-list" id="rtCloudList"></div>
         </div>
       </div>
 
@@ -3550,14 +3548,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
           <div class="flog-tools">
             <button class="flog-import" id="flogImport" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Import GPX</button>
             <input type="file" id="flogImportFile" accept=".gpx,.xml,application/gpx+xml,application/xml,text/xml" hidden>
-          </div>
-          <div class="rt-cloud-add">
-            <button class="ghost small" id="flCloudSave" type="button">&#9729; Save to Cloud</button>
-            <button class="ghost small" id="flCloudRefresh" type="button" title="Refresh cloud flights" aria-label="Refresh cloud flights">&#10227;</button>
+            <button class="wplib-iconbtn" id="flCloudSave" type="button" title="Save to cloud" aria-label="Save to cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
+            <button class="wplib-iconbtn" id="flCloudRefresh" type="button" title="Open library" aria-label="Open library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
           </div>
           <div class="wplib-list" id="flogList"></div>
-          <div class="wplib-grp" style="margin-top:10px"><span class="wplib-grp-l">&#9729; Cloud Flights</span></div>
-          <div class="wplib-list" id="flCloudList"></div>
         </div>
       </div>
     </div>
@@ -4873,8 +4867,9 @@ async function cloudDelete(col, id){ var r = await cloudFetch('/' + (col||'route
     });
   }
   if(cloudSaveBtn) cloudSaveBtn.addEventListener('click', cloudSaveCurrent);
-  if(cloudRefreshBtn) cloudRefreshBtn.addEventListener('click', renderCloud);
+  if(cloudRefreshBtn) cloudRefreshBtn.addEventListener('click', function(){ if(window.NMOpenLibrary) window.NMOpenLibrary('routes'); });
   window.NMCloudRefresh = renderCloud;
+  window.NMRoutePull = pullCloud;
 
   if(saveBtn) saveBtn.addEventListener('click', saveCurrent);
   if(nameEl) nameEl.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); saveCurrent(); } });
@@ -5331,7 +5326,9 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
     flCloudRefresh = document.getElementById('flCloudRefresh');
     flCloudList = document.getElementById('flCloudList');
     if(flCloudSave) flCloudSave.addEventListener('click', pushFlightsToCloud);
-    if(flCloudRefresh) flCloudRefresh.addEventListener('click', renderCloudFlights);
+    if(flCloudRefresh) flCloudRefresh.addEventListener('click', function(){ if(window.NMOpenLibrary) window.NMOpenLibrary('flights'); });
+    window.NMFlightPull = pullFlight;
+    window.NMCloudRefreshFlights = renderCloudFlights;
     if(flCloudList) flFlash(cloudKey() ? 'Tap \u27f3 to load your cloud flights.' : 'Set a library key in Settings to pull flights.');
     seg = document.getElementById('setRecMode');
 
@@ -9373,7 +9370,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       ta.addEventListener('input',function(){ w.note=ta.value; saveWpts(); if(savedTag){ savedTag.classList.add('show'); clearTimeout(svT); svT=setTimeout(function(){ savedTag.classList.remove('show'); },1200); } });
       ['keydown','keyup','keypress'].forEach(function(ev){ ta.addEventListener(ev,function(e){ L.DomEvent.stopPropagation(e); }); });
       L.DomEvent.disableScrollPropagation(ta);
-      ta.addEventListener('blur',function(){ if(typeof renderLib==='function') renderLib(); });
+      ta.addEventListener('blur',function(){ cloudSyncWpt(w); if(typeof renderLib==='function') renderLib(); });
     }
     var rb=el.querySelector('.af-route');
     if(rb) rb.addEventListener('click',function(){ if(window.addFieldToRoute) window.addFieldToRoute(w.name||('WP '+w.id), w.lat.toFixed(6)+', '+w.lon.toFixed(6)); map.closePopup(pop); });
@@ -9454,7 +9451,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var it=document.createElement('div'); it.className='wplib-item'+((w.kind==='village')?' wplib-village':'');
     it.dataset.wpid=w.id;
     it.innerHTML='<div class="wplib-info">'+
-        '<div class="wplib-name">'+escapeHtml(libNameOf(w))+'</div>'+
+        '<div class="wplib-name">'+escapeHtml(libNameOf(w))+((w.note&&w.note.trim())?'<span class="has-note-dot" title="Has a note"></span>':'')+'</div>'+
         '<div class="wplib-co">'+escapeHtml(toDms(w.lat,true)+'  '+toDms(w.lon,false))+'</div>'+
         (w.note?('<div class="wplib-note">'+escapeHtml(w.note)+'</div>'):'')+
       '</div>'+
@@ -9516,6 +9513,18 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       });
     }
   }
+  // When a waypoint that also lives in the cloud is edited on-device, push the
+  // change up so the Library (cloud view) stays in sync. Best-effort: if the
+  // point isn't in the cloud, or we're offline, the device copy simply stands.
+  function cloudSyncWpt(w){
+    if(!w || typeof cloudGet!=='function' || typeof cloudPut!=='function') return;
+    Promise.resolve().then(function(){ return cloudGet('waypoints', w.id); }).then(function(rec){
+      if(!rec || typeof rec!=='object' || rec.error || (rec.lat===undefined && rec.lon===undefined)) return;
+      rec.name=w.name; rec.note=w.note||''; rec.lat=w.lat; rec.lon=w.lon;
+      if(w.kind) rec.kind=w.kind; else if('kind' in rec) delete rec.kind;
+      return cloudPut('waypoints', String(w.id), rec);
+    }).catch(function(){});
+  }
   function libEditInline(it,w){
     it.innerHTML='<div class="wplib-edit">'+
         '<input class="name" type="text" maxlength="16" value="'+escapeAttr(w.name||'')+'" placeholder="Name">'+
@@ -9531,7 +9540,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       w.name=(nm.value.trim()||w.name||('WP '+w.id));
       w.note=nt.value.trim();
       w.lat=+(+p.lat).toFixed(6); w.lon=+(+p.lon).toFixed(6);
-      saveWpts(); renderWpts();
+      saveWpts(); renderWpts(); cloudSyncWpt(w);
     });
     c.addEventListener('input',function(){ c.classList.remove('invalid'); });
     setTimeout(function(){ try{ nm.focus(); }catch(_){} },40);
@@ -9604,11 +9613,99 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     wlibRender();
   }
   /* ===== Cloud Waypoint Library (modal browser) ===== */
-  var wlibItems = [], wlibKind = 'all', wlibQuery = '', wlibSort = 'az';
+  var wlibItems = [], wlibKind = 'all', wlibQuery = '', wlibSort = 'az', wlibType = 'waypoints';
   function $w(id){ return document.getElementById(id); }
   function wlibOpen(){ var o=$w('nmWlibOverlay'); return !!(o && o.classList.contains('active')); }
   function wlibMsg(txt){ var l=$w('nmWlibList'); if(l) l.innerHTML = '<div class="wplib-empty">' + escapeHtml(txt) + '</div>'; var c=$w('nmWlibCount'); if(c) c.textContent=''; }
   function wlibRender(){
+    if(wlibType==='routes') return wlibRenderRoutes();
+    if(wlibType==='flights') return wlibRenderFlights();
+    return wlibRenderWpts();
+  }
+  function wlibWhen(v){ if(!v) return ''; var n=Number(v); var d=(isFinite(n)&&n>1e10)?new Date(n):new Date(v); if(isNaN(d.getTime())) return ''; return ' \u00b7 '+d.toLocaleDateString(); }
+  function wlibArmDelete(xB, col, r){
+    if(!xB) return; var armed=false, t;
+    xB.addEventListener('click', function(){
+      if(!armed){ armed=true; xB.textContent='Delete?'; xB.classList.add('arm'); t=setTimeout(function(){ armed=false; xB.textContent='\u2715'; xB.classList.remove('arm'); },2500); return; }
+      clearTimeout(t); xB.textContent='\u2026';
+      cloudDelete(col, r.id).then(function(){ wlibItems=wlibItems.filter(function(x){ return String(x.id)!==String(r.id); }); wlibRender(); }).catch(function(e){ wlibMsg('Delete failed \u2014 '+cloudErr(e)); });
+    });
+  }
+  function wlibFmtSched(s){ if(!s) return ''; var d=new Date(s+'T00:00:00'); if(isNaN(d.getTime())) return s; return d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'}); }
+  function wlibRenderRoutes(){
+    var list=$w('nmWlibList'); if(!list) return;
+    var q=wlibQuery.trim().toLowerCase();
+    var rows=wlibItems.filter(function(r){ return !q || String(r.name||r.id||'').toLowerCase().indexOf(q)>=0; });
+    rows.sort(function(a,b){ var as=a.sched||'', bs=b.sched||''; if(as&&bs) return as.localeCompare(bs); if(as) return -1; if(bs) return 1; return String(a.name||'').localeCompare(String(b.name||'')); });
+    var c=$w('nmWlibCount'); if(c) c.textContent = rows.length+' of '+wlibItems.length+' route'+(wlibItems.length===1?'':'s');
+    if(!rows.length){ list.innerHTML='<div class="wplib-empty">'+(wlibItems.length?'No matches.':'No cloud routes yet. Save a route to the cloud.')+'</div>'; return; }
+    list.innerHTML='';
+    rows.forEach(function(r){
+      var it=document.createElement('div'); it.className='wplib-item rt-item';
+      var sub = r.sched ? ('<span class="wplib-sched">\u25c6 '+escapeHtml(wlibFmtSched(r.sched))+'</span>') : ('cloud'+escapeHtml(wlibWhen(r.updated)));
+      it.innerHTML='<div class="wplib-info">'
+        +'<div class="wplib-name">'+escapeHtml(r.name||r.id)+'</div>'
+        +'<div class="wplib-co">'+sub+'</div>'
+        +'</div>'
+        +'<div class="wplib-acts">'
+        +'<button class="r rt-pull" type="button" title="Pull this route onto this device">Pull</button>'
+        +'<button class="x" type="button" title="Delete from cloud" aria-label="Delete from cloud">\u2715</button>'
+        +'</div>';
+      it.querySelector('.rt-pull').addEventListener('click', function(){ if(window.NMRoutePull){ closeWlib(); window.NMRoutePull(r.id, r.name); } });
+      it.addEventListener('dblclick', function(e){ if(e.target.closest && e.target.closest('.wplib-acts')) return; e.preventDefault(); wlibRenameCloud('routes', r, it); });
+      it.title='Double-click to rename or schedule';
+      wlibArmDelete(it.querySelector('.x'), 'routes', r);
+      list.appendChild(it);
+    });
+  }
+  function wlibRenderFlights(){
+    var list=$w('nmWlibList'); if(!list) return;
+    var q=wlibQuery.trim().toLowerCase();
+    var rows=wlibItems.filter(function(r){ return !q || String(r.name||('Flight '+r.id)).toLowerCase().indexOf(q)>=0; });
+    rows.sort(function(a,b){ return Number(b.id)-Number(a.id); });
+    var c=$w('nmWlibCount'); if(c) c.textContent = rows.length+' of '+wlibItems.length+' flight'+(wlibItems.length===1?'':'s');
+    if(!rows.length){ list.innerHTML='<div class="wplib-empty">'+(wlibItems.length?'No matches.':'No cloud flights yet. Save a flight to the cloud.')+'</div>'; return; }
+    list.innerHTML='';
+    rows.forEach(function(r){
+      var it=document.createElement('div'); it.className='wplib-item rt-item flog-item';
+      it.innerHTML='<div class="wplib-info">'
+        +'<div class="wplib-name">'+escapeHtml(r.name||('Flight '+r.id))+'</div>'
+        +'<div class="wplib-co">cloud'+escapeHtml(wlibWhen(r.id))+'</div>'
+        +'</div>'
+        +'<div class="wplib-acts">'
+        +'<button class="r fl-pull" type="button" title="Add this flight to this device">Pull</button>'
+        +'<button class="x" type="button" title="Delete from cloud" aria-label="Delete from cloud">\u2715</button>'
+        +'</div>';
+      it.querySelector('.fl-pull').addEventListener('click', function(){ if(window.NMFlightPull){ closeWlib(); window.NMFlightPull(r.id, r.name); } });
+      wlibArmDelete(it.querySelector('.x'), 'flights', r);
+      list.appendChild(it);
+    });
+  }
+  function wlibRenameCloud(col, r, it){
+    var isRt=(col==='routes');
+    it.innerHTML='<div class="wplib-edit">'
+      +'<input class="name" type="text" maxlength="40" value="'+escapeAttr(r.name||'')+'" placeholder="Name">'
+      +(isRt?'<label class="wplib-schrow">Scheduled <input class="sched" type="date" value="'+escapeAttr(r.sched||'')+'"></label>':'')
+      +'<div class="wplib-erow"><button class="ghost small sv" type="button">Save</button><button class="ghost small cx" type="button">Cancel</button></div>'
+      +'</div>';
+    var nm=it.querySelector('.name'), sc=it.querySelector('.sched');
+    it.querySelector('.cx').addEventListener('click', wlibRender);
+    it.querySelector('.sv').addEventListener('click', function(){ var nv=(nm.value||'').trim(); if(!nv){ try{ nm.focus(); }catch(_){ } return; } wlibDoRename(col, r, nv, sc?(sc.value||''):undefined); });
+    setTimeout(function(){ try{ nm.focus(); }catch(_){ } },40);
+  }
+  async function wlibDoRename(col, r, name, sched){
+    var rec;
+    try{ rec = await cloudGet(col, r.id); }catch(e){ wlibMsg('Update failed \u2014 '+cloudErr(e)); return; }
+    if(!rec || typeof rec!=='object' || rec.error){ wlibMsg('Update failed \u2014 record not found'); return; }
+    rec.name = name;
+    if(sched!==undefined){ if(sched) rec.sched=sched; else delete rec.sched; }
+    try{ await cloudPut(col, String(r.id), rec); }catch(e){ wlibMsg('Update failed \u2014 '+cloudErr(e)); return; }
+    r.name = name;
+    if(sched!==undefined){ if(sched) r.sched=sched; else delete r.sched; }
+    if(col==='routes' && window.NMCloudRefresh) window.NMCloudRefresh();
+    wlibRender();
+  }
+  function wlibRenderWpts(){
     var list=$w('nmWlibList'); if(!list) return;
     var local = new Set(wpts.map(function(w){ return String(w.id); }));
     var q = wlibQuery.trim().toLowerCase();
@@ -9705,23 +9802,30 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   async function wlibLoad(){
     if(!cloudKey()){ wlibMsg('Set a library key in Settings to use the cloud library.'); return; }
     wlibMsg('Loading\u2026');
-    try{ wlibItems = await cloudList('waypoints', true); }
+    var col = (wlibType==='routes')?'routes':(wlibType==='flights')?'flights':'waypoints';
+    var full = (wlibType==='waypoints' || wlibType==='routes');
+    try{ wlibItems = await cloudList(col, full); }
     catch(e){ wlibItems=[]; wlibMsg('Couldn\u2019t reach cloud \u2014 ' + cloudErr(e)); return; }
-    wlibItems.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
+    if(wlibType==='waypoints') wlibItems.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
     wlibRender();
   }
   function wlibReloadIfOpen(){ if(wlibOpen()) wlibLoad(); }
-  function openWlib(){
+  function openWlib(type){
     var o=$w('nmWlibOverlay'); if(!o) return;
+    wlibType = (type==='routes'||type==='flights')?type:'waypoints';
     var s=$w('nmWlibSearch'); if(s) s.value=''; wlibQuery='';
+    Array.prototype.forEach.call(document.querySelectorAll('.nm-wlib-types [data-t]'), function(b){ b.classList.toggle('on', b.getAttribute('data-t')===wlibType); });
+    var wptOnly = (wlibType==='waypoints');
+    Array.prototype.forEach.call(document.querySelectorAll('.nm-wlib-modal .wlib-wpt-only'), function(el){ el.style.display = wptOnly?'':'none'; });
     o.classList.add('active');
     wlibLoad();
   }
+  window.NMOpenLibrary = openWlib;
   function closeWlib(){ var o=$w('nmWlibOverlay'); if(o) o.classList.remove('active'); }
   wpCloudSave = document.getElementById('wpCloudSave');
   wpCloudRefresh = document.getElementById('wpCloudRefresh');
   if(wpCloudSave) wpCloudSave.addEventListener('click', pushWaypointsToCloud);
-  if(wpCloudRefresh) wpCloudRefresh.addEventListener('click', openWlib);
+  if(wpCloudRefresh) wpCloudRefresh.addEventListener('click', function(){ openWlib('waypoints'); });
   function wlibInit(){
     var cl=$w('nmWlibClose'), cl2=$w('nmWlibClose2'), rf=$w('nmWlibRefresh'), ovv=$w('nmWlibOverlay'), s=$w('nmWlibSearch');
     if(cl) cl.addEventListener('click', closeWlib);
@@ -9737,6 +9841,9 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
         Array.prototype.forEach.call(document.querySelectorAll('.nm-wlib-filter [data-k]'), function(x){ x.classList.toggle('on', x===b); });
         wlibRender();
       });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.nm-wlib-types [data-t]'), function(b){
+      b.addEventListener('click', function(){ var t=b.getAttribute('data-t')||'waypoints'; if(t!==wlibType) openWlib(t); });
     });
     document.addEventListener('keydown', function(e){ if(e.key==='Escape' && wlibOpen()) closeWlib(); });
   }
@@ -10528,18 +10635,23 @@ if (navigator.storage && navigator.storage.persist) {
   <div class="cr-overlay" id="nmWlibOverlay">
     <div class="cr-modal nm-wlib-modal">
       <div class="cr-head">
-        <h3>Waypoint Library</h3>
+        <h3>Library</h3>
         <button class="cr-close" id="nmWlibClose" type="button" aria-label="Close">&#215;</button>
       </div>
       <div class="cr-body">
         <div class="nm-wlib-tools">
+          <div class="nm-wlib-types">
+            <button type="button" data-t="waypoints" class="on">Waypoints</button>
+            <button type="button" data-t="routes">Routes</button>
+            <button type="button" data-t="flights">Flights</button>
+          </div>
           <input id="nmWlibSearch" type="search" autocomplete="off" placeholder="Search by name">
-          <div class="nm-wlib-filter">
+          <div class="nm-wlib-filter wlib-wpt-only">
             <button type="button" data-k="all" class="on">All</button>
             <button type="button" data-k="wpt">Waypoints</button>
             <button type="button" data-k="village">Villages</button>
           </div>
-          <button class="nm-wlib-sort" id="nmWlibSort" type="button" title="Toggle sort direction">A&#8211;Z</button>
+          <button class="nm-wlib-sort wlib-wpt-only" id="nmWlibSort" type="button" title="Toggle sort direction">A&#8211;Z</button>
         </div>
         <div class="nm-wlib-count" id="nmWlibCount"></div>
         <div class="nm-wlib-list" id="nmWlibList"></div>
