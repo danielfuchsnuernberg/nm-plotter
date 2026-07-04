@@ -3250,6 +3250,15 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-edit input.name::placeholder{color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0}
   .wplib-erow{display:flex;gap:6px}
   .wplib-erow button{flex:1}
+  #nmWlibList .wplib-item, #wplibList .wplib-item, #flogList .wplib-item, #rtlibList .wplib-item{cursor:pointer}
+  .wplib-edit input, .wplib-edit textarea{cursor:auto}
+  .wplib-acts .more{padding:2px 8px;font-size:16px;line-height:1;letter-spacing:.05em;color:var(--text-dim);background:transparent;border:none;cursor:pointer;border-radius:5px}
+  .wplib-acts .more:hover{color:var(--text);background:var(--bg-2)}
+  .nm-rowmenu{position:fixed;z-index:4000;min-width:154px;background:var(--panel);border:1px solid var(--border-strong);border-radius:8px;padding:4px;box-shadow:0 10px 28px rgba(0,0,0,.55)}
+  .nm-rowmenu-item{display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--text);font-family:var(--sans);font-size:12px;padding:8px 11px;border-radius:5px;cursor:pointer}
+  .nm-rowmenu-item:hover{background:var(--bg-2)}
+  .nm-rowmenu-item.danger{color:var(--bad)}
+  .nm-rowmenu-sep{height:1px;background:var(--border);margin:4px 6px}
   .wplib-sched{color:var(--accent);font-weight:600}
   .wplib-schrow{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);margin-top:2px}
   .wplib-schrow input{flex:1}
@@ -4156,7 +4165,7 @@ const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/servic
   updateWhenIdle: true,
   updateWhenZooming: false,
   keepBuffer: 1,
-  zIndex: 2
+  zIndex: 5
 });
 
 // Transparent place-name labels (OSM/CARTO — same source as the village search,
@@ -4170,7 +4179,7 @@ const labelsLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_lab
   updateWhenIdle: true,
   updateWhenZooming: false,
   keepBuffer: 1,
-  zIndex: 4
+  zIndex: 6
 });
 
 /* ===== Offline vector basemap (PMTiles) — progressive enhancement =====
@@ -4813,16 +4822,18 @@ async function cloudDelete(col, id){ var r = await cloudFetch('/' + (col||'route
         '</div>'+
         '<div class="wplib-acts">'+
           '<button class="r rt-load" type="button" title="Load this route">Load</button>'+
-          '<button class="e rt-ren" type="button" title="Rename">Rename</button>'+
-          '<button class="x" type="button" title="Delete" aria-label="Delete">\u2715</button>'+
+          '<button class="more" type="button" title="More actions" aria-label="More actions">\u22EF</button>'+
         '</div>';
       it.querySelector('.rt-load').addEventListener('click',function(){ loadRoute(rt); });
-      it.querySelector('.rt-ren').addEventListener('click',function(){ renameInline(it,rt); });
-      const xB=it.querySelector('.x'); let armed=false, t;
-      xB.addEventListener('click',function(){
-        if(!armed){ armed=true; xB.textContent='Delete?'; xB.classList.add('arm'); t=setTimeout(function(){ armed=false; xB.textContent='\u2715'; xB.classList.remove('arm'); },2500); return; }
-        clearTimeout(t); store(load().filter(x=>x.id!==rt.id)); render();
-      });
+      it.addEventListener('dblclick',function(e){ if(e.target.closest && e.target.closest('.wplib-acts')) return; e.preventDefault(); renameInline(it,rt); });
+      it.title='Double-click to rename';
+      var rMenu=function(anchor){ if(!window.NMRowMenu) return; window.NMRowMenu(anchor, [
+        {label:'Rename', onClick:function(){ renameInline(it,rt); }},
+        {sep:true},
+        {label:'Delete', danger:true, onClick:function(){ if(confirm('Delete \u201c'+(rt.name||'this route')+'\u201d?')){ store(load().filter(function(x){return x.id!==rt.id;})); render(); } }}
+      ]); };
+      it.querySelector('.more').addEventListener('click',function(e){ e.stopPropagation(); rMenu(e.currentTarget); });
+      it.addEventListener('contextmenu',function(e){ rMenu(e); });
       listEl.appendChild(it);
     });
   }
@@ -5230,28 +5241,25 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
           + '</div>'
           + '<div class="wplib-acts">'
           + '<button class="r fl-show" type="button" title="Show flown track on the map">'+(shownId===f.id?'Hide':'Show')+'</button>'
-          + '<button class="e fl-prof" type="button" title="Terrain profile of the flown track">Profile</button>'
-          + '<button class="e fl-debrief" type="button" title="Debrief: map + scrubbable profile">Debrief</button>'
-          + '<button class="e fl-gpx" type="button" title="Export GPX">GPX</button>'
-          + '<button class="e fl-ren" type="button" title="Edit name &amp; remarks">Edit</button>'
-          + '<button class="x" type="button" title="Delete" aria-label="Delete">\u2715</button>'
+          + '<button class="more" type="button" title="More actions" aria-label="More actions">\u22EF</button>'
           + '</div>';
         it.querySelector('.fl-show').addEventListener('click', ()=>{
           if(shownId === f.id){ shownId = null; if(window.NMClearTrack) window.NMClearTrack(); }
           else { shownId = f.id; if(window.NMDrawTrack) window.NMDrawTrack(f.points, true); }
           renderLog();
         });
-        it.querySelector('.fl-gpx').addEventListener('click', ()=>downloadGpx(f));
-        it.querySelector('.fl-prof').addEventListener('click', ()=>{ if(window.NMShowFlightProfile) window.NMShowFlightProfile(f.points, f.name); });
-        it.querySelector('.fl-debrief').addEventListener('click', ()=>{ if(window.NMFlightDebrief) window.NMFlightDebrief(f.points, f.name); });
-        it.querySelector('.fl-ren').addEventListener('click', ()=>renameInline(it, f));
-        const xB = it.querySelector('.x'); let armed=false, t;
-        xB.addEventListener('click', ()=>{
-          if(!armed){ armed=true; xB.textContent='Delete?'; xB.classList.add('arm'); t=setTimeout(()=>{ armed=false; xB.textContent='\u2715'; xB.classList.remove('arm'); },2500); return; }
-          clearTimeout(t);
-          if(shownId===f.id && window.NMClearTrack){ shownId=null; window.NMClearTrack(); }
-          idbDel(f.id).then(renderLog);
-        });
+        it.addEventListener('dblclick', (e)=>{ if(e.target.closest && e.target.closest('.wplib-acts')) return; e.preventDefault(); renameInline(it, f); });
+        it.title='Double-click to edit';
+        const fMenu=(anchor)=>{ if(!window.NMRowMenu) return; window.NMRowMenu(anchor, [
+          {label:'Profile', onClick:()=>{ if(window.NMShowFlightProfile) window.NMShowFlightProfile(f.points, f.name); }},
+          {label:'Debrief', onClick:()=>{ if(window.NMFlightDebrief) window.NMFlightDebrief(f.points, f.name); }},
+          {label:'Export GPX', onClick:()=>downloadGpx(f)},
+          {label:'Edit', onClick:()=>renameInline(it, f)},
+          {sep:true},
+          {label:'Delete', danger:true, onClick:()=>{ if(confirm('Delete \u201c'+(f.name||'this flight')+'\u201d?')){ if(shownId===f.id && window.NMClearTrack){ shownId=null; window.NMClearTrack(); } idbDel(f.id).then(renderLog); } }}
+        ]); };
+        it.querySelector('.more').addEventListener('click', (e)=>{ e.stopPropagation(); fMenu(e.currentTarget); });
+        it.addEventListener('contextmenu', (e)=>{ fMenu(e); });
         flogList.appendChild(it);
       });
     }).catch(err=>{
@@ -7642,6 +7650,33 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     document.body.appendChild(ov);
   }
   window.NMDocView = openChartViewer;
+  (function(){
+    var menuEl=null;
+    function closeMenu(){ if(!menuEl) return; menuEl.remove(); menuEl=null; document.removeEventListener('mousedown',onDoc,true); document.removeEventListener('keydown',onKey,true); window.removeEventListener('scroll',closeMenu,true); window.removeEventListener('resize',closeMenu,true); }
+    function onDoc(e){ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }
+    function onKey(e){ if(e.key==='Escape') closeMenu(); }
+    window.NMRowMenu=function(anchor, items){
+      closeMenu();
+      menuEl=document.createElement('div'); menuEl.className='nm-rowmenu';
+      items.forEach(function(it){
+        if(it.sep){ var s=document.createElement('div'); s.className='nm-rowmenu-sep'; menuEl.appendChild(s); return; }
+        var b=document.createElement('button'); b.type='button'; b.className='nm-rowmenu-item'+(it.danger?' danger':'');
+        b.textContent=it.label;
+        b.addEventListener('click',function(ev){ ev.stopPropagation(); ev.preventDefault(); closeMenu(); try{ it.onClick(); }catch(_){ } });
+        menuEl.appendChild(b);
+      });
+      menuEl.style.visibility='hidden';
+      document.body.appendChild(menuEl);
+      var vw=window.innerWidth, vh=window.innerHeight, mw=menuEl.offsetWidth, mh=menuEl.offsetHeight, x, y;
+      if(anchor && ('clientX' in anchor) && typeof anchor.preventDefault==='function'){ anchor.preventDefault(); x=anchor.clientX; y=anchor.clientY; }
+      else if(anchor && anchor.getBoundingClientRect){ var r=anchor.getBoundingClientRect(); x=r.right-mw; y=r.bottom+4; if(y+mh>vh-6) y=r.top-mh-4; }
+      else { x=(vw-mw)/2; y=(vh-mh)/2; }
+      x=Math.max(6, Math.min(x, vw-mw-6));
+      y=Math.max(6, Math.min(y, vh-mh-6));
+      menuEl.style.left=x+'px'; menuEl.style.top=y+'px'; menuEl.style.visibility='';
+      setTimeout(function(){ document.addEventListener('mousedown',onDoc,true); document.addEventListener('keydown',onKey,true); window.addEventListener('scroll',closeMenu,true); window.addEventListener('resize',closeMenu,true); },0);
+    };
+  })();
   function wireCharts(root, f, pop){
     const wrap = root.querySelector('.af-charts'); if(!wrap) return;
     if(!window.NMCharts || !window.NMCharts.available){ wrap.remove(); if(pop) pop.update(); return; }
@@ -9493,21 +9528,22 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
         (w.note?('<div class="wplib-note">'+escapeHtml(w.note)+'</div>'):'')+
       '</div>'+
       '<div class="wplib-acts">'+
-        '<button class="loc" type="button" title="Show on map" aria-label="Show on map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>'+
         '<button class="r" type="button" title="Add to current route">&#8594; Route</button>'+
-        '<button class="x" type="button" title="Delete" aria-label="Delete">&#10005;</button>'+
+        '<button class="more" type="button" title="More actions" aria-label="More actions">\u22EF</button>'+
       '</div>';
-    it.querySelector('.loc').addEventListener('click',function(){ libFlyTo(w); });
     it.querySelector('.r').addEventListener('click',function(){
       if(window.addFieldToRoute) window.addFieldToRoute(libNameOf(w), w.lat.toFixed(6)+', '+w.lon.toFixed(6));
     });
     it.addEventListener('dblclick',function(e){ if(e.target.closest && e.target.closest('.wplib-acts')) return; e.preventDefault(); libEditInline(it,w); });
     it.title='Double-click to edit';
-    var xB=it.querySelector('.x'), armed=false, t;
-    xB.addEventListener('click',function(){
-      if(!armed){ armed=true; xB.textContent='Delete?'; xB.classList.add('arm'); t=setTimeout(function(){ armed=false; xB.textContent='\u2715'; xB.classList.remove('arm'); },2500); return; }
-      clearTimeout(t); var i=wpts.indexOf(w); if(i>=0){ wpts.splice(i,1); saveWpts(); renderWpts(); }
-    });
+    function wMenu(anchor){ if(!window.NMRowMenu) return; window.NMRowMenu(anchor, [
+      {label:'Show on map', onClick:function(){ libFlyTo(w); }},
+      {label:'Edit', onClick:function(){ libEditInline(it,w); }},
+      {sep:true},
+      {label:'Delete', danger:true, onClick:function(){ if(confirm('Delete \u201c'+libNameOf(w)+'\u201d?')){ var i=wpts.indexOf(w); if(i>=0){ wpts.splice(i,1); saveWpts(); renderWpts(); } } }}
+    ]); }
+    it.querySelector('.more').addEventListener('click',function(e){ e.stopPropagation(); wMenu(e.currentTarget); });
+    it.addEventListener('contextmenu',function(e){ wMenu(e); });
     return it;
   }
   var VILL_OPEN_KEY='nmplotter_lib_villages_open';
