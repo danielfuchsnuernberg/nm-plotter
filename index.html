@@ -1713,7 +1713,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     .panel-foot .act-icon{width:42px;padding-left:0;padding-right:0}
 
     /* Waypoint rows: slightly tighter on mobile */
-    .row{grid-template-columns:14px 80px 1fr auto 20px 20px;gap:5px;padding:6px 8px}
+    .row{grid-template-columns:14px 80px 1fr auto 28px 20px;gap:5px;padding:6px 8px}
 
     /* Right-panel tab strip stays as-is but tighten */
     .tabstrip button{padding:10px 6px;font-size:9px}
@@ -1826,7 +1826,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rows{display:flex;flex-direction:column;gap:6px}
   .row{
     display:grid;
-    grid-template-columns:18px 90px 1fr auto 22px 22px;
+    grid-template-columns:18px 90px 1fr auto 28px 22px;
     gap:6px;
     align-items:center;
   }
@@ -3152,7 +3152,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .notes-lib{margin-top:0;border-top:none;border-bottom:1px solid var(--border);padding-top:0;padding-bottom:12px;margin-bottom:12px}
   .note-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:none}
   .notes-lib.has-notes .note-dot{display:inline-block}
-  .wplib-add{display:flex;gap:6px;margin-bottom:10px}
+  .wplib-add{display:flex;gap:6px;margin-bottom:10px;align-items:center}
   .wplib-add input.name{flex:0 0 33%}
   .wplib-add input.coord{flex:1}
   .wplib-add button{flex:0 0 auto}
@@ -3248,7 +3248,24 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-schrow input{flex:1}
   .wplib-item.wplib-hl{animation:wplibHl 1.6s ease-out}
   @keyframes wplibHl{0%,15%{background:rgba(255,183,0,.28);box-shadow:inset 0 0 0 1px var(--accent)}100%{background:transparent;box-shadow:none}}
+  .rt-add{align-items:center}
   .rt-add input.name{flex:1}
+  /* Unify left-sidebar control heights to 28px. Section-header toggles and the
+     multi-line Notes textarea are intentionally excluded. */
+  .panel.left .panel-head .ghost.small,
+  .panel.left .wplib-add input,
+  .panel.left .wplib-add .ghost.small,
+  .panel.left .wplib-add .wplib-iconbtn,
+  .panel.left .wplib-toolbar .wplib-seg,
+  .panel.left .wplib-toolbar .wplib-iconbtn,
+  .panel.left .flog-tools .flog-import,
+  .panel.left .flog-tools .wplib-iconbtn{height:28px;box-sizing:border-box}
+  .panel.left .panel-head .ghost.small,
+  .panel.left .wplib-add .ghost.small,
+  .panel.left .flog-tools .flog-import{display:inline-flex;align-items:center;justify-content:center}
+  #rows .row input, #rows .row .fuel-toggle, #rows .row .del{height:28px;box-sizing:border-box}
+  #rows .row .fuel-toggle, #rows .row .del{display:inline-flex;align-items:center;justify-content:center}
+  #rows .row .fuel-toggle{width:28px}
   .rt-add button{flex:0 0 auto}
   .rt-item .wplib-co{color:var(--text-faint)}
   /* Flight-log rows carry 6 actions — stack info over a wrapping button row
@@ -3531,9 +3548,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         <div class="wplib-body">
           <div class="wplib-add rt-add">
             <input class="name" id="rtlibName" type="text" maxlength="40" placeholder="Route name (optional)">
-            <button class="ghost small" id="rtlibSave" type="button">Save current</button>
-          </div>
-          <div class="rt-cloud-add">
+            <button class="ghost small" id="rtlibSave" type="button">Save</button>
             <button class="wplib-iconbtn" id="rtlibCloudSave" type="button" title="Save to cloud" aria-label="Save to cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
             <button class="wplib-iconbtn" id="rtlibCloudRefresh" type="button" title="Open library" aria-label="Open library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
           </div>
