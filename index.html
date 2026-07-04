@@ -4097,7 +4097,10 @@ const map = L.map('map', {
     var k = CFG[side];
     try{
       var w = localStorage.getItem(k.wkey); if(w) app.style.setProperty(k.wv, w);
-      if(localStorage.getItem(k.ckey) === '1') app.classList.add(k.cls);
+      var c = localStorage.getItem(k.ckey);
+      // Left panel starts collapsed by default on desktop (map-first); an explicit
+      // open/close is remembered. Desktop-only so the iPad isn't left with no reopen tab.
+      if(c === '1' || (c === null && side === 'left' && window.innerWidth > 900)) app.classList.add(k.cls);
     }catch(_){ }
   });
   function startDrag(side, ev){
