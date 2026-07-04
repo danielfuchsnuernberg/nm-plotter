@@ -9672,7 +9672,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
         +'<div class="wplib-co">'+sub+'</div>'
         +'</div>'
         +'<div class="wplib-acts">'
-        +'<button class="r rt-pull" type="button" title="Pull this route onto this device">Pull</button>'
+        +'<button class="r rt-pull" type="button" title="Download this route to this device">Download</button>'
         +'<button class="x" type="button" title="Delete from cloud" aria-label="Delete from cloud">\u2715</button>'
         +'</div>';
       it.querySelector('.rt-pull').addEventListener('click', function(){ if(window.NMRoutePull){ closeWlib(); window.NMRoutePull(r.id, r.name); } });
@@ -9698,7 +9698,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
         +(r.note?('<div class="wplib-note">'+escapeHtml(r.note)+'</div>'):'')
         +'</div>'
         +'<div class="wplib-acts">'
-        +'<button class="r fl-pull" type="button" title="Add this flight to this device">Pull</button>'
+        +'<button class="r fl-pull" type="button" title="Download this flight to this device">Download</button>'
         +'<button class="x" type="button" title="Delete from cloud" aria-label="Delete from cloud">\u2715</button>'
         +'</div>';
       it.querySelector('.fl-pull').addEventListener('click', function(){ if(window.NMFlightPull){ closeWlib(); window.NMFlightPull(r.id, r.name); } });
@@ -9776,7 +9776,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
         + '</div>'
         + '<div class="wplib-acts">'
         + '<button class="v'+(isVil?' on':'')+'" type="button" title="'+(isVil?'Make a regular waypoint':'Mark as village')+'" aria-label="Toggle village"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg></button>'
-        + (here ? '<button class="ondev" type="button" disabled title="Already on this device">On device</button>' : '<button class="r wp-pull" type="button" title="Add this point to this device">Pull</button>')
+        + (here ? '<button class="ondev" type="button" disabled title="Already on this device">On device</button>' : '<button class="r wp-pull" type="button" title="Download this point to this device">Download</button>')
         + '<button class="x" type="button" title="Delete from cloud" aria-label="Delete from cloud">\u2715</button>'
         + '</div>';
       var pb = it.querySelector('.wp-pull'); if(pb) pb.addEventListener('click', function(){ wlibPull(r); });
