@@ -2954,7 +2954,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .terr-chev{font-size:11px;color:var(--text-dim);transition:transform .15s ease;line-height:1;align-self:center}
   .terr-panel.collapsed .terr-chev{transform:rotate(-90deg)}
   .terr-panel.collapsed .terr-head{margin-bottom:0}
-  .terr-panel.collapsed .terr-row,.terr-panel.collapsed .terr-sub,.terr-panel.collapsed .terr-mrow,.terr-panel.collapsed .terr-dl-btn,.terr-panel.collapsed .terr-adv{display:none}
+  .terr-panel.collapsed .terr-row,.terr-panel.collapsed .terr-sub,.terr-panel.collapsed .terr-mrow,.terr-panel.collapsed .terr-orow,.terr-panel.collapsed .terr-dl-btn,.terr-panel.collapsed .terr-adv{display:none}
   .terr-ttl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim)}
   .terr-alt{font-family:var(--mono);font-size:12px;color:var(--text-faint)}
   .terr-alt b{font-size:22px;color:var(--accent);font-variant-numeric:tabular-nums}
@@ -2975,6 +2975,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .terr-sub b{color:var(--text);font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px}
   .terr-mrow{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--text-faint)}
   .terr-mrow .terr-seg{margin-left:auto}
+  .terr-orow{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--text-faint)}
+  .terr-orow input[type=range]{flex:1;min-width:0;height:5px}
+  .terr-orow input[type=range]::-webkit-slider-thumb{width:16px;height:16px}
+  .terr-orow input[type=range]::-moz-range-thumb{width:16px;height:16px}
+  .terr-orow b{margin-left:2px;min-width:34px;text-align:right;color:var(--text);font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px}
   .terr-seg{display:inline-flex;gap:4px}
   .terr-seg button{padding:4px 7px;border-radius:6px;border:1px solid var(--border-strong);background:var(--bg-2);
     color:var(--text-dim);font-size:11px;font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums}
@@ -3660,6 +3665,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       </div>
       <div class="terr-sub">Highest in view <b id="terrMax">&mdash;</b></div>
       <div class="terr-mrow"><span>Amber margin</span><span class="terr-seg" id="terrMargin"><button data-m="500" type="button">500</button><button data-m="1000" type="button" class="on">1000</button><button data-m="2000" type="button">2000</button></span></div>
+      <div class="terr-orow"><span>Overlay</span><input type="range" id="terrOpac" min="20" max="100" step="5" value="82"><b id="terrOpacVal">82%</b></div>
       <button class="terr-dl-btn" id="terrDlBtn" type="button">&#x2913; Offline map</button>
       <div class="terr-adv"><span class="terr-leg"><i class="r"></i>at/above &nbsp;<i class="a"></i>within margin</span><br>Advisory &mdash; terrain shape only; excludes towers, wires &amp; trees. Cross-check charts &amp; Garmin.</div>
     </div>
@@ -8872,10 +8878,10 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       }catch(_){ resolve(null); }
     });
   };
-  var tCfg={alt:9000,margin:1000,collapsed:false};
+  var tCfg={alt:9000,margin:1000,opac:0.82,collapsed:false};
   try{ var _tc=JSON.parse(localStorage.getItem(TERR_KEY)); if(_tc) tCfg=Object.assign(tCfg,_tc); }catch(_){}
   function saveTerr(){ try{ localStorage.setItem(TERR_KEY,JSON.stringify(tCfg)); }catch(_){} }
-  terrLayer._altFt=tCfg.alt; terrLayer._marginFt=tCfg.margin;
+  terrLayer._altFt=tCfg.alt; terrLayer._marginFt=tCfg.margin; terrLayer.setOpacity(tCfg.opac);
   var tPanel=document.getElementById('terrPanel'), tSlider=document.getElementById('terrSlider'),
       tVal=document.getElementById('terrAltVal'), tMax=document.getElementById('terrMax');
   function fmtFt(n){ return Math.round(n).toLocaleString(); }
@@ -8893,6 +8899,11 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       b.classList.toggle('on', (+b.dataset.m)===tCfg.margin);
       b.addEventListener('click',function(){ mseg.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on',x===b); }); tCfg.margin=+b.dataset.m; saveTerr(); terrLayer.setMargin(tCfg.margin); });
     });
+    var tOpac=document.getElementById('terrOpac'), tOpacVal=document.getElementById('terrOpacVal');
+    if(tOpac){
+      var _op=Math.round((tCfg.opac||0.82)*100); tOpac.value=_op; if(tOpacVal) tOpacVal.textContent=_op+'%';
+      tOpac.addEventListener('input',function(){ var v=+tOpac.value; if(tOpacVal) tOpacVal.textContent=v+'%'; tCfg.opac=v/100; saveTerr(); terrLayer.setOpacity(v/100); });
+    }
   }
 
   var tHead=document.getElementById('terrHead');
