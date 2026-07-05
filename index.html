@@ -2665,6 +2665,44 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .fq-edit-add{background:transparent;border:1px dashed var(--border-strong);color:var(--accent-2);width:100%;padding:7px;border-radius:3px;font-size:11px;letter-spacing:.04em;text-transform:none;font-weight:600;cursor:pointer;margin-top:4px}
   .fq-edit-add:hover{border-color:var(--accent-2)}
 
+  /* ===== Verify Frequencies modal ===== */
+  .fqv-open-btn{width:100%;margin:8px 0 4px;padding:8px;border:1px solid var(--accent-2);background:transparent;color:var(--accent-2);border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.04em;cursor:pointer}
+  .fqv-open-btn:hover{background:rgba(90,160,255,.08)}
+  .fqv-body{max-height:min(72vh,640px);overflow:auto}
+  .fqv-adv{font-size:10.5px;color:var(--text-faint);background:#1a1408;border:1px solid #3a2e10;border-radius:4px;padding:8px 10px;margin-bottom:12px;line-height:1.5}
+  .fqv-adv strong{color:var(--good)}
+  .fqv-sec{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+  .fqv-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+  .fqv-row-main{flex:1;min-width:0}
+  .fqv-idline{display:flex;align-items:center;gap:6px}
+  .fqv-id{font-family:var(--mono);font-weight:600;font-size:12.5px;color:var(--text)}
+  .fqv-iata{font-family:var(--mono);font-size:10px;color:var(--text-faint)}
+  .fqv-badge{font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;background:#0e1f15;color:var(--good);border:1px solid #1f5837}
+  .fqv-badge.aip{background:var(--bg);color:var(--text-faint);border:1px solid var(--border)}
+  .fqv-nm{font-size:11px;color:var(--text-dim);margin:1px 0 5px}
+  .fqv-freqs{display:flex;flex-wrap:wrap;gap:4px}
+  .fqv-f{font-family:var(--mono);font-size:10.5px;padding:2px 6px;border-radius:3px;background:var(--bg);border:1px solid var(--border);color:var(--text-dim)}
+  .fqv-f.v{background:#0e1f15;border-color:#1f5837;color:var(--good)}
+  .fqv-edit{flex:none;align-self:center;padding:5px 12px;border:1px solid var(--border-strong);background:transparent;color:var(--accent-2);border-radius:3px;font-size:11px;font-weight:600;cursor:pointer}
+  .fqv-edit:hover{border-color:var(--accent-2)}
+  .fqv-details{margin-top:10px}
+  .fqv-details summary{cursor:pointer;font-size:11px;color:var(--accent-2);padding:6px 0}
+  .fqv-search-wrap{padding:6px 0 2px}
+  .fqv-sr{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
+  .fqv-sr-t{color:var(--text-dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fqv-sr-t em{color:var(--good);font-style:normal;font-size:10px}
+  .fqv-sr-add{flex:none;padding:4px 10px;border:1px solid var(--border-strong);background:transparent;color:var(--accent-2);border-radius:3px;font-size:10.5px;font-weight:600;cursor:pointer}
+  .fqv-sr-none{font-size:11px;color:var(--text-faint);padding:6px 0}
+  .fqv-ctaf{padding:9px 0;border-bottom:1px solid var(--border)}
+  .fqv-ctaf-head{font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .fqv-ctaf-fields{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+  .fqv-ctaf-fields label{display:flex;flex-direction:column;gap:3px;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint)}
+  .fqv-ctaf-f{width:90px}
+  .fqv-ctaf-hf{width:190px}
+  .fqv-ctaf-fields input{font-family:var(--mono);font-size:12px;padding:5px 7px;background:var(--bg);border:1px solid var(--border-strong);border-radius:3px;color:var(--text)}
+  .fqv-ctaf-reset{padding:5px 10px;border:1px solid var(--border-strong);background:transparent;color:var(--text-faint);border-radius:3px;font-size:10.5px;cursor:pointer}
+  .fqv-ctaf-reset:hover{color:var(--text);border-color:var(--text-faint)}
+
   /* ===== Airfield lookup dropdown (waypoint coord box) =====
      Type a name / ICAO / IATA code into any coord box and pick a field;
      it fills the decimal coords. Body-level + position:fixed so it escapes
@@ -7386,6 +7424,8 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     let h = '';
     h += '<div class="fq-advisory-line">Advisory only \u2014 cross-check every freq against the PNG AIP. <span class="fq-adv-more">Details in Settings</span></div>';
 
+    h += '<button class="fqv-open-btn" id="fqVerifyBtn" type="button">\u2713 Verify all frequencies</button>';
+
     h += ctafScheduleHtml(pts);
 
     if(pts.length < 2){
@@ -7436,6 +7476,8 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     });
     const advMore = host.querySelector('.fq-adv-more');
     if(advMore){ advMore.style.cursor='pointer'; advMore.addEventListener('click', () => { const sb=document.getElementById('settingsBtn'); if(sb) sb.click(); }); }
+    const vBtn = host.querySelector('#fqVerifyBtn');
+    if(vBtn) vBtn.addEventListener('click', openVerify);
     host.querySelectorAll('.fq-add-route').forEach(b =>
       b.addEventListener('click', e => {
         e.stopPropagation();
@@ -7837,6 +7879,79 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     closeEdit();
     renderTab();
     if(fqOverlayOn) renderOverlay();
+    var vo=document.getElementById('fqVerifyOverlay');
+    if(vo && vo.classList.contains('active')) renderVerify();
+  }
+
+  // --- Verify-all modal: single sweep of every frequency (aerodromes + Area CTAF) ---
+  function openVerify(){ renderVerify(); document.getElementById('fqVerifyOverlay').classList.add('active'); }
+  function closeVerify(){ document.getElementById('fqVerifyOverlay').classList.remove('active'); }
+  function fqvSearch(q){
+    var out=document.getElementById('fqvSearchResults'); if(!out) return;
+    q=(q||'').trim().toLowerCase();
+    if(!q){ out.innerHTML=''; return; }
+    var res=NM_REGION.airfields.filter(function(a){
+      return a.ident.toLowerCase().indexOf(q)>=0
+          || (a.name && a.name.toLowerCase().indexOf(q)>=0)
+          || (a.iata && a.iata.toLowerCase().indexOf(q)>=0);
+    }).slice(0,25);
+    out.innerHTML = res.length
+      ? res.map(function(a){ var n=fieldFreqs(a.ident).length;
+          return '<div class="fqv-sr"><span class="fqv-sr-t">'+escapeHtml(a.ident)+' \u00b7 '+escapeHtml(a.name)+(n?' <em>('+n+' freq)</em>':'')+'</span>'
+               + '<button class="fqv-sr-add" type="button" data-ident="'+escapeAttr(a.ident)+'">'+(n?'Edit':'+ Add')+'</button></div>'; }).join('')
+      : '<div class="fqv-sr-none">No match.</div>';
+    out.querySelectorAll('.fqv-sr-add').forEach(function(b){ b.addEventListener('click', function(){ openEdit(b.dataset.ident); }); });
+  }
+  function renderVerify(){
+    var body=document.getElementById('fqvBody'); if(!body) return;
+    var withF = NM_REGION.airfields.filter(function(a){ return fieldFreqs(a.ident).length; })
+                  .sort(function(a,b){ return a.ident<b.ident?-1:(a.ident>b.ident?1:0); });
+    var withoutN = NM_REGION.airfields.length - withF.length;
+    var h='';
+    h += '<div class="fqv-adv">Advisory only \u2014 verify every frequency against a current PNG AIP / ERSA. Saved edits are marked <strong>\u2713</strong> and stored on this device.</div>';
+    h += '<div class="fqv-sec">Aerodromes \u00b7 '+withF.length+' with frequencies</div>';
+    h += withF.map(function(a){
+      var frs=fieldFreqs(a.ident);
+      var allV = frs.length && frs.every(function(fr){ return fr.v; });
+      return '<div class="fqv-row">'
+        + '<div class="fqv-row-main">'
+        +   '<div class="fqv-idline"><span class="fqv-id">'+escapeHtml(a.ident)+'</span>'+(a.iata?'<span class="fqv-iata">'+escapeHtml(a.iata)+'</span>':'')+(allV?'<span class="fqv-badge">\u2713</span>':'<span class="fqv-badge aip">AIP</span>')+'</div>'
+        +   '<div class="fqv-nm">'+escapeHtml(a.name)+'</div>'
+        +   '<div class="fqv-freqs">'+frs.map(function(fr){ return '<span class="fqv-f'+(fr.v?' v':'')+'">'+escapeHtml(fqTypeLabel(fr.t))+' '+escapeHtml(String(fr.f))+'</span>'; }).join('')+'</div>'
+        + '</div>'
+        + '<button class="fqv-edit" type="button" data-ident="'+escapeAttr(a.ident)+'">Edit</button></div>';
+    }).join('');
+    h += '<details class="fqv-details"><summary>'+withoutN+' fields without frequencies \u2014 search to add one</summary>'
+       + '<div class="fqv-search-wrap"><input id="fqvSearch" class="fq-search" type="text" placeholder="Search ident or name (e.g. AYMR, Moro)\u2026" autocomplete="off"><div id="fqvSearchResults" class="fq-search-results"></div></div></details>';
+    var zones = (window.NMCtaf && window.NMCtaf.data) ? window.NMCtaf.data() : [];
+    var bundled = (window.NMCtaf && window.NMCtaf.bundled) ? window.NMCtaf.bundled() : [];
+    h += '<div class="fqv-sec">Area CTAF zones \u00b7 '+zones.length+'</div>';
+    h += zones.map(function(z){
+      var b=null; for(var i=0;i<bundled.length;i++){ if(bundled[i].id===z.id){ b=bundled[i]; break; } }
+      var edited = b && ( String(z.ctaf)!==String(b.ctaf) || JSON.stringify(z.hf||[])!==JSON.stringify(b.hf||[]) );
+      return '<div class="fqv-ctaf" data-id="'+z.id+'">'
+        + '<div class="fqv-ctaf-head">Zone '+z.id+(edited?' <span class="fqv-badge">\u2713</span>':'')+'</div>'
+        + '<div class="fqv-ctaf-fields">'
+        +   '<label>CTAF<input class="fqv-ctaf-f" inputmode="decimal" value="'+escapeAttr(String(z.ctaf))+'"></label>'
+        +   '<label>HF<input class="fqv-ctaf-hf" value="'+escapeAttr((z.hf||[]).join(' '))+'" placeholder="3419 6598 8906"></label>'
+        +   '<button class="fqv-ctaf-reset" type="button" title="Reset to AIP">Reset</button>'
+        + '</div></div>';
+    }).join('');
+    body.innerHTML = h;
+    body.querySelectorAll('.fqv-edit').forEach(function(b){ b.addEventListener('click', function(){ openEdit(b.dataset.ident); }); });
+    var si=document.getElementById('fqvSearch'); if(si) si.addEventListener('input', function(){ fqvSearch(si.value); });
+    body.querySelectorAll('.fqv-ctaf').forEach(function(row){
+      var id=+row.dataset.id;
+      var save=function(){
+        var f=row.querySelector('.fqv-ctaf-f').value.trim();
+        var hf=row.querySelector('.fqv-ctaf-hf').value.trim().split(/[\s,]+/).filter(Boolean);
+        if(window.NMCtaf && window.NMCtaf.save) window.NMCtaf.save(id, f, hf);
+        renderVerify();
+      };
+      row.querySelector('.fqv-ctaf-f').addEventListener('change', save);
+      row.querySelector('.fqv-ctaf-hf').addEventListener('change', save);
+      row.querySelector('.fqv-ctaf-reset').addEventListener('click', function(){ if(window.NMCtaf && window.NMCtaf.reset) window.NMCtaf.reset(id); renderVerify(); });
+    });
   }
 
   // --- PDF helper (called from exportPdf) ---
@@ -7981,8 +8096,15 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     document.getElementById('fqEditOverlay').addEventListener('click', e => {
       if(e.target.id === 'fqEditOverlay') closeEdit();
     });
+    document.getElementById('fqvClose').addEventListener('click', closeVerify);
+    document.getElementById('fqVerifyOverlay').addEventListener('click', e => {
+      if(e.target.id === 'fqVerifyOverlay') closeVerify();
+    });
     document.addEventListener('keydown', e => {
-      if(e.key === 'Escape' && document.getElementById('fqEditOverlay').classList.contains('active')) closeEdit();
+      if(e.key !== 'Escape') return;
+      // Edit sits on top of Verify — close whichever is frontmost first.
+      if(document.getElementById('fqEditOverlay').classList.contains('active')) closeEdit();
+      else if(document.getElementById('fqVerifyOverlay').classList.contains('active')) closeVerify();
     });
     // Refresh overlay when panning the map with no route plotted
     map.on('moveend zoomend', () => { if(fqOverlayOn && (!lastPlottedPoints || lastPlottedPoints.length < 1)) renderOverlay(); });
@@ -8910,6 +9032,15 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   if(tHead){
     if(tCfg.collapsed) tPanel.classList.add('collapsed');
     tHead.addEventListener('click',function(){ var c=tPanel.classList.toggle('collapsed'); tCfg.collapsed=c; saveTerr(); });
+    // Auto-minimise as soon as you tap/click away from the panel — but leave it
+    // open while you're interacting with it, or while any modal overlay is up
+    // (e.g. the offline-map download dialog sitting above it).
+    document.addEventListener('pointerdown', function(e){
+      if(tPanel.classList.contains('collapsed')) return;
+      if(tPanel.contains(e.target)) return;
+      if(e.target.closest && e.target.closest('.cr-overlay.active')) return;
+      tPanel.classList.add('collapsed'); tCfg.collapsed=true; saveTerr();
+    });
   }
 
   /* ---- Terrain profile: vertical cross-section of ground elevation along the
@@ -10011,8 +10142,12 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     L.polygon(a.ring,{color:'#ffb020',weight:2.5,opacity:.95,fillColor:'#ffb020',fillOpacity:.12,interactive:false,className:'ctaf-hl'}).addTo(ctafHlLayer);
   }
   // Exposed for the route handoff schedule (+ later, the frequency editor).
+  function saveCtaf(o){ try{ localStorage.setItem(CTAF_KEY, JSON.stringify(o)); }catch(_){ } }
   window.NMCtaf = {
     data: ctafData,
+    bundled: function(){ return NM_REGION.ctafZones.map(function(a){ return {id:a.id, ctaf:a.ctaf, hf:a.hf}; }); },
+    save: function(id, ctaf, hf){ var o=ctafOverrides(); o[id]={ctaf:ctaf, hf:hf}; saveCtaf(o); renderCtaf(); },
+    reset: function(id){ var o=ctafOverrides(); delete o[id]; saveCtaf(o); renderCtaf(); },
     areaAt: function(lat,lon){ var d=ctafData(); for(var i=0;i<d.length;i++){ if(pointInRing(lat,lon,d[i].ring)) return d[i]; } return null; },
     render: function(){ if(ov.ctaf) renderCtaf(); },
     highlight: ctafHighlight,
@@ -10618,6 +10753,16 @@ if (navigator.storage && navigator.storage.persist) {
 </div>
 
 <!-- ===== Frequency edit modal ===== -->
+<div class="cr-overlay" id="fqVerifyOverlay">
+  <div class="cr-modal" style="width:520px;max-width:94vw">
+    <div class="cr-head">
+      <h3>Verify Frequencies</h3>
+      <button class="cr-close" id="fqvClose" aria-label="Close">✕</button>
+    </div>
+    <div class="cr-body fqv-body" id="fqvBody"></div>
+  </div>
+</div>
+
 <div class="cr-overlay" id="fqEditOverlay">
   <div class="cr-modal" style="width:460px">
     <div class="cr-head">
