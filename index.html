@@ -2964,6 +2964,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ap-region{color:var(--text-faint);font-size:10px;font-weight:400}
   .ap-sep{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);padding:6px 12px 3px;border-top:1px solid var(--border)}
   .ap-foot{font-size:10px;color:var(--text-faint);padding:7px 12px;font-style:italic}
+  .mapsearch-vpin{display:flex;align-items:center;gap:5px;color:var(--accent-2);font-size:12px;line-height:1;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}
+  .mapsearch-vpin span{font-family:var(--sans,system-ui);font-size:11px;font-weight:600;color:var(--text)}
 
   /* ===== Weather (METAR) ===== */
   .wx-modal{max-width:430px;width:92vw}
@@ -4226,7 +4228,7 @@ const labelsLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_lab
   updateWhenIdle: true,
   updateWhenZooming: false,
   keepBuffer: 1,
-  zIndex: 6
+  zIndex: 7
 });
 
 /* ===== Offline vector basemap (PMTiles) — progressive enhancement =====
@@ -5553,6 +5555,9 @@ const processDebounced = debounce(process, 300);
   const clearBtn = document.getElementById('mapSearchClear');
   if(!box || !input || !results) return;
   let active = 0;
+  // Villages via OpenStreetMap (Photon, online) — same source the sidebar uses.
+  const PHOTON = 'https://photon.komoot.io/api/';
+  let photonTimer = null, acAbort = null, curOnline, lastQ = '', villageLayer = null;
   const byId = id => NM_REGION.airfields.find(x => x.ident === id);
   function score(a, q){
     const id=a.ident.toLowerCase(), ia=(a.iata||'').toLowerCase(), nm=(a.name||'').toLowerCase(), mu=(a.muni||'').toLowerCase();
@@ -5576,12 +5581,77 @@ const processDebounced = debounce(process, 300);
       + '<span class="ap-iata">'+escapeHtml(a.iata||'')+'</span>'
       + '<span class="ap-name">'+escapeHtml(a.name)+(a.muni?(' \u00b7 '+escapeHtml(a.muni)):'')+'</span>'+dot+'<button type="button" class="ap-add" data-add="'+escapeAttr(a.ident)+'" title="Add to route" aria-label="Add to route">+</button></div>';
   }
+  function villageHtml(o){
+    return '<div class="ap-item ap-village ap-online" data-online="1" data-lat="'+o.lat+'" data-lon="'+o.lon+'" data-name="'+escapeAttr(o.name)+'">'
+      + '<span class="ap-icao">\u25CF</span><span class="ap-iata"></span>'
+      + '<span class="ap-name">'+escapeHtml(o.name)+(o.region?(' <span class="ap-region">'+escapeHtml(o.region)+'</span>'):'')+'</span>'
+      + '<span class="ap-type">village</span></div>';
+  }
+  function renderResults(){
+    const q = input.value.trim().toLowerCase();
+    const hits = find(input.value); active = 0;
+    let html = hits.map(itemHtml).join('');
+    if(q.length >= 3){
+      if(curOnline === undefined){
+        html += '<div class="ap-foot">Searching villages\u2026</div>';
+      } else if(curOnline.length){
+        html += '<div class="ap-sep">Villages \u00b7 OpenStreetMap (online)</div>' + curOnline.map(villageHtml).join('');
+      } else if(!hits.length){
+        html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
+      }
+    } else if(!hits.length){
+      html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
+    }
+    results.innerHTML = html;
+  }
+  function photonFetch(q){
+    if(acAbort){ try{ acAbort.abort(); }catch(_){} }
+    let opts = {};
+    try { acAbort = new AbortController(); opts.signal = acAbort.signal; } catch(_){ acAbort = null; }
+    fetch(PHOTON + '?q=' + encodeURIComponent(q) + '&limit=10&lat=-6.2&lon=145.0&lang=en', opts)
+      .then(r => (r && r.ok) ? r.json() : null)
+      .then(j => {
+        if(lastQ !== q) return;                 // stale — user kept typing
+        const online = [];
+        if(j && Array.isArray(j.features)){
+          const seen = new Set();
+          for(const f of j.features){
+            const p = f.properties || {}, c = (f.geometry && f.geometry.coordinates) || [];
+            if(p.countrycode !== 'PG' && p.country !== 'Papua New Guinea') continue;
+            const name = p.name || p.city || p.county || '';
+            if(!name || c[1] == null || c[0] == null) continue;
+            if(seen.has(name.toUpperCase())) continue;
+            seen.add(name.toUpperCase());
+            online.push({ name, region:[p.county, p.state].filter(Boolean).join(', '), lat:+(+c[1]).toFixed(6), lon:+(+c[0]).toFixed(6) });
+            if(online.length >= 5) break;
+          }
+        }
+        curOnline = online; renderResults();
+      })
+      .catch(() => { if(lastQ === q){ curOnline = []; renderResults(); } });
+  }
+  function clearVillagePin(){ if(villageLayer){ map.removeLayer(villageLayer); villageLayer = null; } }
+  function goVillage(lat, lon, name){
+    if(!isFinite(lat) || !isFinite(lon)) return;
+    map.setView([lat, lon], Math.max(map.getZoom()||0, 12));
+    clearVillagePin();
+    villageLayer = L.marker([lat, lon], { interactive:false, icon: L.divIcon({
+      className:'', iconSize:null, iconAnchor:[7,7],
+      html:'<div class="mapsearch-vpin">\u25CF<span>'+escapeHtml(name||'')+'</span></div>' }) }).addTo(map);
+    input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; curOnline=undefined; lastQ=''; input.blur();
+    box.classList.remove('focused');
+  }
   function paint(){
     const v = input.value;
     clearBtn.hidden = !v;
-    if(v.trim().length < 2){ results.innerHTML=''; return; }
-    const hits = find(v); active = 0;
-    results.innerHTML = hits.length ? hits.map(itemHtml).join('') : '<div class="map-search-none">No match — try ICAO, IATA, or name.</div>';
+    const q = v.trim();
+    if(q.length < 2){ results.innerHTML=''; lastQ=''; curOnline=undefined; if(acAbort){ try{ acAbort.abort(); }catch(_){} } clearTimeout(photonTimer); return; }
+    lastQ = q.toLowerCase();
+    curOnline = undefined;
+    renderResults();
+    if(acAbort){ try{ acAbort.abort(); }catch(_){} acAbort = null; }
+    clearTimeout(photonTimer);
+    if(q.length >= 3) photonTimer = setTimeout(() => photonFetch(q.toLowerCase()), 320);
   }
   function setActive(n){
     const items = [].slice.call(results.querySelectorAll('.ap-item'));
@@ -5605,8 +5675,8 @@ const processDebounced = debounce(process, 300);
     const items = results.querySelectorAll('.ap-item');
     if(e.key==='ArrowDown'){ e.preventDefault(); setActive(active+1); }
     else if(e.key==='ArrowUp'){ e.preventDefault(); setActive(active-1); }
-    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick) go(byId(pick.dataset.id)); }
-    else if(e.key==='Escape'){ e.preventDefault(); input.value=''; results.innerHTML=''; clearBtn.hidden=true; input.blur(); box.classList.remove('focused'); if(window.NMClearPin) window.NMClearPin(); }
+    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else { go(byId(pick.dataset.id)); } } }
+    else if(e.key==='Escape'){ e.preventDefault(); input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; curOnline=undefined; lastQ=''; input.blur(); box.classList.remove('focused'); clearVillagePin(); if(window.NMClearPin) window.NMClearPin(); }
   });
   results.addEventListener('click', e => {
     const addBtn = e.target.closest('.ap-add');
@@ -5620,9 +5690,12 @@ const processDebounced = debounce(process, 300);
       return;                                // don't fly to it or open its card
     }
     const it = e.target.closest('.ap-item');
-    if(it) go(byId(it.dataset.id));
+    if(it){
+      if(it.dataset.online){ goVillage(+it.dataset.lat, +it.dataset.lon, it.dataset.name); }
+      else go(byId(it.dataset.id));
+    }
   });
-  clearBtn.addEventListener('click', () => { input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; input.focus(); if(window.NMClearPin) window.NMClearPin(); });
+  clearBtn.addEventListener('click', () => { input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; curOnline=undefined; lastQ=''; input.focus(); clearVillagePin(); if(window.NMClearPin) window.NMClearPin(); });
   // Don't let clicks/scroll on the search reach the map (measure, etc.).
   if(window.L && L.DomEvent){ L.DomEvent.disableClickPropagation(box); L.DomEvent.disableScrollPropagation(box); }
   document.addEventListener('click', e => { if(!box.contains(e.target)){ results.innerHTML=''; box.classList.remove('focused'); } });
@@ -8974,7 +9047,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     _repaint:function(){ for(var k in this._tc){ this._paint(this._tc[k].cv,this._tc[k].el); } },
     _emitMax:function(){ var mx=-Infinity; for(var k in this._tc){ if(this._tc[k].mx>mx)mx=this._tc[k].mx; } if(this._onMax)this._onMax(isFinite(mx)?mx:null); }
   });
-  var terrLayer=new TerrainShade({maxZoom:18,maxNativeZoom:TERR.maxNativeZoom,opacity:0.82});
+  var terrLayer=new TerrainShade({maxZoom:18,maxNativeZoom:TERR.maxNativeZoom,opacity:0.82,zIndex:6});
 
   // Ground elevation (ft) at a point, decoded from a Terrarium tile. Used by the
   // map right-click / long-press menu. Resolves null if the tile can't be read.
@@ -10160,7 +10233,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     if(ov.runways){ runwayLayer.addTo(map); renderRunways(); } else map.removeLayer(runwayLayer);
     if(ov.ctaf){ ctafLayer.addTo(map); renderCtaf(); } else map.removeLayer(ctafLayer);
     if(ov.mbz){ mbzLayer.addTo(map); renderMbz(); } else map.removeLayer(mbzLayer);
-    if(ov.terrain){ terrLayer.addTo(map); terrLayer.setZIndex(3); if(tPanel) tPanel.classList.add('show'); } else { map.removeLayer(terrLayer); if(tPanel) tPanel.classList.remove('show'); }
+    if(ov.terrain){ terrLayer.addTo(map); terrLayer.setZIndex(6); if(tPanel) tPanel.classList.add('show'); } else { map.removeLayer(terrLayer); if(tPanel) tPanel.classList.remove('show'); }
   }
 
   /* ---- MBZ (Mandatory Broadcast Zones) ---- */
