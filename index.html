@@ -2964,7 +2964,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ap-region{color:var(--text-faint);font-size:10px;font-weight:400}
   .ap-sep{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);padding:6px 12px 3px;border-top:1px solid var(--border)}
   .ap-foot{font-size:10px;color:var(--text-faint);padding:7px 12px;font-style:italic}
-  .mapsearch-vpin{display:flex;align-items:center;gap:5px;color:var(--accent-2);font-size:12px;line-height:1;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}
+  .mapsearch-vpin{display:flex;align-items:center;gap:5px;color:var(--accent-2);font-size:12px;line-height:1;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;cursor:pointer}
   .mapsearch-vpin span{font-family:var(--sans,system-ui);font-size:11px;font-weight:600;color:var(--text)}
 
   /* ===== Weather (METAR) ===== */
@@ -3203,6 +3203,12 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wpt-card .af-h .af-nm{font-size:13px;color:var(--text);font-weight:700}
   .af-acts .wpt-del{color:var(--bad)}
   .af-edit:hover{color:var(--accent)}
+  .af-acts-grid{flex-wrap:wrap;gap:8px}
+  .af-acts-grid .af-route,.af-acts-grid .af-edit{flex:1 1 40%;white-space:nowrap;text-align:center;padding:8px 10px;border-radius:5px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border:1px solid transparent}
+  .af-acts-grid .af-edit{background:var(--inset);color:var(--text-dim);border-color:var(--border-strong)}
+  .af-acts-grid .af-edit:hover{color:var(--text);border-color:var(--text-dim)}
+  .af-acts-grid .rp-del{color:var(--bad)}
+  .af-acts-grid .rp-del:hover{color:var(--bad);border-color:var(--bad)}
 
   /* ===== Saved Waypoints library (left panel) ===== */
   .wplib{margin-top:14px;border-top:1px solid var(--border);padding-top:12px}
@@ -4499,9 +4505,10 @@ function openRoutePointCard(p){
     + '<span class="af-chip uw-elev">Elev&nbsp;<b>\u2026</b></span>';
   const coord = '<div class="af-coord"><span class="dms">' + escapeHtml(toDms(p.lat,true) + '  ' + toDms(p.lon,false))
     + '</span><span class="dec">' + p.lat.toFixed(5) + ', ' + p.lon.toFixed(5) + '</span></div>';
-  let acts = '<button type="button" class="af-route rp-copy">\u29c9 Copy</button>';
-  if(fld) acts += '<button type="button" class="af-route rp-info">\u2708 Airfield</button>';
-  acts += '<button type="button" class="af-route rp-fc">\u26c5 Forecast</button>';
+  let acts = '';
+  if(fld) acts += '<button type="button" class="af-route rp-info">Airfield</button>';
+  acts += '<button type="button" class="af-route rp-fc">Forecast</button>';
+  acts += '<button type="button" class="af-edit rp-copy">Copy</button>';
   acts += '<button type="button" class="af-edit rp-del">Delete point</button>';
   const key = fld ? fld.ident : ('RP:' + p.lat.toFixed(4) + ',' + p.lon.toFixed(4));
   const docsHtml = '<div class="af-charts"><div class="af-charts-h"><span>Docs</span><button type="button" class="af-charts-add">+ Add</button></div><div class="af-charts-list"></div><input type="file" class="af-charts-file" accept="image/*,application/pdf" multiple hidden></div>';
@@ -4511,7 +4518,7 @@ function openRoutePointCard(p){
     + '<div class="af-h"><span class="af-nm">' + escapeHtml(p.label || 'Point') + '</span></div>'
     + '<div class="af-meta">' + chips + '</div>'
     + coord + docsHtml + notesHtml
-    + '<div class="af-acts">' + acts + '</div>'
+    + '<div class="af-acts af-acts-grid">' + acts + '</div>'
     + '</div>';
   const pop = L.popup({ className:'map-add-popup', closeButton:true, autoPan:true, offset:[0,-6] })
     .setLatLng([p.lat, p.lon]).setContent(el).openOn(map);
@@ -4525,7 +4532,7 @@ function openRoutePointCard(p){
   const copyB = el.querySelector('.rp-copy');
   if(copyB) copyB.addEventListener('click', function(){
     const txt = toDms(p.lat,true) + ' ' + toDms(p.lon,false) + '  \u00b7  ' + p.lat.toFixed(5) + ', ' + p.lon.toFixed(5);
-    const ok = function(){ copyB.textContent = '\u2713 Copied'; setTimeout(function(){ copyB.innerHTML = '\u29c9 Copy'; }, 1400); };
+    const ok = function(){ copyB.textContent = 'Copied'; setTimeout(function(){ copyB.textContent = 'Copy'; }, 1400); };
     if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(ok, function(){ _fallbackCopy(txt); ok(); }); }
     else { _fallbackCopy(txt); ok(); }
   });
@@ -4533,15 +4540,19 @@ function openRoutePointCard(p){
   if(infoB) infoB.addEventListener('click', function(){ map.closePopup(pop); if(window.NMShowAirfield) window.NMShowAirfield(fld.ident); });
   const fcB = el.querySelector('.rp-fc');
   if(fcB) fcB.addEventListener('click', function(){ map.closePopup(pop); if(window.NMForecast) window.NMForecast(p.lat, p.lon, p.label || null); });
-  const delB = el.querySelector('.rp-del');
-  if(delB) delB.addEventListener('click', function(){
+  const doDelete = function(){
     snapshot();
     state.rows = state.rows.filter(x => x.id !== p._rowId);
     if(state.rows.length === 0) addRow();
     renderRows();
     process(false);
     map.closePopup(pop);
-  });
+  };
+  const delB = el.querySelector('.rp-del');
+  if(delB) delB.addEventListener('click', doDelete);
+  // Highlighted point: Delete/Backspace removes it while this card is open.
+  if(window.NMKbDelete) window.NMKbDelete.set(doDelete);
+  if(pop.on) pop.on('remove', function(){ if(window.NMKbDelete) window.NMKbDelete.clear(doDelete); });
   // Notes persist to the same per-place store the airfield card uses (keyed by
   // ident for a field, or by rounded coords for a plain spot), so a note on a
   // field shows on its airfield card too. Photos/PDFs go to the shared docs store.
@@ -4560,6 +4571,63 @@ function openRoutePointCard(p){
   if(window.NMWireDocs) window.NMWireDocs(el, key, pop);
   return pop;
 }
+
+// Card for a searched spot (village / OSM place) that isn't a route point yet.
+// Same look as the route-point card (name, elevation, coords, Docs, Notes) with
+// spot actions: add to route, forecast, copy, save as a point. Notes and docs
+// key by rounded coords — the same key the route-point card uses — so a note or
+// photo added here shows on that point once it's plotted.
+window.NMSpotCard = function(name, lat, lon){
+  lat = +lat; lon = +lon;
+  if(!isFinite(lat) || !isFinite(lon)) return;
+  var key = 'RP:' + lat.toFixed(4) + ',' + lon.toFixed(4);
+  var coordStr = lat.toFixed(6) + ', ' + lon.toFixed(6);
+  var chips = '<span class="af-chip">Village</span><span class="af-chip uw-elev">Elev&nbsp;<b>\u2026</b></span>';
+  var coord = '<div class="af-coord"><span class="dms">' + escapeHtml(toDms(lat,true) + '  ' + toDms(lon,false)) + '</span><span class="dec">' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '</span></div>';
+  var docsHtml = '<div class="af-charts"><div class="af-charts-h"><span>Docs</span><button type="button" class="af-charts-add">+ Add</button></div><div class="af-charts-list"></div><input type="file" class="af-charts-file" accept="image/*,application/pdf" multiple hidden></div>';
+  var notesHtml = '<div class="af-notes"><div class="af-notes-h"><span>My notes</span><span class="af-notes-saved">Saved</span></div><textarea class="af-notes-ta" rows="2" placeholder="Personal notes: hazards, landing spots, contacts"></textarea></div>';
+  var acts = '<button type="button" class="af-route sp-add">+ Route</button>'
+    + '<button type="button" class="af-route sp-fc">Forecast</button>'
+    + '<button type="button" class="af-edit sp-copy">Copy</button>'
+    + '<button type="button" class="af-edit sp-save">Save</button>';
+  var el = document.createElement('div');
+  el.innerHTML = '<div class="af-card wpt-card">'
+    + '<div class="af-h"><span class="af-nm">' + escapeHtml(name || 'Spot') + '</span></div>'
+    + '<div class="af-meta">' + chips + '</div>'
+    + coord + docsHtml + notesHtml
+    + '<div class="af-acts af-acts-grid">' + acts + '</div>'
+    + '</div>';
+  var pop = L.popup({ className:'map-add-popup', closeButton:true, autoPan:true, offset:[0,-6] })
+    .setLatLng([lat, lon]).setContent(el).openOn(map);
+  var elevB = el.querySelector('.uw-elev b');
+  if(elevB){
+    if(typeof window.NMElev === 'function'){ window.NMElev(lat, lon).then(function(ft){ elevB.textContent = (ft == null || !isFinite(ft)) ? '\u2014' : (Math.round(ft).toLocaleString() + ' ft'); }).catch(function(){ elevB.textContent = '\u2014'; }); }
+    else elevB.textContent = '\u2014';
+  }
+  var addB = el.querySelector('.sp-add');
+  if(addB) addB.addEventListener('click', function(){ if(window.addFieldToRoute) window.addFieldToRoute(name || '', coordStr); map.closePopup(pop); });
+  var fcB = el.querySelector('.sp-fc');
+  if(fcB) fcB.addEventListener('click', function(){ map.closePopup(pop); if(window.NMForecast) window.NMForecast(lat, lon, name || null); });
+  var cpB = el.querySelector('.sp-copy');
+  if(cpB) cpB.addEventListener('click', function(){
+    var txt = toDms(lat,true) + ' ' + toDms(lon,false) + '  \u00b7  ' + lat.toFixed(5) + ', ' + lon.toFixed(5);
+    var ok = function(){ cpB.textContent = 'Copied'; setTimeout(function(){ cpB.textContent = 'Copy'; }, 1400); };
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(ok, function(){ _fallbackCopy(txt); ok(); }); }
+    else { _fallbackCopy(txt); ok(); }
+  });
+  var svB = el.querySelector('.sp-save');
+  if(svB) svB.addEventListener('click', function(){ if(window.NMSaveVillage) window.NMSaveVillage(name || '', lat, lon); svB.textContent = 'Saved'; setTimeout(function(){ map.closePopup(pop); }, 700); });
+  var ta = el.querySelector('.af-notes-ta');
+  if(ta && window.NMAfNotes){
+    ta.value = window.NMAfNotes.get(key);
+    var savedTag = el.querySelector('.af-notes-saved'), svT = null;
+    ta.addEventListener('input', function(){ window.NMAfNotes.set(key, ta.value); if(savedTag){ savedTag.classList.add('show'); clearTimeout(svT); svT = setTimeout(function(){ savedTag.classList.remove('show'); }, 1200); } });
+    ['keydown','keyup','keypress'].forEach(function(ev){ ta.addEventListener(ev, function(e){ L.DomEvent.stopPropagation(e); }); });
+    L.DomEvent.disableScrollPropagation(ta);
+  }
+  if(window.NMWireDocs) window.NMWireDocs(el, key, pop);
+  return pop;
+};
 
 function highlightLeg(idx){
   legLines.forEach((line, i) => {
@@ -4799,6 +4867,27 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     undo();
   }
+});
+
+// Delete / Backspace removes the currently highlighted item — the plotted route
+// point or saved waypoint whose card is open. A card registers its own delete
+// action on open and clears it on close (identity-checked, so Leaflet's popup
+// auto-close can't leave a stale action behind). Guarded so it never fires while
+// typing in a field, and never while a full-screen modal owns the keyboard.
+let _kbDelete = null;
+window.NMKbDelete = {
+  set(fn){ _kbDelete = fn; },
+  clear(fn){ if(_kbDelete === fn) _kbDelete = null; }
+};
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Delete' && e.key !== 'Backspace') return;
+  if(!_kbDelete) return;
+  const t = document.activeElement;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if(document.querySelector('.cr-overlay.active')) return; // a modal owns the keyboard
+  e.preventDefault();
+  const fn = _kbDelete; _kbDelete = null;
+  fn();
 });
 
 // Pull coordinates out of pasted KML (Google Earth "Copy feature", or a .kml's
@@ -5742,11 +5831,15 @@ const processDebounced = debounce(process, 300);
     if(!isFinite(lat) || !isFinite(lon)) return;
     map.setView([lat, lon], Math.max(map.getZoom()||0, 12));
     clearVillagePin();
-    villageLayer = L.marker([lat, lon], { interactive:false, icon: L.divIcon({
+    villageLayer = L.marker([lat, lon], { interactive:true, keyboard:false, icon: L.divIcon({
       className:'', iconSize:null, iconAnchor:[7,7],
       html:'<div class="mapsearch-vpin">\u25CF<span>'+escapeHtml(name||'')+'</span></div>' }) }).addTo(map);
-    input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; curOnline=undefined; lastQ=''; input.blur();
+    villageLayer.on('click', function(){ if(window.NMSpotCard) window.NMSpotCard(name, lat, lon); });
+    // Keep the found name in the box so the clear (X) stays visible — that X is
+    // the reset: it clears the box and removes this pin (neutralizes the spot).
+    input.value = name || ''; results.innerHTML=''; clearBtn.hidden = !(name); active=0; curOnline=undefined; lastQ=''; input.blur();
     box.classList.remove('focused');
+    if(window.NMSpotCard) window.NMSpotCard(name, lat, lon);
   }
   function paint(){
     const v = input.value;
@@ -9777,8 +9870,11 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     }
     var rb=el.querySelector('.af-route');
     if(rb) rb.addEventListener('click',function(){ if(window.addFieldToRoute) window.addFieldToRoute(w.name||('WP '+w.id), w.lat.toFixed(6)+', '+w.lon.toFixed(6)); map.closePopup(pop); });
+    var wptDel=function(){ var i=wpts.indexOf(w); if(i>=0){ wpts.splice(i,1); saveWpts(); renderWpts(); } map.closePopup(pop); };
     var delB=el.querySelector('.wpt-del');
-    if(delB) delB.addEventListener('click',function(){ var i=wpts.indexOf(w); if(i>=0){ wpts.splice(i,1); saveWpts(); renderWpts(); } map.closePopup(pop); });
+    if(delB) delB.addEventListener('click', wptDel);
+    if(window.NMKbDelete) window.NMKbDelete.set(wptDel);
+    if(pop.on) pop.on('remove', function(){ if(window.NMKbDelete) window.NMKbDelete.clear(wptDel); });
     wireWptDocs(el, 'WPT:'+w.id, pop);
     return pop;
   }
