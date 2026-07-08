@@ -2961,6 +2961,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ap-item.ap-wpt .ap-icao{color:#e8f0f8}
   .ap-item.ap-wpt .ap-name{color:#e8f0f8;font-weight:700}
   .ap-item.ap-village .ap-icao{color:var(--accent-2);font-size:9px}
+  .ap-item.ap-saved .ap-icao{color:var(--accent);font-size:12px}
   .ap-region{color:var(--text-faint);font-size:10px;font-weight:400}
   .ap-sep{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);padding:6px 12px 3px;border-top:1px solid var(--border)}
   .ap-foot{font-size:10px;color:var(--text-faint);padding:7px 12px;font-style:italic}
@@ -5783,19 +5784,48 @@ const processDebounced = debounce(process, 300);
       + '<span class="ap-name">'+escapeHtml(o.name)+(o.region?(' <span class="ap-region">'+escapeHtml(o.region)+'</span>'):'')+'</span>'
       + '<span class="ap-type">village</span></div>';
   }
+  function findWpts(q){
+    if(!q || q.length < 2 || typeof window.NMSavedWpts !== 'function') return [];
+    var arr = window.NMSavedWpts() || [];
+    return arr.map(function(w){
+      var nm = (w.name||'').toLowerCase(), s = 99;
+      if(nm === q) s = 0; else if(nm.indexOf(q) === 0) s = 1; else if(nm.indexOf(q) > -1) s = 4;
+      return { w:w, s:s };
+    }).filter(function(x){ return x.s < 99; })
+      .sort(function(a,b){ return a.s - b.s || (a.w.name||'').localeCompare(b.w.name||''); })
+      .slice(0, 5).map(function(x){ return x.w; });
+  }
+  function wptHtml(w){
+    var dot = (w.note && String(w.note).trim()) ? '<span class="has-note-dot" title="Your notes"></span>' : '';
+    var coord = (w.lat!=null && w.lon!=null) ? (Number(w.lat).toFixed(6)+', '+Number(w.lon).toFixed(6)) : '';
+    return '<div class="ap-item ap-saved" data-wptid="'+escapeAttr(String(w.id))+'">'
+      + '<span class="ap-icao">\u2605</span><span class="ap-iata"></span>'
+      + '<span class="ap-name">'+escapeHtml(w.name||'Waypoint')+'</span>'+dot
+      + '<button type="button" class="ap-add" data-wptadd="1" data-name="'+escapeAttr(w.name||'')+'" data-coord="'+escapeAttr(coord)+'" title="Add to route" aria-label="Add to route">+</button></div>';
+  }
+  function goWpt(id){
+    if(window.NMShowWpt) window.NMShowWpt(id);
+    input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; input.blur();
+    box.classList.remove('focused');
+  }
   function renderResults(){
     const q = input.value.trim().toLowerCase();
-    const hits = find(input.value); active = 0;
+    const hits = find(input.value);
+    const wptHits = findWpts(q);
+    active = 0;
     let html = hits.map(itemHtml).join('');
+    if(wptHits.length){
+      html += '<div class="ap-sep">Your saved waypoints</div>' + wptHits.map(wptHtml).join('');
+    }
     if(q.length >= 3){
       if(curOnline === undefined){
         html += '<div class="ap-foot">Searching villages\u2026</div>';
       } else if(curOnline.length){
         html += '<div class="ap-sep">Villages \u00b7 OpenStreetMap (online)</div>' + curOnline.map(villageHtml).join('');
-      } else if(!hits.length){
+      } else if(!hits.length && !wptHits.length){
         html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
       }
-    } else if(!hits.length){
+    } else if(!hits.length && !wptHits.length){
       html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
     }
     results.innerHTML = html;
@@ -5875,12 +5905,20 @@ const processDebounced = debounce(process, 300);
     const items = results.querySelectorAll('.ap-item');
     if(e.key==='ArrowDown'){ e.preventDefault(); setActive(active+1); }
     else if(e.key==='ArrowUp'){ e.preventDefault(); setActive(active-1); }
-    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else { go(byId(pick.dataset.id)); } } }
+    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else if(pick.dataset.wptid){ goWpt(pick.dataset.wptid); } else { go(byId(pick.dataset.id)); } } }
     else if(e.key==='Escape'){ e.preventDefault(); input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; curOnline=undefined; lastQ=''; input.blur(); box.classList.remove('focused'); clearVillagePin(); if(window.NMClearPin) window.NMClearPin(); }
   });
   results.addEventListener('click', e => {
     const addBtn = e.target.closest('.ap-add');
-    if(addBtn){                              // "+" drops the field straight into the route
+    if(addBtn){                              // "+" drops the point straight into the route
+      if(addBtn.dataset.wptadd){
+        if(addBtn.dataset.coord && typeof window.addFieldToRoute === 'function'){
+          window.addFieldToRoute(addBtn.dataset.name || '', addBtn.dataset.coord);
+          addBtn.textContent = '\u2713'; addBtn.classList.add('added');
+          setTimeout(() => { addBtn.textContent = '+'; addBtn.classList.remove('added'); }, 1200);
+        }
+        return;
+      }
       const a = byId(addBtn.dataset.add);
       if(a && typeof window.addFieldToRoute === 'function'){
         window.addFieldToRoute(a.ident, a.lat.toFixed(6) + ', ' + a.lon.toFixed(6));
@@ -5892,6 +5930,7 @@ const processDebounced = debounce(process, 300);
     const it = e.target.closest('.ap-item');
     if(it){
       if(it.dataset.online){ goVillage(+it.dataset.lat, +it.dataset.lon, it.dataset.name); }
+      else if(it.dataset.wptid){ goWpt(it.dataset.wptid); }
       else go(byId(it.dataset.id));
     }
   });
@@ -9916,6 +9955,14 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     openWptEditor(w,[lat,lon]);
   }
   window.addUserWaypointAt=addWptAt;
+  // For the map search bar: read the saved-waypoint list, and open one by id.
+  window.NMSavedWpts = function(){ return wpts; };
+  window.NMShowWpt = function(id){
+    var w = wpts.filter(function(x){ return String(x.id) === String(id); })[0];
+    if(!w) return;
+    map.setView([w.lat, w.lon], Math.max(map.getZoom()||0, 13));
+    openWptCard(w, [w.lat, w.lon]);
+  };
   // Save a village from the name lookup (tagged kind:'village', deduped by name+coord).
   // Keeps the in-memory list and the library in sync, and returns the record.
   window.NMSaveVillage=function(name,lat,lon){
@@ -10956,7 +11003,11 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
   function render(d){
     var H=d.hourly||{}, C=d.current||{}, D=d.daily||{};
-    var i=(H.time&&C.time)?H.time.indexOf(C.time):0; if(i<0) i=0;
+    var i=0;
+    if(H.time && H.time.length && C.time){
+      var cms=Date.parse(C.time), best=Infinity;
+      for(var q=0;q<H.time.length;q++){ var df=Math.abs(Date.parse(H.time[q])-cms); if(df<best){ best=df; i=q; } }
+    }
     function hv(k){ return (H[k]&&H[k][i]!=null)?H[k][i]:null; }
     var temp=hv('temperature_2m'), dew=hv('dew_point_2m'), rh=hv('relative_humidity_2m');
     var wdir=hv('wind_direction_10m'), wspd=hv('wind_speed_10m'), wgst=hv('wind_gusts_10m');
@@ -10964,6 +11015,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var low=hv('cloud_cover_low'), mid=hv('cloud_cover_mid'), cc=hv('cloud_cover'), code=hv('weather_code');
     var w=wxc(code||0), cat=catFor(visM,low,mid);
     var inHg=(pmsl!=null)?(pmsl*0.0295300):null;
+    var flFt=ftOf(fl);
     var elevFt=(d.elevation!=null)?d.elevation*3.28084:null, DA=null;
     if(elevFt!=null&&inHg!=null&&temp!=null){
       var PA=elevFt+(29.9213-inHg)*1000, isa=15-1.98*(elevFt/1000);
@@ -10972,7 +11024,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var visTxt='\u2014';
     if(visM!=null){ var sm=visM/1609.34; visTxt=(sm>=10?'10+ SM':(sm.toFixed(1)+' SM'))+' \u00b7 '+Math.round(visM/1000)+' km'; }
     var windTxt=(wdir!=null&&wspd!=null)?(compass(wdir)+' '+Math.round(wdir)+'\u00b0 @ '+Math.round(wspd)+' kt'+(wgst?(' G'+Math.round(wgst)):'')):'\u2014';
-    var asOf=C.time?C.time.substring(11,16):'';
+    var asOf=(H.time&&H.time[i])?H.time[i].substring(11,16):(C.time?C.time.substring(11,16):'');
     var h='<div class="fc-top"><span class="fc-cat" style="background:'+cat[1]+'">'+cat[0]+'</span><span class="fc-desc">'+w[1]+' '+esc(w[0])+'</span></div>'
       + '<div class="fc-asof">Model forecast for '+esc(asOf)+' local'+(d.timezone_abbreviation?(' '+esc(d.timezone_abbreviation)):'')+'</div>';
     function cell(k,v){ return '<div class="fc-cell"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
@@ -10985,7 +11037,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       + cell('Humidity',rh!=null?rh+'%':'\u2014')
       + cell('Altimeter',inHg!=null?(inHg.toFixed(2)+' inHg \u00b7 '+Math.round(pmsl)+' hPa'):'\u2014')
       + cell('Density alt (est.)',DA!=null?DA.toLocaleString()+' ft':'\u2014')
-      + cell('Freezing level',fl!=null?(ftOf(fl).toLocaleString()+' ft'):'\u2014')
+      + cell('Freezing level',flFt!=null?(flFt.toLocaleString()+' ft'):'\u2014')
       + '</div>';
     var hs='<div class="fc-sec-h">Next hours</div><div class="fc-strip">';
     for(var j=i;j<i+12 && H.time && j<H.time.length;j++){
