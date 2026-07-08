@@ -2969,6 +2969,27 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
   /* ===== Weather (METAR) ===== */
   .wx-modal{max-width:430px;width:92vw}
+  .fc-modal{max-width:540px;width:94vw}
+  .fc-load,.fc-none{padding:20px 6px;color:var(--text-dim);text-align:center;font-size:13px;line-height:1.5}
+  .fc-top{display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap}
+  .fc-cat{display:inline-block;padding:3px 12px;border-radius:6px;font-weight:800;color:#08150c;font-size:15px;letter-spacing:.06em}
+  .fc-desc{font-size:15px;color:var(--text);font-weight:600}
+  .fc-asof{font-size:11px;color:var(--text-faint);margin-bottom:10px}
+  .fc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:7px;margin-bottom:12px}
+  .fc-cell{background:var(--inset);border:1px solid var(--border);border-radius:7px;padding:7px 10px;display:flex;flex-direction:column;gap:2px}
+  .fc-cell .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
+  .fc-cell .v{font-size:14px;color:var(--text);font-family:var(--mono)}
+  .fc-sec-h{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:10px 0 6px}
+  .fc-strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+  .fc-hr,.fc-day{flex:0 0 auto;min-width:60px;background:var(--inset);border:1px solid var(--border);border-radius:7px;padding:7px 6px;text-align:center;font-family:var(--mono)}
+  .fc-day{min-width:66px}
+  .fc-hr .t,.fc-day .t{font-size:11px;color:var(--text-dim)}
+  .fc-hr .ic,.fc-day .ic{font-size:17px;margin:2px 0}
+  .fc-hr .tp,.fc-day .hilo{font-size:13px;color:var(--text)}
+  .fc-hr .wd{font-size:10px;color:var(--text-muted)}
+  .fc-hr .pp,.fc-day .pp{font-size:10px;color:#4aa3ff;min-height:12px}
+  .fc-foot{margin-top:12px;font-size:10.5px;line-height:1.5;color:var(--text-faint);border-top:1px solid var(--border);padding-top:8px}
+  .fc-foot b{color:var(--text-dim)}
   .wx-cat{display:inline-block;font-weight:800;font-size:12px;letter-spacing:.06em;padding:3px 10px;border-radius:5px;color:#0a0e13}
   .wx-raw{font-family:var(--mono);font-size:12px;color:var(--accent-2);background:var(--bg-2);border:1px solid var(--border-strong);border-radius:6px;padding:9px 11px;margin:10px 0;word-break:break-word;line-height:1.45}
   .wx-line{display:flex;gap:10px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)}
@@ -4367,6 +4388,13 @@ function plotPoints(points, fit){
     }).addTo(lineLayer);
     legLines.push(seg);
     if(FINE_POINTER){
+      // Wider invisible hit line over the thin visible leg, so the route is
+      // easy to grab for drag-to-insert. Transparent; sits on top of the leg
+      // but under the waypoint dots (which live in markerLayer / markerPane).
+      const hit = L.polyline([latlngs[i], latlngs[i+1]], {
+        color:'#000', weight:18, opacity:0, className:'route-leg-hit'
+      }).addTo(lineLayer);
+      hit.on('mousedown', ev => startLegDrag(ev, i, points));
       seg.on('mousedown', ev => startLegDrag(ev, i, points));
     }
   }
@@ -4388,13 +4416,14 @@ function plotPoints(points, fit){
 
     const rowId = p._rowId;
     if(FINE_POINTER){
-      dot.on('dragstart', () => dot.closeTooltip());
+      dot.on('dragstart', () => { dot._dragging = true; dot.closeTooltip(); });
       dot.on('drag', () => {
         const ll = dot.getLatLng();
         if(legLines[idx-1]){ const g = legLines[idx-1].getLatLngs(); legLines[idx-1].setLatLngs([g[0], ll]); }
         if(legLines[idx]){ const g = legLines[idx].getLatLngs(); legLines[idx].setLatLngs([ll, g[1]]); }
       });
       dot.on('dragend', () => {
+        dot._dragging = false; dot._dragEndAt = Date.now();
         const ll = dot.getLatLng();
         const r = state.rows.find(x => x.id === rowId);
         if(r){ snapshot(); r.coord = `${ll.lat.toFixed(6)}, ${ll.lng.toFixed(6)}`; renderRows(); process(false); }
@@ -4419,14 +4448,17 @@ function plotPoints(points, fit){
       });
     });
 
-    // A tap on a plotted airfield opens its full card (same card as layer/search).
-    if(_fld){
-      dot.on('click', (e) => {
-        if(e && e.originalEvent) L.DomEvent.stopPropagation(e);
-        dot.closeTooltip();
-        if(window.NMShowAirfield) window.NMShowAirfield(_fld.ident);
-      });
-    }
+    // Single left-click / tap a plotted point -> a compact card (styled like the
+    // Saved Waypoint card) with its coords, elevation and route actions. On
+    // desktop the dot is draggable, so a short click can trail a drag; the flags
+    // set in dragstart/dragend suppress that. Right-click / long-press still
+    // opens the full map action menu (handled above).
+    dot.on('click', (e) => {
+      if(e && e.originalEvent) L.DomEvent.stop(e.originalEvent);
+      if(dot._dragging || (Date.now() - (dot._dragEndAt || 0) < 250)) return; // trailing click after a drag
+      dot.closeTooltip();
+      openRoutePointCard(p);
+    });
 
     const labelIcon = L.divIcon({
       className:'marker-label',
@@ -4452,6 +4484,81 @@ function plotPoints(points, fit){
       }
     }
   }
+}
+
+// Card for a plotted route point. Mirrors the Saved Waypoint card's look
+// (same af-card/af-coord/af-chip classes) but with route-correct actions:
+// Copy coords, Delete point (removes it from the route), and — when the point
+// is a known field — quick access to the full airfield card. Notes/docs are
+// intentionally omitted; those persist to the saved-points library and a route
+// point isn't a library record.
+function openRoutePointCard(p){
+  const code = (p.label || '').trim().toUpperCase();
+  const fld = code && NM_REGION.airfields.find(a => a.ident === code || (a.iata && a.iata.toUpperCase() === code));
+  const chips = '<span class="af-chip">' + (fld ? 'Airfield' : 'Route point') + '</span>'
+    + '<span class="af-chip uw-elev">Elev&nbsp;<b>\u2026</b></span>';
+  const coord = '<div class="af-coord"><span class="dms">' + escapeHtml(toDms(p.lat,true) + '  ' + toDms(p.lon,false))
+    + '</span><span class="dec">' + p.lat.toFixed(5) + ', ' + p.lon.toFixed(5) + '</span></div>';
+  let acts = '<button type="button" class="af-route rp-copy">\u29c9 Copy</button>';
+  if(fld) acts += '<button type="button" class="af-route rp-info">\u2708 Airfield</button>';
+  acts += '<button type="button" class="af-route rp-fc">\u26c5 Forecast</button>';
+  acts += '<button type="button" class="af-edit rp-del">Delete point</button>';
+  const key = fld ? fld.ident : ('RP:' + p.lat.toFixed(4) + ',' + p.lon.toFixed(4));
+  const docsHtml = '<div class="af-charts"><div class="af-charts-h"><span>Docs</span><button type="button" class="af-charts-add">+ Add</button></div><div class="af-charts-list"></div><input type="file" class="af-charts-file" accept="image/*,application/pdf" multiple hidden></div>';
+  const notesHtml = '<div class="af-notes"><div class="af-notes-h"><span>My notes</span><span class="af-notes-saved">Saved</span></div><textarea class="af-notes-ta" rows="2" placeholder="Personal notes: hazards, landing spots, contacts"></textarea></div>';
+  const el = document.createElement('div');
+  el.innerHTML = '<div class="af-card wpt-card">'
+    + '<div class="af-h"><span class="af-nm">' + escapeHtml(p.label || 'Point') + '</span></div>'
+    + '<div class="af-meta">' + chips + '</div>'
+    + coord + docsHtml + notesHtml
+    + '<div class="af-acts">' + acts + '</div>'
+    + '</div>';
+  const pop = L.popup({ className:'map-add-popup', closeButton:true, autoPan:true, offset:[0,-6] })
+    .setLatLng([p.lat, p.lon]).setContent(el).openOn(map);
+  const elevB = el.querySelector('.uw-elev b');
+  if(elevB){
+    if(fld && fld.elev != null && isFinite(fld.elev)){ elevB.textContent = Math.round(fld.elev).toLocaleString() + ' ft'; }
+    else if(typeof window.NMElev === 'function'){
+      window.NMElev(p.lat, p.lon).then(function(ft){ elevB.textContent = (ft == null || !isFinite(ft)) ? '\u2014' : (Math.round(ft).toLocaleString() + ' ft'); }).catch(function(){ elevB.textContent = '\u2014'; });
+    } else { elevB.textContent = '\u2014'; }
+  }
+  const copyB = el.querySelector('.rp-copy');
+  if(copyB) copyB.addEventListener('click', function(){
+    const txt = toDms(p.lat,true) + ' ' + toDms(p.lon,false) + '  \u00b7  ' + p.lat.toFixed(5) + ', ' + p.lon.toFixed(5);
+    const ok = function(){ copyB.textContent = '\u2713 Copied'; setTimeout(function(){ copyB.innerHTML = '\u29c9 Copy'; }, 1400); };
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(ok, function(){ _fallbackCopy(txt); ok(); }); }
+    else { _fallbackCopy(txt); ok(); }
+  });
+  const infoB = el.querySelector('.rp-info');
+  if(infoB) infoB.addEventListener('click', function(){ map.closePopup(pop); if(window.NMShowAirfield) window.NMShowAirfield(fld.ident); });
+  const fcB = el.querySelector('.rp-fc');
+  if(fcB) fcB.addEventListener('click', function(){ map.closePopup(pop); if(window.NMForecast) window.NMForecast(p.lat, p.lon, p.label || null); });
+  const delB = el.querySelector('.rp-del');
+  if(delB) delB.addEventListener('click', function(){
+    snapshot();
+    state.rows = state.rows.filter(x => x.id !== p._rowId);
+    if(state.rows.length === 0) addRow();
+    renderRows();
+    process(false);
+    map.closePopup(pop);
+  });
+  // Notes persist to the same per-place store the airfield card uses (keyed by
+  // ident for a field, or by rounded coords for a plain spot), so a note on a
+  // field shows on its airfield card too. Photos/PDFs go to the shared docs store.
+  const ta = el.querySelector('.af-notes-ta');
+  if(ta && window.NMAfNotes){
+    ta.value = window.NMAfNotes.get(key);
+    const savedTag = el.querySelector('.af-notes-saved');
+    let svT = null;
+    ta.addEventListener('input', function(){
+      window.NMAfNotes.set(key, ta.value);
+      if(savedTag){ savedTag.classList.add('show'); clearTimeout(svT); svT = setTimeout(function(){ savedTag.classList.remove('show'); }, 1200); }
+    });
+    ['keydown','keyup','keypress'].forEach(function(ev){ ta.addEventListener(ev, function(e){ L.DomEvent.stopPropagation(e); }); });
+    L.DomEvent.disableScrollPropagation(ta);
+  }
+  if(window.NMWireDocs) window.NMWireDocs(el, key, pop);
+  return pop;
 }
 
 function highlightLeg(idx){
@@ -7690,7 +7797,7 @@ document.getElementById('plotBtn').addEventListener('click', () => {
   function afNoteGet(ident){ const o=afNotesAll(); return (o && typeof o[ident]==='string') ? o[ident] : ''; }
   function afNoteSet(ident, text){ const o=afNotesAll(); if(text && text.trim()){ o[ident]=text; } else { delete o[ident]; } try{ localStorage.setItem(AF_NOTES_KEY, JSON.stringify(o)); }catch(_){} }
   function afHasNote(ident){ return !!afNoteGet(ident).trim(); }
-  window.NMAfNotes = { has: afHasNote, get: afNoteGet };
+  window.NMAfNotes = { has: afHasNote, get: afNoteGet, set: afNoteSet };
 
   function airfieldCardHtml(f, distNm){
     const freqs = fieldFreqs(f.ident);
@@ -8808,6 +8915,7 @@ function openMapMenu(latlng, containerPoint){
   buttons += '<button type="button" class="map-add-btn map-base" data-name="' + (near ? escapeAttr(near.ident) : '') + '">\u2302 Set as Base</button>';
   buttons += '<button type="button" class="map-add-btn map-elev">\u26f0 Ground elevation</button>';
   buttons += '<button type="button" class="map-add-btn map-near">\u2708 Nearest airfield + freqs</button>';
+  buttons += '<button type="button" class="map-add-btn map-fc">\u26c5 Forecast (model)</button>';
   if(state.rows.filter(r => r.coord.trim()).length >= 2){
     buttons += '<button type="button" class="map-add-btn map-reverse">\u21c4 Reverse route order</button>';
   }
@@ -8819,6 +8927,10 @@ function openMapMenu(latlng, containerPoint){
     b.addEventListener('click', function(){
       if(b.classList.contains('map-add-wx')){
         if(typeof window.openWx === 'function') window.openWx(b.dataset.wx);
+        map.closePopup(pop); return;
+      }
+      if(b.classList.contains('map-fc')){
+        if(typeof window.NMForecast === 'function') window.NMForecast(lat, lon, near ? near.ident : null);
         map.closePopup(pop); return;
       }
       if(b.classList.contains('map-add-save')){
@@ -9644,6 +9756,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     if(pop && pop.on) pop.on('remove', clearUrls);
     render();
   }
+  window.NMWireDocs = wireWptDocs;
   function openWptCard(w, latlng){
     var el=document.createElement('div'); el.innerHTML=wptCardHtml(w);
     var pop=L.popup({className:'map-add-popup',closeButton:true,autoPan:true,offset:[0,-6]}).setLatLng(latlng||[w.lat,w.lon]).setContent(el).openOn(map);
@@ -10715,6 +10828,110 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 
+/* ===== Point forecast (Open-Meteo model) — advisory only, any lat/lon ===== */
+(function(){
+  var ov, body, title, wired=false;
+  function grab(){ if(!ov){ ov=document.getElementById('fcOverlay'); body=document.getElementById('fcBody'); title=document.getElementById('fcTitle'); } }
+  function close(){ if(ov) ov.classList.remove('active'); }
+  function initClose(){
+    if(wired) return; wired=true;
+    var c=document.getElementById('fcClose'); if(c) c.addEventListener('click', close);
+    if(ov) ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape' && ov && ov.classList.contains('active')) close(); });
+  }
+  var WMO={0:['Clear','\u2600'],1:['Mainly clear','\u26c5'],2:['Partly cloudy','\u26c5'],3:['Overcast','\u2601'],
+    45:['Fog','\u2601'],48:['Rime fog','\u2601'],51:['Light drizzle','\u2602'],53:['Drizzle','\u2602'],55:['Heavy drizzle','\u2602'],
+    56:['Freezing drizzle','\u2602'],57:['Freezing drizzle','\u2602'],61:['Light rain','\u2602'],63:['Rain','\u2602'],65:['Heavy rain','\u2602'],
+    66:['Freezing rain','\u2602'],67:['Freezing rain','\u2602'],71:['Light snow','\u2744'],73:['Snow','\u2744'],75:['Heavy snow','\u2744'],
+    77:['Snow grains','\u2744'],80:['Rain showers','\u2602'],81:['Rain showers','\u2602'],82:['Violent showers','\u26a1'],
+    85:['Snow showers','\u2744'],86:['Snow showers','\u2744'],95:['Thunderstorm','\u26a1'],96:['Thunderstorm, hail','\u26a1'],99:['Thunderstorm, hail','\u26a1']};
+  function wxc(c){ return WMO[c]||['\u2014','']; }
+  var COMPASS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  function compass(d){ return COMPASS[Math.round((d%360)/22.5)%16]; }
+  function catFor(visM, low, mid){
+    var vis=(visM==null)?null:visM/1609.34;
+    var ceil=Math.max(low||0,(mid||0)*0.6);
+    if((vis!=null&&vis<1)||ceil>=90) return ['LIFR','#c026d3'];
+    if((vis!=null&&vis<3)||ceil>=80) return ['IFR','#f0506e'];
+    if((vis!=null&&vis<5)||ceil>=55) return ['MVFR','#3b82f6'];
+    return ['VFR','#34d399'];
+  }
+  function ftOf(m){ return (m==null||!isFinite(m))?null:Math.round(m*3.28084); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+  function render(d){
+    var H=d.hourly||{}, C=d.current||{}, D=d.daily||{};
+    var i=(H.time&&C.time)?H.time.indexOf(C.time):0; if(i<0) i=0;
+    function hv(k){ return (H[k]&&H[k][i]!=null)?H[k][i]:null; }
+    var temp=hv('temperature_2m'), dew=hv('dew_point_2m'), rh=hv('relative_humidity_2m');
+    var wdir=hv('wind_direction_10m'), wspd=hv('wind_speed_10m'), wgst=hv('wind_gusts_10m');
+    var pmsl=hv('pressure_msl'), visM=hv('visibility'), fl=hv('freezing_level_height');
+    var low=hv('cloud_cover_low'), mid=hv('cloud_cover_mid'), cc=hv('cloud_cover'), code=hv('weather_code');
+    var w=wxc(code||0), cat=catFor(visM,low,mid);
+    var inHg=(pmsl!=null)?(pmsl*0.0295300):null;
+    var elevFt=(d.elevation!=null)?d.elevation*3.28084:null, DA=null;
+    if(elevFt!=null&&inHg!=null&&temp!=null){
+      var PA=elevFt+(29.9213-inHg)*1000, isa=15-1.98*(elevFt/1000);
+      DA=Math.round(PA+118.8*(temp-isa));
+    }
+    var visTxt='\u2014';
+    if(visM!=null){ var sm=visM/1609.34; visTxt=(sm>=10?'10+ SM':(sm.toFixed(1)+' SM'))+' \u00b7 '+Math.round(visM/1000)+' km'; }
+    var windTxt=(wdir!=null&&wspd!=null)?(compass(wdir)+' '+Math.round(wdir)+'\u00b0 @ '+Math.round(wspd)+' kt'+(wgst?(' G'+Math.round(wgst)):'')):'\u2014';
+    var asOf=C.time?C.time.substring(11,16):'';
+    var h='<div class="fc-top"><span class="fc-cat" style="background:'+cat[1]+'">'+cat[0]+'</span><span class="fc-desc">'+w[1]+' '+esc(w[0])+'</span></div>'
+      + '<div class="fc-asof">Model forecast for '+esc(asOf)+' local'+(d.timezone_abbreviation?(' '+esc(d.timezone_abbreviation)):'')+'</div>';
+    function cell(k,v){ return '<div class="fc-cell"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+    var g='<div class="fc-grid">'
+      + cell('Category (est.)','<b style="color:'+cat[1]+'">'+cat[0]+'</b>')
+      + cell('Visibility (est.)',visTxt)
+      + cell('Cloud cover',(cc!=null?cc+'%':'\u2014')+(low!=null?(' \u00b7 low '+low+'%'):''))
+      + cell('Wind',windTxt)
+      + cell('Temp / Dewpt',(temp!=null?Math.round(temp)+'\u00b0C':'\u2014')+' / '+(dew!=null?Math.round(dew)+'\u00b0C':'\u2014'))
+      + cell('Humidity',rh!=null?rh+'%':'\u2014')
+      + cell('Altimeter',inHg!=null?(inHg.toFixed(2)+' inHg \u00b7 '+Math.round(pmsl)+' hPa'):'\u2014')
+      + cell('Density alt (est.)',DA!=null?DA.toLocaleString()+' ft':'\u2014')
+      + cell('Freezing level',fl!=null?(ftOf(fl).toLocaleString()+' ft'):'\u2014')
+      + '</div>';
+    var hs='<div class="fc-sec-h">Next hours</div><div class="fc-strip">';
+    for(var j=i;j<i+12 && H.time && j<H.time.length;j++){
+      var ww=wxc(H.weather_code?H.weather_code[j]:0), pp=H.precipitation_probability?H.precipitation_probability[j]:null;
+      hs+='<div class="fc-hr"><div class="t">'+esc(H.time[j].substring(11,16))+'</div><div class="ic">'+ww[1]+'</div>'
+        + '<div class="tp">'+(H.temperature_2m&&H.temperature_2m[j]!=null?Math.round(H.temperature_2m[j])+'\u00b0':'\u2014')+'</div>'
+        + '<div class="wd">'+(H.wind_speed_10m&&H.wind_speed_10m[j]!=null?Math.round(H.wind_speed_10m[j])+'kt':'')+'</div>'
+        + '<div class="pp">'+(pp!=null?pp+'%':'')+'</div></div>';
+    }
+    hs+='</div>';
+    var ds='';
+    if(D.time&&D.time.length){
+      var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      ds='<div class="fc-sec-h">Next days</div><div class="fc-strip">';
+      for(var k=0;k<D.time.length;k++){
+        var p=D.time[k].split('-'), dt=new Date(Date.UTC(+p[0],+p[1]-1,+p[2])), dw=DOW[dt.getUTCDay()], dww=wxc(D.weather_code?D.weather_code[k]:0);
+        ds+='<div class="fc-day"><div class="t">'+dw+'</div><div class="ic">'+dww[1]+'</div>'
+          + '<div class="hilo">'+(D.temperature_2m_max&&D.temperature_2m_max[k]!=null?Math.round(D.temperature_2m_max[k]):'\u2014')+'\u00b0 / '+(D.temperature_2m_min&&D.temperature_2m_min[k]!=null?Math.round(D.temperature_2m_min[k]):'\u2014')+'\u00b0</div>'
+          + '<div class="pp">'+(D.precipitation_probability_max&&D.precipitation_probability_max[k]!=null?D.precipitation_probability_max[k]+'%':'')+'</div></div>';
+      }
+      ds+='</div>';
+    }
+    var foot='<div class="fc-foot"><b>Model forecast \u2014 advisory only, not an observation.</b> Interpolated from a numerical model on a ~9\u201311 km grid; it will not capture valley or local terrain weather in the highlands. Ceiling, visibility and flight category are model estimates. Data by Open-Meteo.com (CC BY 4.0).</div>';
+    return h+g+hs+ds+foot;
+  }
+  window.NMForecast=function(lat, lon, label){
+    grab(); initClose(); if(!ov) return;
+    title.textContent='Forecast \u2014 '+(label || (lat.toFixed(3)+', '+lon.toFixed(3)));
+    ov.classList.add('active');
+    body.innerHTML='<div class="fc-load">Fetching model forecast\u2026</div>';
+    var cur='temperature_2m,relative_humidity_2m,dew_point_2m,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day';
+    var hr='temperature_2m,dew_point_2m,relative_humidity_2m,precipitation_probability,weather_code,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,freezing_level_height,pressure_msl';
+    var dy='weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant';
+    var url='https://api.open-meteo.com/v1/forecast?latitude='+lat.toFixed(4)+'&longitude='+lon.toFixed(4)
+      +'&current='+cur+'&hourly='+hr+'&daily='+dy+'&wind_speed_unit=kn&timezone=auto&forecast_days=5';
+    fetch(url,{headers:{'Accept':'application/json'}})
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if(!d || d.error || !d.hourly){ throw new Error((d&&d.reason)||'bad response'); } body.innerHTML=render(d); })
+      .catch(function(){ body.innerHTML='<div class="fc-none">Couldn\u2019t reach the forecast service \u2014 the model forecast needs an internet connection. Try again when you\u2019re online.</div>'; });
+  };
+})();
+
 if ('serviceWorker' in navigator && window.isSecureContext) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js')
@@ -10936,6 +11153,13 @@ if (navigator.storage && navigator.storage.persist) {
     <div class="cr-modal wx-modal">
       <div class="cr-head"><h3 id="wxTitle">Weather</h3><button class="cr-close" id="wxClose" type="button" aria-label="Close">&times;</button></div>
       <div class="cr-body" id="wxBody"></div>
+    </div>
+  </div>
+
+  <div class="cr-overlay" id="fcOverlay">
+    <div class="cr-modal fc-modal">
+      <div class="cr-head"><h3 id="fcTitle">Forecast</h3><button class="cr-close" id="fcClose" type="button" aria-label="Close">&times;</button></div>
+      <div class="cr-body" id="fcBody"></div>
     </div>
   </div>
   <div class="cr-overlay" id="terrDlOverlay">
