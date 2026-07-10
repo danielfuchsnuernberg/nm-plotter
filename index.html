@@ -3688,6 +3688,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     <div class="panel-foot">
       <button class="primary" id="plotBtn">Plot</button>
       <button class="primary act-icon" id="copyRouteBtn" title="Copy route to clipboard for ForeFlight" aria-label="Copy route" style="background:var(--accent-2);border-color:var(--accent-2);color:#0a0e13"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+      <button class="ghost act-icon" id="flyoverBtn" type="button" title="3D flyover — fly the plotted route" aria-label="3D flyover"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l5-7 3.5 4.2L15 11l6 9z"/><circle cx="8" cy="6.5" r="1.5"/></svg></button>
       <div class="exp-wrap" id="expWrap">
         <button class="ghost act-icon" id="exportMenuBtn" type="button" title="Export route (PDF or GPX)" aria-label="Export route"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
         <div class="exp-menu" id="exportMenu">
@@ -11176,6 +11177,21 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   window.NMTour={ start:start };
 })();
 
+
+/* 3D flyover hand-off: pass the plotted route to the companion page flyover.html
+   (kept separate from the offline core — it's online-only and Three.js-heavy). */
+(function(){
+  function openFlyover(){
+    var route=(lastPlottedPoints||[]).filter(function(p){ return p && isFinite(p.lat) && isFinite(p.lon); })
+      .map(function(p){ return {lat:+p.lat, lon:+p.lon, name:(p.label||'')}; });
+    if(route.length<2){ alert('Plot a route with at least two points first, then open the 3D flyover.'); return; }
+    try{ localStorage.setItem('nmplotter_flyover_route', JSON.stringify(route)); }catch(e){}
+    window.open('flyover.html','_blank');
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    var b=document.getElementById('flyoverBtn'); if(b) b.addEventListener('click', openFlyover);
+  });
+})();
 
 if ('serviceWorker' in navigator && window.isSecureContext) {
   window.addEventListener('load', () => {
