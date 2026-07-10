@@ -11,7 +11,7 @@
    Bump CACHE when you change index.html, so devices pull the new
    copy instead of an old cached one.
    ============================================================ */
-const CACHE = 'nmplotter-v191';
+const CACHE = 'nmplotter-v192';
 const TERRAIN_CACHE = 'nmplotter-terrain';
 
 const SHELL = [

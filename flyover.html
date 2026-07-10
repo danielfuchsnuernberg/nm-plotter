@@ -102,9 +102,9 @@
       latMax=Math.max.apply(null,route.map(function(p){return p.lat;})),
       lonMin=Math.min.apply(null,route.map(function(p){return p.lon;})),
       lonMax=Math.max.apply(null,route.map(function(p){return p.lon;}));
-  var padLat=Math.max((latMax-latMin)*0.28, 0.04), padLon=Math.max((lonMax-lonMin)*0.28, 0.04);
+  var padLat=Math.max((latMax-latMin)*0.15, 0.03), padLon=Math.max((lonMax-lonMin)*0.15, 0.03);
   latMin-=padLat; latMax+=padLat; lonMin-=padLon; lonMax+=padLon;
-  var N=32;                    // 32x32 = 1024 points = ~11 gentle paced requests (fine for a single load)
+  var N=10;                    // 10x10 = 100 points = ONE request (loads in a single shot)
   var gridLat=[], gridLon=[], colX=[], rowZ=[];
   for(var r0=0;r0<N;r0++){ var la=latMax-(latMax-latMin)*r0/(N-1); gridLat.push(la); rowZ.push(projZ(la)); }
   for(var c0=0;c0<N;c0++){ var lo=lonMin+(lonMax-lonMin)*c0/(N-1); gridLon.push(lo); colX.push(projX(lo)); }
@@ -118,7 +118,7 @@
     for(var attempt=0; attempt<=waits.length; attempt++){
       var res=await fetch(elevURL(lats,lons));
       if(res.ok){ var j=await res.json(); if(!j||!j.elevation) throw new Error('bad response'); return j.elevation; }
-      if(res.status===429 && attempt<waits.length){ prog.textContent=label+' · rate-limited, waiting '+(waits[attempt]/1000)+'s…'; await wait(waits[attempt]); continue; }
+      if((res.status===429 || res.status>=500) && attempt<waits.length){ prog.textContent=label+' · server busy, waiting '+(waits[attempt]/1000)+'s…'; await wait(waits[attempt]); continue; }
       throw new Error('HTTP '+res.status);
     }
     throw new Error('HTTP 429 (still rate-limited after retries)');
@@ -145,7 +145,7 @@
       var label=(k+1)+' / '+chunks.length+' tiles'; prog.textContent=label;
       try{ elev=elev.concat(await getTile(chunks[k][0], chunks[k][1], label)); }
       catch(e2){ fail('Elevation lookup failed on tile '+(k+1)+'/'+chunks.length+': '+((e2&&e2.message)||e2)+(String(e2).indexOf('429')>-1?'  ·  You\u2019ve hit the free rate limit — wait a few minutes and reload.':'')); return; }
-      await wait(350);   // be a good citizen between batches
+      await wait(600);   // be a good citizen between batches
     }
     if(elev.length<N*N){ fail('Elevation grid incomplete ('+elev.length+'/'+(N*N)+').'); return; }
     cb(elev);
