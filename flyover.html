@@ -104,30 +104,51 @@
       lonMax=Math.max.apply(null,route.map(function(p){return p.lon;}));
   var padLat=Math.max((latMax-latMin)*0.28, 0.04), padLon=Math.max((lonMax-lonMin)*0.28, 0.04);
   latMin-=padLat; latMax+=padLat; lonMin-=padLon; lonMax+=padLon;
-  var N=44;                    // 44x44 = 1936 points -> 20 requests
+  var N=32;                    // 32x32 = 1024 points -> ~11 batches (gentler on the rate limit)
   var gridLat=[], gridLon=[], colX=[], rowZ=[];
   for(var r0=0;r0<N;r0++){ var la=latMax-(latMax-latMin)*r0/(N-1); gridLat.push(la); rowZ.push(projZ(la)); }
   for(var c0=0;c0<N;c0++){ var lo=lonMin+(lonMax-lonMin)*c0/(N-1); gridLon.push(lo); colX.push(projX(lo)); }
 
   // ---------- fetch elevations ----------
-  function fetchGrid(cb){
+  function elevURL(lats,lons){ return 'https://api.open-meteo.com/v1/elevation?latitude='+lats.join(',')+'&longitude='+lons.join(','); }
+  function wait(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+  async function getTile(lats, lons, label){
+    // fetch one batch, retrying politely on 429 (rate limit) with backoff
+    var waits=[1200, 2500, 4500, 7000];
+    for(var attempt=0; attempt<=waits.length; attempt++){
+      var res=await fetch(elevURL(lats,lons));
+      if(res.ok){ var j=await res.json(); if(!j||!j.elevation) throw new Error('bad response'); return j.elevation; }
+      if(res.status===429 && attempt<waits.length){ prog.textContent=label+' · rate-limited, waiting '+(waits[attempt]/1000)+'s…'; await wait(waits[attempt]); continue; }
+      throw new Error('HTTP '+res.status);
+    }
+    throw new Error('HTTP 429 (still rate-limited after retries)');
+  }
+  async function fetchGrid(cb){
+    // 1) single-point sanity check first, so any failure is specific
+    try{
+      var tr=await fetch(elevURL([lat0.toFixed(4)],[lon0.toFixed(4)]));
+      if(!tr.ok){ throw new Error('HTTP '+tr.status); }
+      var tj=await tr.json();
+      if(!tj || tj.elevation==null) throw new Error('no elevation field in response');
+    }catch(e){
+      var m=(e&&e.message)||String(e);
+      fail('Elevation test failed: '+m+'   —   ("Load failed" = a CORS block; an HTTP 4xx = the request. HTTP 429 = rate limit — wait a few minutes and reload.)');
+      return;
+    }
+    // 2) full grid, fetched one batch at a time with a small gap + 429 retries
     var lats=[], lons=[];
     for(var r=0;r<N;r++) for(var c=0;c<N;c++){ lats.push(gridLat[r].toFixed(4)); lons.push(gridLon[c].toFixed(4)); }
-    var chunks=[];
-    for(var i=0;i<lats.length;i+=100) chunks.push([lats.slice(i,i+100), lons.slice(i,i+100)]);
-    var done=0; prog.textContent='0 / '+chunks.length+' tiles';
-    Promise.all(chunks.map(function(ch){
-      var url='https://api.open-meteo.com/v1/elevation?latitude='+ch[0].join(',')+'&longitude='+ch[1].join(',');
-      return fetch(url).then(function(x){ return x.json(); }).then(function(j){
-        done++; prog.textContent=done+' / '+chunks.length+' tiles';
-        if(!j || !j.elevation) throw new Error('bad elevation response');
-        return j.elevation;
-      });
-    })).then(function(parts){
-      var elev=[]; parts.forEach(function(p){ elev=elev.concat(p); });
-      if(elev.length<N*N) throw new Error('short elevation grid');
-      cb(elev);
-    }).catch(function(){ fail('Elevation lookup failed — check your connection and reload.'); });
+    var B=100, chunks=[];
+    for(var i=0;i<lats.length;i+=B) chunks.push([lats.slice(i,i+B), lons.slice(i,i+B)]);
+    var elev=[];
+    for(var k=0;k<chunks.length;k++){
+      var label=(k+1)+' / '+chunks.length+' tiles'; prog.textContent=label;
+      try{ elev=elev.concat(await getTile(chunks[k][0], chunks[k][1], label)); }
+      catch(e2){ fail('Elevation lookup failed on tile '+(k+1)+'/'+chunks.length+': '+((e2&&e2.message)||e2)+(String(e2).indexOf('429')>-1?'  ·  You\u2019ve hit the free rate limit — wait a few minutes and reload.':'')); return; }
+      await wait(350);   // be a good citizen between batches
+    }
+    if(elev.length<N*N){ fail('Elevation grid incomplete ('+elev.length+'/'+(N*N)+').'); return; }
+    cb(elev);
   }
 
   fetchGrid(function(elev){ try{ build(elev); }catch(e){ fail('3D build error: '+e.message); } });
