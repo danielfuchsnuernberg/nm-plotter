@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NM Plotter — 3D Route Flyover</title>
+<style>
+  :root{
+    --panel:#0d1219; --border:#2a3744; --text:#dce6f0; --dim:#8a9bb0; --faint:#5f7186;
+    --accent:#ffb020; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace; --sans:ui-sans-serif,system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#0a0e13;font-family:var(--sans);color:var(--text)}
+  #c{position:fixed;inset:0;display:block;touch-action:none;cursor:grab}
+  #c:active{cursor:grabbing}
+
+  .hud{position:fixed;top:14px;left:14px;z-index:10;display:flex;background:rgba(13,18,25,.82);border:1px solid var(--border);border-radius:9px;overflow:hidden;backdrop-filter:blur(4px)}
+  .hud .cell{padding:9px 15px;border-right:1px solid var(--border)}
+  .hud .cell:last-child{border-right:none}
+  .hud .v{font-family:var(--mono);font-size:19px;font-weight:700;line-height:1}
+  .hud .k{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint);margin-top:4px;text-transform:uppercase}
+
+  .title{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10;font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);background:rgba(13,18,25,.7);border:1px solid var(--border);border-radius:20px;padding:7px 16px;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+
+  .attr{position:fixed;top:14px;right:14px;z-index:10;font-family:var(--mono);font-size:9.5px;color:var(--faint);text-align:right;line-height:1.5;background:rgba(13,18,25,.6);border-radius:7px;padding:6px 10px}
+
+  .bar{position:fixed;left:14px;right:14px;bottom:14px;z-index:10;display:flex;align-items:center;gap:12px;background:rgba(13,18,25,.9);border:1px solid var(--border);border-radius:11px;padding:11px 14px;backdrop-filter:blur(4px)}
+  .bar button{font-family:var(--sans);font-size:13px;font-weight:600;border:1px solid var(--border);background:#12191f;color:var(--text);border-radius:7px;padding:8px 13px;cursor:pointer}
+  .bar button.play{background:var(--accent);border-color:var(--accent);color:#0a0e13;min-width:66px}
+  .bar .seg{display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .bar .seg button{border:none;border-radius:0;border-right:1px solid var(--border);padding:8px 10px}
+  .bar .seg button:last-child{border-right:none}
+  .bar .seg button.on{background:rgba(255,176,32,.16);color:var(--accent)}
+  .bar input[type=range]{flex:1;accent-color:var(--accent)}
+  .bar .t{font-family:var(--mono);font-size:12px;color:var(--dim);min-width:74px;text-align:right}
+  .hint{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:9;font-family:var(--mono);font-size:11px;color:var(--faint);background:rgba(13,18,25,.6);border-radius:20px;padding:5px 13px}
+
+  .overlay{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center;background:#0a0e13}
+  .overlay .box{max-width:44ch}
+  .overlay h2{font-size:20px;margin:0 0 8px}
+  .overlay p{color:var(--dim);font-size:14px;line-height:1.6;margin:0}
+  .overlay b{color:var(--accent)}
+  .spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 18px;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #prog{font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:12px}
+  #errOv{display:none}
+  @media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+</style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+
+  <div class="title" id="title">3D Route Flyover</div>
+  <div class="hud">
+    <div class="cell"><div class="v" id="hAlt">—</div><div class="k">Alt (ft)</div></div>
+    <div class="cell"><div class="v" id="hAgl">—</div><div class="k">AGL (ft)</div></div>
+    <div class="cell"><div class="v" id="hTime">0:00</div><div class="k">Time</div></div>
+  </div>
+  <div class="attr">Terrain: Copernicus DEM (GLO-90)<br>via Open-Meteo · vertical exaggeration <span id="veLbl">1.8&times;</span></div>
+
+  <div class="hint">Drag to look around · Scroll to zoom · Space = play/pause</div>
+  <div class="bar">
+    <button class="play" id="play">Play</button>
+    <div class="seg" id="spd"><button data-s="1" class="on">1&times;</button><button data-s="2">2&times;</button><button data-s="4">4&times;</button></div>
+    <input type="range" id="scrub" min="0" max="1000" value="0">
+    <span class="t" id="tt">0:00</span>
+    <button id="reset">Reset</button>
+  </div>
+
+  <div class="overlay" id="loadOv"><div class="box"><div class="spinner"></div><h2>Building terrain</h2><p>Fetching real ground elevation along your route from the Copernicus dataset.</p><div id="prog">Starting…</div></div></div>
+  <div class="overlay" id="errOv"><div class="box"><h2>Couldn't build the flyover</h2><p id="errMsg">This view needs an internet connection — it streams the 3D engine and fetches live elevation data. Connect and reload.</p></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  var loadOv=document.getElementById('loadOv'), errOv=document.getElementById('errOv'), prog=document.getElementById('prog');
+  function fail(msg){ if(msg) document.getElementById('errMsg').textContent=msg; loadOv.style.display='none'; errOv.style.display='flex'; }
+  if(!window.THREE){ fail(); return; }
+  var T=THREE;
+
+  // ---------- route in ----------
+  var SAMPLE=[
+    {lat:-6.5686, lon:146.7264, name:'AYNZ Nadzab'},
+    {lat:-6.0817, lon:145.3919, name:'AYGA Goroka'},
+    {lat:-5.8277, lon:144.2960, name:'AYMH Mt Hagen'}
+  ];
+  var route=SAMPLE;
+  try{ var raw=localStorage.getItem('nmplotter_flyover_route'); if(raw){ var r=JSON.parse(raw); if(Array.isArray(r)&&r.length>=2) route=r.filter(function(p){return isFinite(p.lat)&&isFinite(p.lon);}); } }catch(e){}
+  if(route.length<2){ fail('Plot a route with at least two points first.'); return; }
+  document.getElementById('title').textContent=(route[0].name||'Start')+'  →  '+(route[route.length-1].name||'End');
+
+  // ---------- projection (equirectangular, metres) ----------
+  var lat0=route.reduce(function(a,p){return a+p.lat;},0)/route.length;
+  var lon0=route.reduce(function(a,p){return a+p.lon;},0)/route.length;
+  var mLat=111320, mLon=111320*Math.cos(lat0*Math.PI/180);
+  function projX(lon){ return (lon-lon0)*mLon; }
+  function projZ(lat){ return (lat0-lat)*mLat; }   // north = -z
+  var EXAG=1.8;
+
+  // ---------- grid over padded route bbox ----------
+  var latMin=Math.min.apply(null,route.map(function(p){return p.lat;})),
+      latMax=Math.max.apply(null,route.map(function(p){return p.lat;})),
+      lonMin=Math.min.apply(null,route.map(function(p){return p.lon;})),
+      lonMax=Math.max.apply(null,route.map(function(p){return p.lon;}));
+  var padLat=Math.max((latMax-latMin)*0.28, 0.04), padLon=Math.max((lonMax-lonMin)*0.28, 0.04);
+  latMin-=padLat; latMax+=padLat; lonMin-=padLon; lonMax+=padLon;
+  var N=44;                    // 44x44 = 1936 points -> 20 requests
+  var gridLat=[], gridLon=[], colX=[], rowZ=[];
+  for(var r0=0;r0<N;r0++){ var la=latMax-(latMax-latMin)*r0/(N-1); gridLat.push(la); rowZ.push(projZ(la)); }
+  for(var c0=0;c0<N;c0++){ var lo=lonMin+(lonMax-lonMin)*c0/(N-1); gridLon.push(lo); colX.push(projX(lo)); }
+
+  // ---------- fetch elevations ----------
+  function fetchGrid(cb){
+    var lats=[], lons=[];
+    for(var r=0;r<N;r++) for(var c=0;c<N;c++){ lats.push(gridLat[r].toFixed(4)); lons.push(gridLon[c].toFixed(4)); }
+    var chunks=[];
+    for(var i=0;i<lats.length;i+=100) chunks.push([lats.slice(i,i+100), lons.slice(i,i+100)]);
+    var done=0; prog.textContent='0 / '+chunks.length+' tiles';
+    Promise.all(chunks.map(function(ch){
+      var url='https://api.open-meteo.com/v1/elevation?latitude='+ch[0].join(',')+'&longitude='+ch[1].join(',');
+      return fetch(url).then(function(x){ return x.json(); }).then(function(j){
+        done++; prog.textContent=done+' / '+chunks.length+' tiles';
+        if(!j || !j.elevation) throw new Error('bad elevation response');
+        return j.elevation;
+      });
+    })).then(function(parts){
+      var elev=[]; parts.forEach(function(p){ elev=elev.concat(p); });
+      if(elev.length<N*N) throw new Error('short elevation grid');
+      cb(elev);
+    }).catch(function(){ fail('Elevation lookup failed — check your connection and reload.'); });
+  }
+
+  fetchGrid(function(elev){ try{ build(elev); }catch(e){ fail('3D build error: '+e.message); } });
+
+  // ---------- build scene ----------
+  function elevAt(elev, x, z){
+    var cf=(x-colX[0])/(colX[N-1]-colX[0])*(N-1), rf=(z-rowZ[0])/(rowZ[N-1]-rowZ[0])*(N-1);
+    cf=Math.max(0,Math.min(N-1,cf)); rf=Math.max(0,Math.min(N-1,rf));
+    var c=Math.floor(cf), r=Math.floor(rf), fc=cf-c, fr=rf-r, c1=Math.min(c+1,N-1), r1=Math.min(r+1,N-1);
+    var a=elev[r*N+c], b=elev[r*N+c1], d=elev[r1*N+c], e=elev[r1*N+c1];
+    return (a*(1-fc)+b*fc)*(1-fr)+(d*(1-fc)+e*fc)*fr;
+  }
+  function terrColor(h){
+    var col;
+    if(h<300) col=[0.13,0.30,0.15];
+    else if(h<1200) col=[0.18,0.33,0.17];
+    else if(h<2200) col=[0.31,0.34,0.20];
+    else if(h<3200) col=[0.42,0.34,0.24];
+    else if(h<4000) col=[0.55,0.54,0.56];
+    else col=[0.86,0.88,0.92];
+    return col;
+  }
+
+  function build(elev){
+    var canvas=document.getElementById('c');
+    var renderer=new T.WebGLRenderer({canvas:canvas, antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    var scene=new T.Scene(); scene.background=new T.Color(0x9ec4e8);
+    var spanX=colX[N-1]-colX[0], spanZ=rowZ[N-1]-rowZ[0], span=Math.max(Math.abs(spanX),Math.abs(spanZ));
+    scene.fog=new T.Fog(0x9ec4e8, span*0.35, span*1.25);
+    var camera=new T.PerspectiveCamera(60, innerWidth/innerHeight, Math.max(2,span*0.0004), span*4);
+    scene.add(new T.HemisphereLight(0xcfe2ff,0x33401f,1.0));
+    var sun=new T.DirectionalLight(0xffffff,0.75); sun.position.set(-1,2,1.2); scene.add(sun);
+
+    // terrain mesh from real grid
+    var verts=[], cols=[], idx=[];
+    for(var r=0;r<N;r++) for(var c=0;c<N;c++){
+      var h=elev[r*N+c]; verts.push(colX[c], h*EXAG, rowZ[r]);
+      var cc=terrColor(h); cols.push(cc[0],cc[1],cc[2]);
+    }
+    for(var r2=0;r2<N-1;r2++) for(var c2=0;c2<N-1;c2++){
+      var a=r2*N+c2, b=a+1, d=(r2+1)*N+c2, e2=d+1;
+      idx.push(a,d,e2, a,e2,b);
+    }
+    var tg=new T.BufferGeometry();
+    tg.setAttribute('position', new T.Float32BufferAttribute(verts,3));
+    tg.setAttribute('color', new T.Float32BufferAttribute(cols,3));
+    tg.setIndex(idx); tg.computeVertexNormals();
+    scene.add(new T.Mesh(tg, new T.MeshStandardMaterial({vertexColors:true, roughness:1, metalness:0})));
+
+    // route -> flight path (cruise above max terrain)
+    var wp=route.map(function(p){ return new T.Vector3(projX(p.lon), 0, projZ(p.lat)); });
+    var xz=new T.CatmullRomCurve3(wp);
+    var M=Math.max(120, route.length*60), samp=[], maxG=-1e9;
+    for(var m=0;m<=M;m++){ var pp=xz.getPointAt(m/M), g=elevAt(elev,pp.x,pp.z); samp.push({x:pp.x,z:pp.z,g:g}); if(g>maxG)maxG=g; }
+    var clearance=600, cruise=maxG+clearance, g0=samp[0].g, gL=samp[M].g;
+    function lerp(a,b,t){return a+(b-a)*t;} function sm(t){return t*t*(3-2*t);}
+    var flightPts=[], pathReal=[];
+    for(var m2=0;m2<=M;m2++){
+      var t=m2/M, s=samp[m2], a;
+      if(t<0.14) a=lerp(g0+250,cruise,sm(t/0.14));
+      else if(t>0.86) a=lerp(cruise,gL+250,sm((t-0.86)/0.14));
+      else a=cruise;
+      if(a<s.g+150) a=s.g+150;
+      pathReal.push({y:a, g:s.g});
+      flightPts.push(new T.Vector3(s.x, a*EXAG, s.z));
+    }
+    var flight=new T.CatmullRomCurve3(flightPts);
+
+    // curtain
+    var cv=[], cc2=[], ci=[];
+    for(var m3=0;m3<=M;m3++){ var s2=samp[m3], top=flightPts[m3].y;
+      cv.push(s2.x, s2.g*EXAG, s2.z); cv.push(s2.x, top, s2.z);
+      cc2.push(0.16,0.83,1.0); cc2.push(0.18,0.45,1.0); }
+    for(var m4=0;m4<M;m4++){ var b0=2*m4; ci.push(b0,b0+1,b0+3, b0,b0+3,b0+2); }
+    var cg=new T.BufferGeometry();
+    cg.setAttribute('position', new T.Float32BufferAttribute(cv,3));
+    cg.setAttribute('color', new T.Float32BufferAttribute(cc2,3));
+    cg.setIndex(ci);
+    scene.add(new T.Mesh(cg, new T.MeshBasicMaterial({vertexColors:true, transparent:true, opacity:0.34, side:T.DoubleSide, depthWrite:false})));
+    scene.add(new T.Line(new T.BufferGeometry().setFromPoints(flight.getPoints(300)), new T.LineBasicMaterial({color:0x59e0ff})));
+
+    // waypoint markers
+    var wpMat=new T.MeshBasicMaterial({color:0xffb020});
+    route.forEach(function(p){ var x=projX(p.lon), z=projZ(p.lat), g=elevAt(elev,x,z);
+      var mk=new T.Mesh(new T.SphereGeometry(span*0.004,10,10), wpMat); mk.position.set(x,(g+120)*EXAG,z); scene.add(mk); });
+
+    // plane (size scaled to view)
+    var pScale=Math.max(span*0.006, 60);
+    var plane=new T.Group();
+    var blue=new T.MeshStandardMaterial({color:0x2e6dff, roughness:.5, metalness:.1, emissive:0x14306e, emissiveIntensity:.4});
+    var body=new T.Mesh(new T.ConeGeometry(6,42,10), blue); body.rotation.x=Math.PI/2; plane.add(body);
+    plane.add(new T.Mesh(new T.BoxGeometry(74,2.5,13), blue));
+    var tw=new T.Mesh(new T.BoxGeometry(28,2,9), blue); tw.position.z=-17; plane.add(tw);
+    var tf=new T.Mesh(new T.BoxGeometry(2,13,10), blue); tf.position.set(0,6,-17); plane.add(tf);
+    plane.scale.setScalar(pScale/40); scene.add(plane);
+
+    // camera control
+    var camDist=Math.max(span*0.05,400), camHeight=camDist*0.42, userYaw=0, dragging=false, px=0,py=0;
+    canvas.addEventListener('pointerdown', function(e){ dragging=true; px=e.clientX; py=e.clientY; });
+    addEventListener('pointerup', function(){ dragging=false; });
+    addEventListener('pointermove', function(e){ if(!dragging)return; userYaw-=(e.clientX-px)*0.006; camHeight=Math.max(camDist*0.12,Math.min(camDist*2.4,camHeight+(e.clientY-py)*(span*0.0008))); px=e.clientX; py=e.clientY; });
+    canvas.addEventListener('wheel', function(e){ e.preventDefault(); camDist=Math.max(span*0.012,Math.min(span*0.5,camDist*(1+Math.sign(e.deltaY)*0.08))); }, {passive:false});
+
+    var u=0, playing=false, speed=1, last=performance.now(), DUR=Math.max(35, route.length*22);
+    var upV=new T.Vector3(0,1,0), right=new T.Vector3(), up2=new T.Vector3(), basis=new T.Matrix4(), fwd=new T.Vector3();
+    var hAlt=document.getElementById('hAlt'), hAgl=document.getElementById('hAgl'), hTime=document.getElementById('hTime'),
+        scrub=document.getElementById('scrub'), tt=document.getElementById('tt'), playBtn=document.getElementById('play');
+    function mmss(s){ var m=Math.floor(s/60),x=Math.floor(s%60); return m+':'+(x<10?'0':'')+x; }
+    function realAtU(uu){ var i=Math.max(0,Math.min(M,Math.round(uu*M))); return pathReal[i]; }
+
+    function upd(){
+      var p=flight.getPointAt(u), tan=flight.getTangentAt(u).normalize();
+      plane.position.copy(p);
+      right.crossVectors(upV,tan).normalize(); up2.crossVectors(tan,right).normalize();
+      basis.makeBasis(right,up2,tan); plane.quaternion.setFromRotationMatrix(basis);
+      var t2=flight.getTangentAt(Math.min(u+0.004,1)).normalize();
+      plane.rotateZ(Math.max(-0.6,Math.min(0.6,-right.dot(t2)*5)));
+      fwd.copy(tan); fwd.y=0; if(fwd.lengthSq()<1e-6) fwd.set(0,0,1); fwd.normalize();
+      var q=new T.Quaternion().setFromAxisAngle(upV,userYaw), behind=fwd.clone().negate().applyQuaternion(q);
+      var want=p.clone().addScaledVector(behind,camDist); want.y=p.y+camHeight;
+      camera.position.lerp(want,0.12); camera.lookAt(p.x,p.y+span*0.004,p.z);
+      var rr=realAtU(u); hAlt.textContent=Math.round(rr.y*3.28084).toLocaleString(); hAgl.textContent=Math.round((rr.y-rr.g)*3.28084).toLocaleString();
+      var sec=u*DUR; hTime.textContent=mmss(sec); tt.textContent=mmss(sec); scrub.value=Math.round(u*1000);
+    }
+    function setPlay(on){ if(u>=1&&on) u=0; playing=on; playBtn.textContent=playing?'Pause':(u>=1?'Replay':'Play'); }
+    playBtn.addEventListener('click', function(){ setPlay(!playing); });
+    document.getElementById('reset').addEventListener('click', function(){ u=0; playing=false; playBtn.textContent='Play'; });
+    scrub.addEventListener('input', function(){ u=scrub.value/1000; playing=false; playBtn.textContent=(u>=1?'Replay':'Play'); });
+    document.querySelectorAll('#spd button').forEach(function(b){ b.addEventListener('click', function(){ speed=+b.dataset.s; document.querySelectorAll('#spd button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); }); });
+    addEventListener('keydown', function(e){ if(e.code==='Space'){ e.preventDefault(); setPlay(!playing); } });
+    function resize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+    addEventListener('resize', resize); resize();
+
+    upd();
+    loadOv.style.display='none';
+    (function loop(now){ requestAnimationFrame(loop); var dt=Math.min(0.05,(now-last)/1000); last=now;
+      if(playing){ u+=dt/DUR*speed; if(u>=1){ u=1; playing=false; playBtn.textContent='Replay'; } }
+      upd(); renderer.render(scene,camera);
+    })(performance.now());
+  }
+})();
+</script>
+</body>
+</html>
