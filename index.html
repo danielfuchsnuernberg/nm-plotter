@@ -2892,6 +2892,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ov-row.on .sw::after{transform:translateX(14px);background:#0a0e13}
   .ov-row .lbl{flex:1;font-size:13px;color:var(--text);line-height:1.25}
   .ov-row .lbl .sub{display:block;font-size:10px;color:var(--text-faint);font-weight:400;letter-spacing:0;text-transform:none}
+  .ov-row.ov-sub{margin-left:16px;border-left:1px solid var(--border)}
+  .ov-row.ov-sub .lbl{font-size:12px}
   .ctaf-lab{transform:translate(-50%,-50%);text-align:center;white-space:nowrap;pointer-events:none}
   .ctaf-f{display:inline-block;background:rgba(255,176,32,.92);color:#0a0e13;font-family:var(--mono);font-weight:700;font-size:12px;padding:1px 7px;border-radius:4px;letter-spacing:.02em;box-shadow:0 1px 3px rgba(0,0,0,.55)}
   .ctaf-hf{margin-top:2px;font-family:var(--mono);font-size:9px;color:#e6edf4;letter-spacing:.03em;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 3px rgba(0,0,0,.8)}
@@ -3734,6 +3736,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <div class="ov-row" data-ov="ctaf"><span class="sw"></span><span class="lbl">CTAF Areas<span class="sub">advisory broadcast zones</span></span></div>
       <div class="ov-row" data-ov="mbz"><span class="sw"></span><span class="lbl">MBZ<span class="sub">mandatory broadcast zones</span></span></div>
       <div class="ov-row" data-ov="freqs"><span class="sw"></span><span class="lbl">Aerodromes<span class="sub">nearby fields + freqs</span></span></div>
+      <div class="ov-row ov-sub" data-ov="afdeclutter"><span class="sw"></span><span class="lbl">Declutter labels<span class="sub">hide strip names when zoomed out</span></span></div>
       <div class="ov-row" data-ov="runways"><span class="sw"></span><span class="lbl">Runways<span class="sub">magnetic · advisory</span></span></div>
       <div class="ov-row" data-ov="navaids"><span class="sw"></span><span class="lbl">Navaids<span class="sub">VOR / NDB / DME</span></span></div>
       <div class="ov-sep"></div>
@@ -7889,27 +7892,58 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     const dot = afHasNote(f.ident) ? '<span class="has-note-dot" title="Your notes"></span>' : '';
     return L.divIcon({className:'', html:`<div class="fq-map-label">${f.ident}${dot}</div>`, iconSize:null, iconAnchor:[-6,6]});
   }
+  // Declutter (opt-in, off by default): in the no-route browse case only, thin out
+  // airfield *labels* at low zoom. Dots are never removed -- every field keeps a dot
+  // at every zoom (quiet when far, solid when close) so no option is ever hidden.
+  const AF_DECLUTTER_KEY = 'nmplotter_af_declutter';
+  function afDeclutter(){ try{ return localStorage.getItem(AF_DECLUTTER_KEY) === '1'; }catch(_){ return false; } }
+  function afSetDeclutter(on){ try{ localStorage.setItem(AF_DECLUTTER_KEY, on ? '1' : '0'); }catch(_){} }
   function renderOverlay(){
     fqOverlayLayer.clearLayers();
     if(!fqOverlayOn) return;
     clearPin();   // the overlay itself now draws fields, so drop any standalone search pin
     const pts = lastPlottedPoints || [];
+    const browse = pts.length < 1;   // no route plotted -> free browse of fields in view
     let fields;
-    if(pts.length >= 1){
+    if(!browse){
       fields = matches(pts, fqRadius).map(x => x.field);
     } else {
       // No route: show fields in the current view at any zoom (like Navaids), capped.
+      // A higher cap when decluttering keeps every option visible at low zoom, where
+      // the labels are dropped so the extra markers stay cheap (dots only).
       const b = map.getBounds();
-      fields = NM_REGION.airfields.filter(f => b.contains([f.lat, f.lon])).slice(0, 80);
+      const cap = afDeclutter() ? 220 : 80;
+      fields = NM_REGION.airfields.filter(f => b.contains([f.lat, f.lon])).slice(0, cap);
     }
+    // Declutter applies to the browse case only; a plotted route's corridor is left
+    // exactly as-is (every corridor field keeps its dot + label at all zooms).
+    const declutter = browse && afDeclutter();
+    const z = map.getZoom();
+    const MAJOR_LABEL_Z = 7, STRIP_SOLID_Z = 9, STRIP_LABEL_Z = 10;
     fields.forEach(f => {
       const ctrl = isControlled(f.ident);
+      const major = f.type === 'large_airport' || f.type === 'medium_airport';
+      let radius, weight, fillOpacity, strokeOpacity = 1, showLabel;
+      if(!declutter){
+        // Unchanged behaviour: dot + label for every field at all zooms.
+        radius = ctrl ? 6 : 4; weight = ctrl ? 2 : 1; fillOpacity = ctrl ? 0.9 : 0.25; showLabel = true;
+      } else if(major){
+        // Majors are the anchors: always a solid dot; label from mid zoom.
+        radius = ctrl ? 6 : 5; weight = ctrl ? 2 : 1.5; fillOpacity = 0.9; showLabel = z >= MAJOR_LABEL_Z;
+      } else {
+        // Bush strips: always a dot (quiet when far, solid when close); label only close in,
+        // so a strip is never hidden -- only its name is deferred to a closer zoom.
+        const solid = z >= STRIP_SOLID_Z;
+        radius = solid ? 4 : 3; weight = 1; fillOpacity = solid ? 0.9 : 0.22; strokeOpacity = solid ? 1 : 0.5;
+        showLabel = z >= STRIP_LABEL_Z;
+      }
       const cm = L.circleMarker([f.lat, f.lon], {
-        radius: ctrl ? 6 : 4,
+        radius: radius,
         color: '#7fb3d5',
-        weight: ctrl ? 2 : 1,
+        weight: weight,
+        opacity: strokeOpacity,
         fillColor: '#7fb3d5',
-        fillOpacity: ctrl ? 0.9 : 0.25
+        fillOpacity: fillOpacity
       }).addTo(fqOverlayLayer)
         .bindTooltip(overlayPopup(f), {direction:'top', offset:[0,-6]});
       cm.on('click', e => {
@@ -7917,9 +7951,14 @@ document.getElementById('plotBtn').addEventListener('click', () => {
         cm.closeTooltip();
         openAirfieldCard(f);
       });
-      L.marker([f.lat, f.lon], {icon: markerHtml(f), interactive:false}).addTo(fqOverlayLayer);
+      if(showLabel){
+        L.marker([f.lat, f.lon], {icon: markerHtml(f), interactive:false}).addTo(fqOverlayLayer);
+      }
     });
   }
+  window.NMAfDeclutter = afDeclutter;
+  window.NMAfSetDeclutter = afSetDeclutter;
+  window.NMRenderOverlay = function(){ if(fqOverlayOn) renderOverlay(); };
   // Search pin: drops the searched field's marker (dot + label, same as the Aerodromes
   // layer) even when that layer is off, so a looked-up field stays visible on the map.
   const fqPinLayer = L.layerGroup();
@@ -10624,6 +10663,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   function syncMenu(){
     menu.querySelector('[data-ov="sat"]').classList.toggle('on',ov.sat);
     menu.querySelector('[data-ov="freqs"]').classList.toggle('on',freqsOn());
+    var _dcl=menu.querySelector('[data-ov="afdeclutter"]'); if(_dcl) _dcl.classList.toggle('on', !!(window.NMAfDeclutter && window.NMAfDeclutter()));
     menu.querySelector('[data-ov="mywpts"]').classList.toggle('on',ov.mywpts);
     menu.querySelector('[data-ov="navaids"]').classList.toggle('on',ov.navaids);
     menu.querySelector('[data-ov="runways"]').classList.toggle('on',ov.runways);
@@ -10638,6 +10678,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     row.addEventListener('click',function(){
       var k=row.dataset.ov;
       if(k==='freqs'){ setFreqs(!freqsOn()); ov.freqs=freqsOn(); saveOv(); }
+      else if(k==='afdeclutter'){ if(window.NMAfSetDeclutter) window.NMAfSetDeclutter(!(window.NMAfDeclutter && window.NMAfDeclutter())); if(window.NMRenderOverlay) window.NMRenderOverlay(); }
       else { ov[k]=!ov[k]; saveOv(); applyLayers(); }
       syncMenu();
     });
