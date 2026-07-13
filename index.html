@@ -3737,6 +3737,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <div class="ov-row" data-ov="mbz"><span class="sw"></span><span class="lbl">MBZ<span class="sub">mandatory broadcast zones</span></span></div>
       <div class="ov-row" data-ov="freqs"><span class="sw"></span><span class="lbl">Aerodromes<span class="sub">nearby fields + freqs</span></span></div>
       <div class="ov-row ov-sub" data-ov="afdeclutter"><span class="sw"></span><span class="lbl">Declutter labels<span class="sub">hide strip names when zoomed out</span></span></div>
+      <div class="ov-row ov-sub" data-ov="flightcat"><span class="sw"></span><span class="lbl">Flight category<span class="sub">colour dots by live METAR</span></span></div>
       <div class="ov-row" data-ov="runways"><span class="sw"></span><span class="lbl">Runways<span class="sub">magnetic · advisory</span></span></div>
       <div class="ov-row" data-ov="navaids"><span class="sw"></span><span class="lbl">Navaids<span class="sub">VOR / NDB / DME</span></span></div>
       <div class="ov-sep"></div>
@@ -7898,6 +7899,38 @@ document.getElementById('plotBtn').addEventListener('click', () => {
   const AF_DECLUTTER_KEY = 'nmplotter_af_declutter';
   function afDeclutter(){ try{ return localStorage.getItem(AF_DECLUTTER_KEY) === '1'; }catch(_){ return false; } }
   function afSetDeclutter(on){ try{ localStorage.setItem(AF_DECLUTTER_KEY, on ? '1' : '0'); }catch(_){} }
+  // Flight Category (opt-in, off by default): recolour the aerodrome dots by live,
+  // *observed* METAR flight category (VFR/MVFR/IFR/LIFR). Only fields that actually
+  // report get a colour; every field without a report stays neutral -- a missing
+  // METAR must never read as good weather. Online-only; advisory, Garmin primary.
+  const FC_KEY = 'nmplotter_flightcat';
+  const FC_TTL = 5 * 60 * 1000;   // re-pull a field's category at most this often
+  function fcOn(){ try{ return localStorage.getItem(FC_KEY) === '1'; }catch(_){ return false; } }
+  function fcSet(on){ try{ localStorage.setItem(FC_KEY, on ? '1' : '0'); }catch(_){} }
+  let fcData = {};        // ident -> { cat:[label,color]|null, age:string, obsTime:number }
+  let fcFetchedAt = 0;    // last bulk-fetch time (ms), for a light staleness throttle
+  let fcInFlight = false;
+  function fcColor(ident){ const d = fcData[ident]; return (d && d.cat) ? d.cat[1] : null; }
+  // Pull live METAR category for the reporting-capable fields currently shown, then
+  // repaint. Bush strips are never asked (they don't report); a major that returns no
+  // METAR is cached neutral so we don't re-hammer it on every pan.
+  function fcEnsure(idents){
+    if(!fcOn() || !window.NMWx || !window.NMWx.ready() || fcInFlight) return;
+    const fresh = (Date.now() - fcFetchedAt) < FC_TTL;
+    const want = fresh ? idents.filter(id => !(id in fcData)) : idents.slice();
+    if(!want.length) return;
+    fcInFlight = true;
+    window.NMWx.fetchMany(want).then(map => {
+      want.forEach(id => {
+        const m = map[id];
+        fcData[id] = m ? { cat: window.NMWx.category(m), age: window.NMWx.age(m), obsTime: m.obsTime || 0 }
+                       : { cat: null, age: '', obsTime: 0 };
+      });
+      fcFetchedAt = Date.now();
+      fcInFlight = false;
+      if(fqOverlayOn) renderOverlay();
+    }).catch(() => { fcInFlight = false; });
+  }
   function renderOverlay(){
     fqOverlayLayer.clearLayers();
     if(!fqOverlayOn) return;
@@ -7918,6 +7951,7 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     // Declutter applies to the browse case only; a plotted route's corridor is left
     // exactly as-is (every corridor field keeps its dot + label at all zooms).
     const declutter = browse && afDeclutter();
+    const fc = fcOn();   // recolour dots by observed METAR category when on
     const z = map.getZoom();
     const MAJOR_LABEL_Z = 7, STRIP_SOLID_Z = 9, STRIP_LABEL_Z = 10;
     fields.forEach(f => {
@@ -7937,15 +7971,25 @@ document.getElementById('plotBtn').addEventListener('click', () => {
         radius = solid ? 4 : 3; weight = 1; fillOpacity = solid ? 0.9 : 0.22; strokeOpacity = solid ? 1 : 0.5;
         showLabel = z >= STRIP_LABEL_Z;
       }
+      // Category recolour only ever changes the dot's colour -- radius/weight/opacity
+      // (and so the declutter tiers + quiet strip dots) are untouched. No report -> neutral.
+      const catCol = fc ? fcColor(f.ident) : null;
+      const dotCol = catCol || '#7fb3d5';
+      let tip = overlayPopup(f);
+      if(catCol){
+        const d = fcData[f.ident];
+        tip += '<br><span style="color:' + catCol + ';font-weight:600">' + d.cat[0] + '</span>'
+             + (d.age ? ' <span style="color:#8a9bb0;font-size:11px">' + d.age + '</span>' : '');
+      }
       const cm = L.circleMarker([f.lat, f.lon], {
         radius: radius,
-        color: '#7fb3d5',
+        color: dotCol,
         weight: weight,
         opacity: strokeOpacity,
-        fillColor: '#7fb3d5',
+        fillColor: dotCol,
         fillOpacity: fillOpacity
       }).addTo(fqOverlayLayer)
-        .bindTooltip(overlayPopup(f), {direction:'top', offset:[0,-6]});
+        .bindTooltip(tip, {direction:'top', offset:[0,-6]});
       cm.on('click', e => {
         if(e.originalEvent) L.DomEvent.stopPropagation(e);
         cm.closeTooltip();
@@ -7955,9 +7999,16 @@ document.getElementById('plotBtn').addEventListener('click', () => {
         L.marker([f.lat, f.lon], {icon: markerHtml(f), interactive:false}).addTo(fqOverlayLayer);
       }
     });
+    // Browse-mode POC: pull live category for the reporting-capable fields in view.
+    // (Corridor/route case is wired next round.) Bush strips are never asked.
+    if(fc && browse){
+      fcEnsure(fields.filter(f => f.type === 'large_airport' || f.type === 'medium_airport').map(f => f.ident));
+    }
   }
   window.NMAfDeclutter = afDeclutter;
   window.NMAfSetDeclutter = afSetDeclutter;
+  window.NMFlightCat = fcOn;
+  window.NMSetFlightCat = function(on){ fcSet(on); if(fqOverlayOn) renderOverlay(); };
   window.NMRenderOverlay = function(){ if(fqOverlayOn) renderOverlay(); };
   // Search pin: drops the searched field's marker (dot + label, same as the Aerodromes
   // layer) even when that layer is off, so a looked-up field stays visible on the map.
@@ -10664,6 +10715,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     menu.querySelector('[data-ov="sat"]').classList.toggle('on',ov.sat);
     menu.querySelector('[data-ov="freqs"]').classList.toggle('on',freqsOn());
     var _dcl=menu.querySelector('[data-ov="afdeclutter"]'); if(_dcl) _dcl.classList.toggle('on', !!(window.NMAfDeclutter && window.NMAfDeclutter()));
+    var _fc=menu.querySelector('[data-ov="flightcat"]'); if(_fc) _fc.classList.toggle('on', !!(window.NMFlightCat && window.NMFlightCat()));
     menu.querySelector('[data-ov="mywpts"]').classList.toggle('on',ov.mywpts);
     menu.querySelector('[data-ov="navaids"]').classList.toggle('on',ov.navaids);
     menu.querySelector('[data-ov="runways"]').classList.toggle('on',ov.runways);
@@ -10679,6 +10731,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       var k=row.dataset.ov;
       if(k==='freqs'){ setFreqs(!freqsOn()); ov.freqs=freqsOn(); saveOv(); }
       else if(k==='afdeclutter'){ if(window.NMAfSetDeclutter) window.NMAfSetDeclutter(!(window.NMAfDeclutter && window.NMAfDeclutter())); if(window.NMRenderOverlay) window.NMRenderOverlay(); }
+      else if(k==='flightcat'){ if(window.NMSetFlightCat) window.NMSetFlightCat(!(window.NMFlightCat && window.NMFlightCat())); }
       else { ov[k]=!ov[k]; saveOv(); applyLayers(); }
       syncMenu();
     });
@@ -10821,6 +10874,25 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
           var list = Array.isArray(arr) ? arr : (arr && arr.rawOb ? [arr] : []);
           var m=null; list.forEach(function(x){ if(x && x.rawOb){ if(!m || (x.obsTime||0) > (m.obsTime||0)) m=x; } });
           return m;
+        });
+    },
+    fetchMany: function(idents){
+      var ids=(idents||[]).filter(Boolean);
+      if(!ids.length) return Promise.resolve({});
+      return fetch(proxy()+'/metar?ids='+encodeURIComponent(ids.join(','))+'&format=json&hours=12', {headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.text().then(function(t){ return {status:r.status, text:t}; }); })
+        .then(function(res){
+          var out={}; var t=(res.text||'').trim();
+          if(res.status===204 || !t) return out;
+          var arr; try{ arr=JSON.parse(t); }catch(_){ return out; }
+          var list = Array.isArray(arr) ? arr : (arr && arr.rawOb ? [arr] : []);
+          list.forEach(function(x){
+            if(!x || !x.rawOb) return;
+            var id = x.icaoId || (String(x.rawOb).trim().split(/\s+/)[0]) || '';
+            if(!id) return;
+            if(!out[id] || (x.obsTime||0) > (out[id].obsTime||0)) out[id]=x;
+          });
+          return out;
         });
     },
     category: function(m){
