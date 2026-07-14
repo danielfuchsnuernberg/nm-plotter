@@ -2898,6 +2898,31 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ctaf-f{display:inline-block;background:rgba(255,176,32,.92);color:#0a0e13;font-family:var(--mono);font-weight:700;font-size:12px;padding:1px 7px;border-radius:4px;letter-spacing:.02em;box-shadow:0 1px 3px rgba(0,0,0,.55)}
   .ctaf-hf{margin-top:2px;font-family:var(--mono);font-size:9px;color:#e6edf4;letter-spacing:.03em;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 3px rgba(0,0,0,.8)}
   /* MBZ (Mandatory Broadcast Zone) layer label */
+  .rt-lab{transform:translate(-50%,-50%);font:600 10px/1 var(--sans,system-ui);color:#f4a6d0;background:rgba(20,10,18,.74);border:1px solid #8a2f66;border-radius:3px;padding:2px 5px;text-shadow:0 0 3px #000;white-space:nowrap;letter-spacing:.04em;cursor:pointer}
+  .rt-card{font:12px/1.4 var(--sans,system-ui);min-width:210px}
+  .rt-h{display:flex;align-items:center;gap:8px}
+  .rt-id{font-family:var(--mono,monospace);font-weight:700;font-size:14px;color:#fff}
+  .rt-tag{font-size:10px;text-transform:uppercase;letter-spacing:.06em;border:1px solid #8a2f66;color:#e0479e;border-radius:4px;padding:1px 5px}
+  .rt-lim{font-family:var(--mono,monospace);color:#f4a6d0;font-size:11px;margin-top:3px}
+  .rt-seq{color:var(--text-faint,#8aa0b4);font-size:11px;margin-top:6px;line-height:1.5;font-family:var(--mono,monospace)}
+  .rt-load{margin-top:8px;border:1px solid #8a2f66;background:#150f14;color:#e0479e;border-radius:5px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer;display:block}
+  .rt-ed{color:#6a7c8c;font-size:10px;margin-top:6px}
+  .ap-item.ap-route .ap-icao{color:#e0479e;font-size:12px}
+  .rt-legs{margin-top:7px;border-top:1px solid #33242a;padding-top:5px}
+  .rt-lgh{display:flex;justify-content:space-between;gap:8px;color:#6a7c8c;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;padding:0 0 3px}
+  .rt-leg{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono,monospace);font-size:11px;padding:2px 0;border-top:1px solid #1b2530}
+  .rt-lg-nm{color:#cfe1f0;flex:1 1 auto;white-space:nowrap}
+  .rt-lg-d{color:var(--text-faint,#8aa0b4);white-space:nowrap}
+  .rt-lg-a{color:#f0a500;font-weight:700;min-width:52px;text-align:right;white-space:nowrap}
+  .rt-note{color:#ffb27a;font-size:10.5px;margin-top:5px}
+  .ct-lab{transform:translate(-50%,-50%);font:600 10px/1 var(--sans,system-ui);color:#a6e0ff;background:rgba(10,18,24,.74);border:1px solid #2b6a8a;border-radius:3px;padding:2px 5px;text-shadow:0 0 3px #000;white-space:nowrap;letter-spacing:.03em;cursor:pointer}
+  .ct-card{font:12px/1.4 var(--sans,system-ui);min-width:200px}
+  .ct-h{display:flex;align-items:center;gap:8px}
+  .ct-id{font-family:var(--mono,monospace);font-weight:700;font-size:13px;color:#fff}
+  .ct-tag{font-size:10px;text-transform:uppercase;letter-spacing:.06em;border:1px solid #2b6a8a;color:#a6e0ff;border-radius:4px;padding:1px 5px}
+  .ct-sub{font-weight:600;margin-top:2px}
+  .ct-lim{font-family:var(--mono,monospace);color:#a6e0ff;font-size:11px;margin-top:2px}
+  .ct-ed{color:#6a7c8c;font-size:10px;margin-top:6px}
   .da-lab{transform:translate(-50%,-50%);font:600 10px/1 var(--sans,system-ui);color:#ff9088;background:rgba(22,10,10,.74);border:1px solid #7a2b28;border-radius:3px;padding:2px 4px;text-shadow:0 0 3px #000;white-space:nowrap;letter-spacing:.03em;cursor:pointer}
   .da-pop .leaflet-popup-content-wrapper{background:#15100f;color:var(--text,#e6edf3);border:1px solid #5a2320;border-radius:9px;box-shadow:0 8px 30px rgba(0,0,0,.55)}
   .da-pop .leaflet-popup-tip{background:#15100f;border:1px solid #5a2320}
@@ -2994,6 +3019,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ap-item.ap-air .ap-icao{color:#ff5a52;font-size:9px}
   .ap-item.ap-air-mbz .ap-icao{color:#b388ff}
   .ap-item.ap-air-noloc{opacity:.6}
+  .ap-item.ap-air-ctl .ap-icao{color:#4db8e8}
   .ap-item.ap-saved .ap-icao{color:var(--accent);font-size:12px}
   .ap-region{color:var(--text-faint);font-size:10px;font-weight:400}
   .ap-sep{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);padding:6px 12px 3px;border-top:1px solid var(--border)}
@@ -3767,6 +3793,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <div class="ov-row" data-ov="ctaf"><span class="sw"></span><span class="lbl">CTAF Areas<span class="sub">advisory broadcast zones</span></span></div>
       <div class="ov-row" data-ov="mbz"><span class="sw"></span><span class="lbl">MBZ<span class="sub">mandatory broadcast zones</span></span></div>
       <div class="ov-row" data-ov="danger"><span class="sw"></span><span class="lbl">Danger / Restricted<span class="sub">hazard + restricted areas · advisory</span></span></div>
+      <div class="ov-row" data-ov="routes"><span class="sw"></span><span class="lbl">ATS routes<span class="sub">lower ATS airways · advisory</span></span></div>
+      <div class="ov-row" data-ov="controlled"><span class="sw"></span><span class="lbl">Controlled airspace<span class="sub">CTR / ATZ · advisory</span></span></div>
       <div class="ov-row" data-ov="freqs"><span class="sw"></span><span class="lbl">Aerodromes<span class="sub">nearby fields + freqs</span></span></div>
       <div class="ov-row ov-sub" data-ov="afdeclutter"><span class="sw"></span><span class="lbl">Declutter labels<span class="sub">hide strip names when zoomed out</span></span></div>
       <div class="ov-row ov-sub" data-ov="flightcat"><span class="sw"></span><span class="lbl">Flight category<span class="sub">colour dots by live METAR</span></span></div>
@@ -5864,6 +5892,18 @@ const processDebounced = debounce(process, 300);
     return (window.NMEnroute.data()||[]).map(function(f){ var nm=(f.n||'').toUpperCase(), s=99; if(nm===Q)s=0; else if(nm.indexOf(Q)===0)s=1; else if(nm.indexOf(Q)>-1)s=4; return {f:f,s:s}; })
       .filter(function(x){return x.s<99;}).sort(function(a,b){return a.s-b.s||a.f.n.localeCompare(b.f.n);}).slice(0,6).map(function(x){return x.f;});
   }
+  function findRoutes(q){
+    if(!q || q.length < 2 || !(window.NMRoutes && window.NMRoutes.data)) return [];
+    var Q=q.toUpperCase();
+    return (window.NMRoutes.data()||[]).map(function(r){ var rid=(r.rd||'').toUpperCase(), s=99; if(rid===Q)s=0; else if(rid.indexOf(Q)===0)s=1; else if(rid.indexOf(Q)>-1)s=4; return {r:r,s:s}; })
+      .filter(function(x){return x.s<99;}).sort(function(a,b){return a.s-b.s||(a.r.rd||'').localeCompare(b.r.rd||'');}).slice(0,6).map(function(x){return x.r;});
+  }
+  function routeHtml(r){
+    return '<div class="ap-item ap-route" data-route="1" data-rd="'+escapeAttr(r.rd)+'">'
+      + '<span class="ap-icao">\u2500</span><span class="ap-iata"></span>'
+      + '<span class="ap-name">'+escapeHtml(r.rd)+' <span class="ap-region">'+escapeHtml(r.pts.length+' pts')+'</span></span>'
+      + '<span class="ap-type">ATS route</span></div>';
+  }
   function findAirspace(q){
     if(!q || q.length < 2 || !(window.NMAirspace && window.NMAirspace.list)) return [];
     var Q=q.toUpperCase();
@@ -5877,7 +5917,7 @@ const processDebounced = debounce(process, 300);
       + '<span class="ap-type">fix</span></div>';
   }
   function airHtml(z){
-    var kc = z.kind==='MBZ' ? 'mbz' : 'haz';
+    var kc = z.kind==='MBZ' ? 'mbz' : ((z.kind==='CTR' || z.kind==='ATZ') ? 'ctl' : 'haz');
     var noloc = (z.lat==null || z.lon==null);
     return '<div class="ap-item ap-air ap-air-'+kc+(noloc?' ap-air-noloc':'')+'"'
       + (noloc ? '' : ' data-air="1" data-lat="'+z.lat+'" data-lon="'+z.lon+'" data-name="'+escapeAttr(z.id)+'"')
@@ -5896,6 +5936,7 @@ const processDebounced = debounce(process, 300);
     const wptHits = findWpts(q);
     const fixHits = findFixes(q);
     const airHits = findAirspace(q);
+    const routeHits = findRoutes(q);
     active = 0;
     let html = hits.map(itemHtml).join('');
     if(wptHits.length){
@@ -5907,15 +5948,18 @@ const processDebounced = debounce(process, 300);
     if(airHits.length){
       html += '<div class="ap-sep">Airspace areas</div>' + airHits.map(airHtml).join('');
     }
+    if(routeHits.length){
+      html += '<div class="ap-sep">ATS routes</div>' + routeHits.map(routeHtml).join('');
+    }
     if(q.length >= 3){
       if(curOnline === undefined){
         html += '<div class="ap-foot">Searching villages\u2026</div>';
       } else if(curOnline.length){
         html += '<div class="ap-sep">Villages \u00b7 OpenStreetMap (online)</div>' + curOnline.map(villageHtml).join('');
-      } else if(!hits.length && !wptHits.length && !fixHits.length && !airHits.length){
+      } else if(!hits.length && !wptHits.length && !fixHits.length && !airHits.length && !routeHits.length){
         html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
       }
-    } else if(!hits.length && !wptHits.length && !fixHits.length && !airHits.length){
+    } else if(!hits.length && !wptHits.length && !fixHits.length && !airHits.length && !routeHits.length){
       html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
     }
     results.innerHTML = html;
@@ -6000,6 +6044,15 @@ const processDebounced = debounce(process, 300);
   }
   function goFix(f){ if(f) goPin(f.a, f.o, f.n, 11); }
   function goArea(z){ if(z && z.lat!=null && z.lon!=null) goPin(z.lat, z.lon, z.id, 10); }
+  function goRoute(rd){
+    var b = (window.NMRoutes && window.NMRoutes.bounds) ? window.NMRoutes.bounds(rd) : null;
+    if(!b || !b.length) return;
+    clearVillagePin();
+    map.fitBounds(b, { padding:[60,60], maxZoom:11 });
+    if(window.NMRoutes && window.NMRoutes.select) window.NMRoutes.select(rd);
+    input.value = rd || ''; results.innerHTML=''; clearBtn.hidden = !(rd); active=0; curOnline=undefined; lastQ=''; input.blur();
+    box.classList.remove('focused');
+  }
   input.addEventListener('input', paint);
   input.addEventListener('focus', () => { box.classList.add('focused'); if(input.value.trim().length>=2 && !results.innerHTML) paint(); });
   input.addEventListener('keydown', e => {
@@ -6007,7 +6060,7 @@ const processDebounced = debounce(process, 300);
     const items = results.querySelectorAll('.ap-item');
     if(e.key==='ArrowDown'){ e.preventDefault(); setActive(active+1); }
     else if(e.key==='ArrowUp'){ e.preventDefault(); setActive(active-1); }
-    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else if(pick.dataset.fix){ goFix({n:pick.dataset.name, a:+pick.dataset.lat, o:+pick.dataset.lon}); } else if(pick.dataset.air){ goArea({id:pick.dataset.name, lat:+pick.dataset.lat, lon:+pick.dataset.lon}); } else if(pick.dataset.wptid){ goWpt(pick.dataset.wptid); } else { go(byId(pick.dataset.id)); } } }
+    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else if(pick.dataset.fix){ goFix({n:pick.dataset.name, a:+pick.dataset.lat, o:+pick.dataset.lon}); } else if(pick.dataset.air){ goArea({id:pick.dataset.name, lat:+pick.dataset.lat, lon:+pick.dataset.lon}); } else if(pick.dataset.route){ goRoute(pick.dataset.rd); } else if(pick.dataset.wptid){ goWpt(pick.dataset.wptid); } else { go(byId(pick.dataset.id)); } } }
     else if(e.key==='Escape'){ e.preventDefault(); input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; curOnline=undefined; lastQ=''; input.blur(); box.classList.remove('focused'); clearVillagePin(); if(window.NMClearPin) window.NMClearPin(); }
   });
   results.addEventListener('click', e => {
@@ -6034,6 +6087,7 @@ const processDebounced = debounce(process, 300);
       if(it.dataset.online){ goVillage(+it.dataset.lat, +it.dataset.lon, it.dataset.name); }
       else if(it.dataset.fix){ goFix({n:it.dataset.name, a:+it.dataset.lat, o:+it.dataset.lon}); }
       else if(it.dataset.air){ goArea({id:it.dataset.name, lat:+it.dataset.lat, lon:+it.dataset.lon}); }
+      else if(it.dataset.route){ goRoute(it.dataset.rd); }
       else if(it.dataset.wptid){ goWpt(it.dataset.wptid); }
       else go(byId(it.dataset.id));
     }
@@ -8698,10 +8752,22 @@ document.getElementById('plotBtn').addEventListener('click', () => {
       }
       arsp.sort((x,y) => x.s - y.s || (x.z.id||'').localeCompare(y.z.id||''));
     }
+    // ATS routes (H/A/B... designators) — searchable by designator; picking loads all points.
+    const rsc = [];
+    if(window.NMRoutes && window.NMRoutes.data){
+      for(const rt of window.NMRoutes.data()){
+        const rid=(rt.rd||'').toUpperCase();
+        let s=-1;
+        if(rid===q) s=0; else if(rid.startsWith(q)) s=1; else if(rid.includes(q)) s=2;
+        if(s>=0) rsc.push({r:rt, s});
+      }
+      rsc.sort((x,y) => x.s - y.s || (x.r.rd||'').localeCompare(y.r.rd||''));
+    }
     const items = wsc.map(r => ({type:'wpt', w:r.w}))
       .concat(asc.map(r => ({type:'af', a:r.a})))
       .concat(fsc.map(r => ({type:'fix', f:r.f})))
       .concat(arsp.map(r => ({type:'air', z:r.z})))
+      .concat(rsc.map(r => ({type:'route', r:r.r})))
       .concat(vsc.map(r => ({type:'village', w:r.w})));
     return items.slice(0, 9);
   }
@@ -8739,13 +8805,20 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     }
     if(it.type === 'air'){
       const z = it.z;
-      const kc = z.kind === 'MBZ' ? 'mbz' : 'haz';
+      const kc = z.kind === 'MBZ' ? 'mbz' : ((z.kind === 'CTR' || z.kind === 'ATZ') ? 'ctl' : 'haz');
       const noloc = (z.lat == null || z.lon == null);
       return `<div class="ap-item ap-air ap-air-${kc}${noloc?' ap-air-noloc':''}"`
         + (noloc ? '' : ` data-air="1" data-lat="${z.lat}" data-lon="${z.lon}" data-name="${escapeAttr(z.id)}"`)
         + `><span class="ap-icao">\u25B2</span><span class="ap-iata"></span>`
         + `<span class="ap-name">${escapeHtml(z.id)} ${escapeHtml(z.name)}</span>`
         + `<span class="ap-type">${escapeHtml(z.kind.toLowerCase())}${noloc?' \u00b7 reserved':''}</span></div>`;
+    }
+    if(it.type === 'route'){
+      const r = it.r;
+      return `<div class="ap-item ap-route" data-route="1" data-rd="${escapeAttr(r.rd)}">`
+        + `<span class="ap-icao">\u2500</span><span class="ap-iata"></span>`
+        + `<span class="ap-name">${escapeHtml(r.rd)} <span class="ap-region">${escapeHtml(r.pts.length+' pts')}</span></span>`
+        + `<span class="ap-type">ATS route</span></div>`;
     }
     const a = it.a;
     return `<div class="ap-item" data-ident="${escapeAttr(a.ident)}">`
@@ -8853,6 +8926,7 @@ document.getElementById('plotBtn').addEventListener('click', () => {
   function pickEl(el){
     if(el.dataset.fix === '1'){ fillRow(el.dataset.name || 'FIX', +el.dataset.lat, +el.dataset.lon); return; }
     if(el.dataset.air === '1'){ fillRow(el.dataset.name || 'AREA', +el.dataset.lat, +el.dataset.lon); return; }
+    if(el.dataset.route === '1'){ if(window.NMRoutes) window.NMRoutes.load(el.dataset.rd); hide(); return; }
     if(el.dataset.online === '1'){
       const lat = +el.dataset.lat, lon = +el.dataset.lon, name = el.dataset.name || 'Village';
       fillRow(name, lat, lon);
@@ -9479,7 +9553,9 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   }
   function rwyLabel(n){ return L.divIcon({className:'rwy-ic',html:'<span class="rwy-num">'+escapeHtml(n)+'</span>',iconSize:[0,0],iconAnchor:[0,0]}); }
   const PNG_DANGER=[{"id":"AYR920","name":"GOLDIE RIVER","cls":"R","up":"9000 ft","lo":"SFC","remark":"Artillery. Hours by NOTAM. Dept of Defence.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-9.3,147.26667],[-9.36667,147.26667],[-9.36667,147.33333],[-9.3,147.33333],[-9.3,147.26667]],"approx":false,"note":""},{"id":"AYR921","name":"PORT MORESBY","cls":"R","up":"20000 ft","lo":"SFC","remark":"Gunnery. Hours by NOTAM. Dept of Defence.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-9.63333,146.86667],[-9.69167,146.925],[-9.91667,146.83333],[-9.73333,146.64167],[-9.63333,146.86667]],"approx":false,"note":""},{"id":"AYR959","name":"SEPIK PLAINS","cls":"R","up":"9000 ft","lo":"SFC","remark":"Mortar firing. Hours by NOTAM. Dept of Defence. When active, confine to north of Sepik Plains airstrip.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-3.90833,143.56667],[-3.88333,143.65833],[-3.97083,143.71667],[-4.0,143.575],[-3.90833,143.56667]],"approx":false,"note":""},{"id":"AYR962","name":"ADMIRALTY ISLANDS","cls":"R","up":"20000 ft","lo":"SFC","remark":"Gunnery & weapon firing. Hours by NOTAM. Dept of Defence.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-0.78333,147.0],[-0.78333,147.66667],[-1.78333,147.66667],[-1.78333,147.0],[-0.78333,147.0]],"approx":false,"note":""},{"id":"AYD901","name":"DAUGO","cls":"D","up":"4000 ft","lo":"SFC","remark":"Flying Training. Hours HJ. CASA.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-9.45833,147.075],[-9.55833,147.13333],[-9.66622,146.96717],[-9.65421,146.95658],[-9.64172,146.94658],[-9.62877,146.93721],[-9.61539,146.92847],[-9.60161,146.92039],[-9.58747,146.91299],[-9.573,146.90628],[-9.55823,146.90028],[-9.54319,146.895],[-9.52792,146.89046],[-9.51246,146.88667],[-9.49683,146.88362],[-9.48108,146.88134],[-9.46524,146.87982],[-9.44934,146.87907],[-9.43343,146.87909]],"approx":true,"note":"Approximate: the south edge is a 20 NM arc centred on Port Moresby, drawn as a polyline."},{"id":"AYD903","name":"MOUNT HAGEN","cls":"D","up":"10000 ft","lo":"SFC","remark":"Hours HJ. Low flying, subject to CAR 91.131. CASA.","ed":"ENR 5.2 · 11 JUL 2024","geom":"poly","ring":[[-5.78333,144.36667],[-5.78333,144.46667],[-5.75,144.48333],[-5.66667,144.46667],[-5.66667,144.36667],[-5.75,144.33333],[-5.78333,144.36667]],"approx":true,"note":"Boundary per ENR 5.2 (current edition); the ENR 5.1 (2020) page prints a different, partly-truncated outline."},{"id":"AYD904A/B","name":"KUTUBU / GOBE","cls":"D","up":"8000 ft","lo":"SFC","remark":"Low Level Rotor-wing operations. Hours HJ. CASA.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-6.2,143.56667],[-6.16667,143.01667],[-6.35,142.91667],[-6.36667,142.96667],[-6.8,143.5],[-7.31667,144.18333],[-7.0,144.33333],[-6.66667,144.05],[-6.2,143.56667]],"approx":true,"note":"Approximate: part of the boundary follows the Hegigio river (drawn straight here). A/B share this footprint; divider line shown separately.","divider":[[-6.36667,143.73333],[-6.86667,143.6]]},{"id":"AYD905","name":"NAPA NAPA","cls":"D","up":"600 ft","lo":"SFC","remark":"Flame from flare at Napa Napa refinery.","ed":"ENR 5.1 · 23 APR 2020","geom":"circle","c":[-9.45833,147.11472],"rNm":1,"approx":false,"note":""},{"id":"AYD907","name":"WAGHI","cls":"D","up":"10000 ft","lo":"SFC","remark":"Flying Training. Hours HJ. Low flying, subject to CAR 91.131. CASA.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-5.74583,144.50833],[-5.6875,144.5375],[-5.74583,144.69167],[-5.81667,144.66111],[-5.74583,144.50833]],"approx":true,"note":"Approximate: part of the boundary follows the old Highlands Highway (drawn straight here)."},{"id":"AYD908","name":"KOMO","cls":"D","up":"6800 ft","lo":"SFC","remark":"Flammable Gas With Heat Radiation. Hours HJ. CAR 91.129. 5 NM NW of Komo (AYXM).","ed":"ENR 5.1 · 23 APR 2020","geom":"circle","c":[-6.00402,142.81767],"rNm":1,"approx":false,"note":""},{"id":"AYD909","name":"KOMO","cls":"D","up":"9500 ft","lo":"SFC","remark":"Flammable Gas With Heat Radiation. Hours HJ. CAR 91.129. 12.60 NM NW of Komo (AYXM).","ed":"ENR 5.1 · 23 APR 2020","geom":"circle","c":[-5.92953,142.71386],"rNm":1,"approx":false,"note":""},{"id":"AYD910","name":"LEALEA","cls":"D","up":"2400 ft","lo":"SFC","remark":"Gas Flare Stack. Hours H24. CAR 91.129. 15 NM NW of Port Moresby (AYPY).","ed":"ENR 5.1 · 23 APR 2020","geom":"circle","c":[-9.32989,147.01907],"rNm":1,"approx":false,"note":""}];
-  var ov={freqs:false,mywpts:false,navaids:false,enroute:false,runways:false,terrain:false,ctaf:false,mbz:false,danger:false,sat:false};
+  const PNG_ROUTES=[{"rd":"H401","cls":"Class A, C & F","up":"FL450","lo":"SFC","ed":"ENR 3.1 · 18 MAY 2023","pts":[{"n":"PORT MORESBY VOR (PY)","s":"PY","a":-9.46105,"o":147.233},{"n":"LELID","s":"LELID","a":-8.91109,"o":147.11942},{"n":"GUARI","s":"GUARI","a":-8.125,"o":146.98},{"n":"NADZAB VOR (NZ)","s":"NZ","a":-6.57,"o":146.70799},{"n":"ALBUP","s":"ALBUP","a":-5.21167,"o":145.77667},{"n":"BOGIA","s":"BOGIA","a":-4.40355,"o":144.73198},{"n":"DOTUB","s":"DOTUB","a":-3.58333,"o":143.67667},{"n":"EMLEN","s":"EMLEN","a":-3.13137,"o":142.48773},{"n":"VANIMO NDB (VNO)","s":"VNO","a":-2.6789,"o":141.30299}],"segs":[{"t":344,"d":33,"a":"8500","f":false},{"t":344,"d":47,"a":"14000","f":false},{"t":344,"d":94,"a":"14000","f":false},{"t":320,"d":98,"a":"16000","f":false},{"t":303,"d":79,"a":"7800","f":false},{"t":303,"d":80,"a":"7800","f":false},{"t":287,"d":76,"a":"7300","f":false},{"t":287,"d":76,"a":"8400","f":false}]},{"rd":"H404","cls":"Class A, C & F","up":"FL450","lo":"SFC","ed":"ENR 3.1 · 18 MAY 2023","pts":[{"n":"NADZAB VOR (NZ)","s":"NZ","a":-6.57,"o":146.70799},{"n":"OKTUX","s":"OKTUX","a":-4.30026,"o":147.07103},{"n":"MOMOTE NDB (MOE)","s":"MOE","a":-2.06142,"o":147.42599}],"segs":[{"t":4,"d":138,"a":"16000","f":false},{"t":4,"d":136,"a":"3000","f":false}]},{"rd":"H405","cls":"Class A, C & F","up":"FL450","lo":"SFC","ed":"ENR 3.1 · 18 MAY 2023","pts":[{"n":"PORT MORESBY VOR (PY)","s":"PY","a":-9.46105,"o":147.233},{"n":"DUKIS","s":"DUKIS","a":-8.12226,"o":147.10843},{"n":"LARID","s":"LARID","a":-6.73667,"o":146.99833},{"n":"NADZAB VOR (NZ)","s":"NZ","a":-6.57,"o":146.70799}],"segs":[{"t":350,"d":80,"a":"15300","f":false},{"t":349,"d":83,"a":"15300","f":false},{"t":295,"d":20,"a":"6300","f":false}]},{"rd":"H407","cls":"Class A, C & F","up":"FL450","lo":"SFC","ed":"ENR 3.1 · 18 MAY 2023","pts":[{"n":"NADZAB VOR (NZ)","s":"NZ","a":-6.57,"o":146.70799},{"n":"KAMUL","s":"KAMUL","a":-8.18626,"o":146.73463},{"n":"SAKTO","s":"SAKTO","a":-8.70286,"o":146.74289}],"segs":[{"t":174,"d":97,"a":"14000","f":false},{"t":173,"d":31,"a":"14400","f":false}]},{"rd":"H408","cls":"Class A, C & F","up":"FL450","lo":"SFC","ed":"ENR 3.1 · 18 MAY 2023","pts":[{"n":"NADZAB VOR (NZ)","s":"NZ","a":-6.57,"o":146.70799},{"n":"WESFI","s":"WESFI","a":-6.55044,"o":146.40752},{"n":"BEMGO","s":"BEMGO","a":-6.53246,"o":146.24222}],"segs":[{"t":268,"d":18,"a":"11000","f":false},{"t":268,"d":10,"a":"11000","f":false}]},{"rd":"H409","cls":"Class A, C & F","up":"FL450","lo":"SFC","ed":"ENR 3.1 · 18 MAY 2023","pts":[{"n":"NADZAB VOR (NZ)","s":"NZ","a":-6.57,"o":146.70799},{"n":"MUKIK","s":"MUKIK","a":-6.37456,"o":146.18645},{"n":"KANTU","s":"KANTU","a":-6.22239,"o":145.77736},{"n":"MUDIX","s":"MUDIX","a":-6.07833,"o":145.39},{"n":"YABAL","s":"YABAL","a":-5.94897,"o":144.8071},{"n":"IKERU","s":"IKERU","a":-5.83833,"o":144.30833},{"n":"PAPTI","s":"PAPTI","a":-5.6148,"o":142.76914},{"n":"OK TEDI NDB (OKT)","s":"OKT","a":-5.4099,"o":141.319}],"segs":[{"t":285,"d":33,"a":"8000","f":false},{"t":285,"d":26,"a":"12500","f":false},{"t":285,"d":25,"a":"14000/12500","f":true},{"t":278,"d":36,"a":"15800","f":false},{"t":278,"d":30,"a":"15800","f":false},{"t":274,"d":93,"a":"15000/16400","f":true},{"t":273,"d":88,"a":"15000","f":false}]},{"rd":"H410","cls":"Class A, C & F","up":"FL450","lo":"SFC","ed":"ENR 3.1 · 18 MAY 2023","pts":[{"n":"NADZAB VOR (NZ)","s":"NZ","a":-6.57,"o":146.70799},{"n":"AVLIX","s":"AVLIX","a":-6.61498,"o":147.85793},{"n":"ARAWE","s":"ARAWE","a":-6.10479,"o":148.99879},{"n":"VATVO","s":"VATVO","a":-5.45833,"o":150.415},{"n":"ESNIV","s":"ESNIV","a":-4.34667,"o":152.39833}],"segs":[{"t":87,"d":68,"a":"11000","f":false},{"t":59,"d":75,"a":"3300","f":false},{"t":59,"d":93,"a":"8300","f":false},{"t":54,"d":136,"a":"9300","f":false}]},{"rd":"H411","cls":"Class A, C & F","up":"FL450","lo":"SFC","ed":"ENR 3.1 · 18 MAY 2023","pts":[{"n":"LARID","s":"LARID","a":-6.73667,"o":146.99833},{"n":"PALDO","s":"PALDO","a":-7.42499,"o":147.42697},{"n":"MORBE","s":"MORBE","a":-7.71577,"o":147.60857},{"n":"RUPNO","s":"RUPNO","a":-8.74557,"o":148.25419},{"n":"KALKO","s":"KALKO","a":-10.315,"o":150.36167}],"segs":[{"t":142,"d":49,"a":"4500/8000","f":true},{"t":142,"d":21,"a":"10000","f":false},{"t":142,"d":73,"a":"10000/8000","f":true},{"t":121,"d":156,"a":"14100","f":false}]},{"rd":"H413","cls":"Class A, C & F","up":"FL450","lo":"SFC","ed":"ENR 3.1 · 18 MAY 2023","pts":[{"n":"NADZAB VOR (NZ)","s":"NZ","a":-6.57,"o":146.70799},{"n":"VIDOT","s":"VIDOT","a":-6.84854,"o":146.35397},{"n":"EPKED","s":"EPKED","a":-7.96258,"o":145.77838}],"segs":[{"t":226,"d":27,"a":"6000","f":false},{"t":201,"d":75,"a":"11000","f":false}]}];
+  const PNG_CTA=[{"id":"NADZAB CTR","kk":"CTR","cls":"Class C","up":"6000 ft","lo":"SFC","ed":"ENR 2.1-1 · 07 OCT 2021","ctr":[-6.56917,146.72806],"geom":"poly","ring":[[-6.25472,146.61694],[-6.4125,146.67111],[-6.40555,146.69672],[-6.40268,146.72311],[-6.404,146.74962],[-6.40945,146.77559],[-6.41891,146.80037],[-6.43214,146.82334],[-6.4488,146.84392],[-6.46848,146.8616],[-6.49069,146.87592],[-6.51487,146.88654],[-6.54041,146.89319],[-6.56667,146.89583],[-6.56667,146.97972],[-6.61096,146.976],[-6.65393,146.96464],[-6.69422,146.94579],[-6.73056,146.92005],[-6.76179,146.88824],[-6.78693,146.85135],[-6.80518,146.81056],[-6.81596,146.76715],[-6.81894,146.72251],[-6.81401,146.67804],[-6.80134,146.63516],[-6.78167,146.595],[-6.85333,146.55167],[-6.81513,146.50187],[-6.7689,146.45965],[-6.71566,146.42687],[-6.65728,146.40466],[-6.59581,146.39381],[-6.53341,146.39469],[-6.47227,146.40728],[-6.41453,146.43111],[-6.36222,146.46536],[-6.31717,146.50882],[-6.28097,146.55996]]},{"id":"PORT MORESBY CTR","kk":"CTR","cls":"Class C","up":"5000 ft","lo":"SFC","ed":"ENR 2.1-5 · 25 MAY 2017","ctr":[-9.44194,147.21917],"geom":"circle","c":[-9.44194,147.21917],"rNm":20},{"id":"GOROKA ATZ","kk":"ATZ","cls":"Class F","up":"20000 ft","lo":"SFC","ed":"ENR 2.1-13 · 11 JUL 2024","ctr":[-6.08139,145.39167],"geom":"poly","ring":[[-5.8825,145.23917],[-6.08333,145.64306],[-6.11665,145.64041],[-6.14933,145.63346],[-6.1808,145.62218],[-6.2105,145.60679],[-6.23789,145.58754],[-6.26247,145.56479],[-6.28382,145.53893],[-6.30155,145.51045],[-6.31534,145.47983],[-6.32495,145.44764],[-6.33019,145.41444],[-6.33111,145.38083],[-5.94639,145.18],[-5.94046,145.18424],[-5.93452,145.18845],[-5.9287,145.19283],[-5.92302,145.19738],[-5.91747,145.2021],[-5.91205,145.20697],[-5.90678,145.212],[-5.90166,145.21718],[-5.89669,145.22251],[-5.89187,145.22799],[-5.88722,145.2336]]},{"id":"MADANG ATZ","kk":"ATZ","cls":"Class F","up":"20000 ft","lo":"SFC","ed":"ENR 2.1-13 · 11 JUL 2024","ctr":[-5.20833,145.78778],"geom":"circle","c":[-5.20833,145.78778],"rNm":25},{"id":"MOUNT HAGEN ATZ","kk":"ATZ","cls":"Class F","up":"20000 ft","lo":"SFC","ed":"ENR 2.1-13 · 11 JUL 2024","ctr":[-5.82778,144.29944],"geom":"poly","ring":[[-5.71667,144.525],[-5.88833,144.45528],[-5.90981,144.44516],[-5.92957,144.43197],[-5.94727,144.41608],[-5.96255,144.39783],[-5.97509,144.37757],[-5.98464,144.35573],[-5.991,144.33275],[-5.99406,144.30909],[-5.99373,144.28524],[-5.99004,144.26167],[-5.98305,144.23887],[-5.97306,144.21722],[-5.87556,144.05278],[-5.81598,144.0486],[-5.75711,144.05859],[-5.70228,144.08232],[-5.65461,144.11845],[-5.61684,144.16491],[-5.5911,144.21904],[-5.57888,144.27776],[-5.58087,144.33772],[-5.59695,144.39549],[-5.62621,144.44778],[-5.66698,144.49161]]},{"id":"TOKUA ATZ","kk":"ATZ","cls":"Class F","up":"20000 ft","lo":"SFC","ed":"ENR 2.1-14 · 24 MAR 2022","ctr":[-4.34111,152.37917],"geom":"circle","c":[-4.34111,152.37917],"rNm":25}];
+  var ov={freqs:false,mywpts:false,navaids:false,enroute:false,runways:false,terrain:false,ctaf:false,mbz:false,danger:false,routes:false,controlled:false,sat:false};
   try{ var s=JSON.parse(localStorage.getItem(OV_KEY)); if(s) ov=Object.assign(ov,s); }catch(_){}
   function saveOv(){ try{ localStorage.setItem(OV_KEY, JSON.stringify(ov)); }catch(_){} }
   var wpts=[];
@@ -10747,6 +10823,8 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     if(ov.ctaf){ ctafLayer.addTo(map); renderCtaf(); } else map.removeLayer(ctafLayer);
     if(ov.mbz){ mbzLayer.addTo(map); renderMbz(); } else map.removeLayer(mbzLayer);
     if(ov.danger){ daLayer.addTo(map); renderDanger(); } else map.removeLayer(daLayer);
+    if(ov.routes){ routeLayer.addTo(map); renderRoutes(); } else map.removeLayer(routeLayer);
+    if(ov.controlled){ ctaLayer.addTo(map); renderControlled(); } else map.removeLayer(ctaLayer);
     if(ov.terrain){ terrLayer.addTo(map); terrLayer.setZIndex(6); if(tPanel) tPanel.classList.add('show'); } else { map.removeLayer(terrLayer); if(tPanel) tPanel.classList.remove('show'); }
   }
 
@@ -10890,6 +10968,96 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     });
   }
   window.NMDanger={ data:function(){ return PNG_DANGER; }, render:function(){ if(ov.danger) renderDanger(); } };
+  /* ---- Lower ATS routes (ENR 3.1) ---- */
+  var routeLayer=L.layerGroup();
+  function routeCardHtml(r){
+    var h='<div class="rt-card">';
+    h+='<div class="rt-h"><span class="rt-id">'+escapeHtml(r.rd)+'</span><span class="rt-tag">ATS route</span></div>';
+    h+='<div class="rt-lim">'+escapeHtml(r.cls)+' \u00b7 '+escapeHtml(r.up)+' / '+escapeHtml(r.lo)+'</div>';
+    var segs=r.segs||[], anyFlag=false;
+    h+='<div class="rt-legs"><div class="rt-lgh"><span>leg</span><span>trk \u00b7 dist</span><span>LSALT</span></div>';
+    for(var i=0;i<segs.length && i<r.pts.length-1;i++){
+      var s=segs[i]; if(s.f) anyFlag=true;
+      var trk=('00'+s.t).slice(-3);
+      h+='<div class="rt-leg"><span class="rt-lg-nm">'+escapeHtml(r.pts[i].s)+' \u2192 '+escapeHtml(r.pts[i+1].s)+'</span>'
+        +'<span class="rt-lg-d">'+trk+'\u00b0 \u00b7 '+s.d+' NM</span>'
+        +'<span class="rt-lg-a">'+escapeHtml(s.a)+(s.f?'*':'')+'</span></div>';
+    }
+    h+='</div>';
+    if(anyFlag) h+='<div class="rt-note">* two LSALT values printed \u2014 verify</div>';
+    h+='<button type="button" class="rt-load" data-rd="'+escapeAttr(r.rd)+'">+ Load into route</button>';
+    h+='<div class="rt-ed">'+escapeHtml(r.ed)+' \u00b7 advisory; LSALT ft AMSL \u00b7 Garmin primary</div>';
+    return h+'</div>';
+  }
+  var routeLines={};   // rd -> visible polyline
+  var routeSel=null;   // clicked/tapped route that stays highlighted
+  var RT_N={color:'#e0479e',weight:1.6,opacity:.85,dashArray:'7 6'};
+  var RT_HI={color:'#ff8ad0',weight:4,opacity:1,dashArray:null};
+  var RT_DIM={color:'#e0479e',weight:1.4,opacity:.3,dashArray:'7 6'};
+  function paintRoutes(hoverRd){
+    Object.keys(routeLines).forEach(function(k){
+      var ln=routeLines[k];
+      if(k===routeSel || k===hoverRd) ln.setStyle(RT_HI);
+      else if(hoverRd) ln.setStyle(RT_DIM);
+      else ln.setStyle(RT_N);
+    });
+    var front = hoverRd || routeSel;
+    if(front && routeLines[front]) routeLines[front].bringToFront();
+  }
+  function renderRoutes(){
+    routeLayer.clearLayers(); routeLines={};
+    if(!ov.routes) return;
+    PNG_ROUTES.forEach(function(r){
+      var line=r.pts.map(function(p){ return [p.a,p.o]; });
+      if(line.length<2) return;
+      var vis=L.polyline(line,{color:RT_N.color,weight:RT_N.weight,opacity:RT_N.opacity,dashArray:RT_N.dashArray,interactive:false}).addTo(routeLayer);
+      routeLines[r.rd]=vis;
+      // wide invisible hit line: hover brightens the whole airway, tap/click pins it
+      var hit=L.polyline(line,{color:'#000',weight:16,opacity:0,interactive:true,bubblingMouseEvents:false}).addTo(routeLayer);
+      hit.on('mouseover',function(){ paintRoutes(r.rd); });
+      hit.on('mouseout',function(){ paintRoutes(null); });
+      hit.on('click',function(){ routeSel=(routeSel===r.rd?null:r.rd); paintRoutes(null); });
+      var mid=line[Math.floor(line.length/2)];
+      L.marker(mid,{icon:L.divIcon({className:'',html:'<div class="rt-lab">'+escapeHtml(r.rd)+'</div>'}),interactive:true,keyboard:false}).addTo(routeLayer)
+        .bindPopup(routeCardHtml(r),{className:'rt-pop',maxWidth:320,maxHeight:340,autoPan:true})
+        .on('popupopen',function(e){
+          var b=e.popup.getElement().querySelector('.rt-load');
+          if(b) b.addEventListener('click',function(){ if(window.NMRoutes) window.NMRoutes.load(r.rd); map.closePopup(); });
+        });
+    });
+    paintRoutes(null);
+  }
+  window.NMRoutes={
+    data:function(){ return PNG_ROUTES; },
+    render:function(){ if(ov.routes) renderRoutes(); },
+    select:function(rd){ routeSel=rd||null; paintRoutes(null); },
+    bounds:function(rd){ var r=PNG_ROUTES.find(function(x){return x.rd===rd;}); return r?r.pts.map(function(p){return [p.a,p.o];}):null; },
+    load:function(rd){ var r=PNG_ROUTES.find(function(x){return x.rd===rd;}); if(!r||typeof window.addFieldToRoute!=='function') return; r.pts.forEach(function(p){ window.addFieldToRoute(p.s, p.a.toFixed(6)+', '+p.o.toFixed(6)); }); }
+  };
+  /* ---- Controlled airspace (ENR 2.1): CTR / ATZ ---- */
+  var ctaLayer=L.layerGroup();
+  function ctaCardHtml(a){
+    var kind = a.kk==='CTR' ? 'Control Zone' : 'Aerodrome Traffic Zone';
+    var h='<div class="ct-card">';
+    h+='<div class="ct-h"><span class="ct-id">'+escapeHtml(a.id)+'</span><span class="ct-tag">'+escapeHtml(a.kk)+'</span></div>';
+    h+='<div class="ct-sub">'+escapeHtml(kind)+'</div>';
+    h+='<div class="ct-lim">'+escapeHtml(a.up)+' / '+escapeHtml(a.lo)+' \u00b7 '+escapeHtml(a.cls)+'</div>';
+    h+='<div class="ct-ed">'+escapeHtml(a.ed)+' \u00b7 advisory; clearance / traffic zone \u00b7 Garmin primary</div>';
+    return h+'</div>';
+  }
+  function ctaLabelIcon(a){ return L.divIcon({className:'', html:'<div class="ct-lab">'+escapeHtml(a.id)+'</div>', iconSize:null}); }
+  function renderControlled(){
+    ctaLayer.clearLayers();
+    if(!ov.controlled) return;
+    PNG_CTA.forEach(function(a){
+      var base={color:'#4db8e8',weight:1.6,opacity:.9,fillColor:'#4db8e8',fillOpacity:.05,interactive:false};
+      if(a.geom==='circle'){ L.circle(a.c,Object.assign({radius:(Number(a.rNm)||0)*1852},base)).addTo(ctaLayer); }
+      else { L.polygon(a.ring,base).addTo(ctaLayer); }
+      L.marker(a.ctr,{icon:ctaLabelIcon(a),interactive:true,keyboard:false}).addTo(ctaLayer)
+        .bindPopup(ctaCardHtml(a),{className:'ct-pop',maxWidth:280,autoPan:true});
+    });
+  }
+  window.NMControlled={ data:function(){ return PNG_CTA; }, render:function(){ if(ov.controlled) renderControlled(); } };
   window.NMEnroute={ data:function(){ return PNG_ENROUTE; } };
   var PNG_TRAINING=[{id:'AYD901',name:'DAUGO'},{id:'AYD903',name:'MOUNT HAGEN'},{id:'AYD907',name:'WAGHI'}];
   var PNG_ADIZ=[{id:'AYR906',name:'(Reserved)'},{id:'AYR916',name:'(Reserved)'}];
@@ -10902,6 +11070,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     PNG_TRAINING.forEach(function(t){ var d=null; for(var i=0;i<PNG_DANGER.length;i++){ if(PNG_DANGER[i].id===t.id){ d=PNG_DANGER[i]; break; } } if(d){ var c=daCentre(d); out.push({id:t.id,name:t.name,kind:'Training',lat:c[0],lon:c[1]}); } });
     loadMbz().forEach(function(z){ var la=Number(z.lat),lo=Number(z.lon); if(isFinite(la)&&isFinite(lo)) out.push({id:z.id,name:z.name,kind:'MBZ',lat:la,lon:lo}); });
     PNG_ADIZ.forEach(function(z){ out.push({id:z.id,name:z.name,kind:'ADIZ',lat:null,lon:null}); });
+    if(typeof PNG_CTA!=='undefined') PNG_CTA.forEach(function(a){ out.push({id:a.id,name:'',kind:a.kk,lat:a.ctr[0],lon:a.ctr[1]}); });
     return out;
   } };
 
@@ -10910,7 +11079,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   function setFreqs(on){ if(freqsOn()!==on && fqBtn) fqBtn.click(); }
 
   var btn=document.getElementById('overlaysBtn'), menu=document.getElementById('overlaysMenu');
-  function anyOn(){ return ov.mywpts||ov.navaids||ov.enroute||ov.runways||ov.terrain||ov.ctaf||ov.mbz||ov.danger||ov.sat||freqsOn(); }
+  function anyOn(){ return ov.mywpts||ov.navaids||ov.enroute||ov.runways||ov.terrain||ov.ctaf||ov.mbz||ov.danger||ov.routes||ov.controlled||ov.sat||freqsOn(); }
   function syncMenu(){
     menu.querySelector('[data-ov="sat"]').classList.toggle('on',ov.sat);
     menu.querySelector('[data-ov="freqs"]').classList.toggle('on',freqsOn());
@@ -10923,6 +11092,8 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     menu.querySelector('[data-ov="ctaf"]').classList.toggle('on',ov.ctaf);
     menu.querySelector('[data-ov="mbz"]').classList.toggle('on',ov.mbz);
     var _da=menu.querySelector('[data-ov="danger"]'); if(_da) _da.classList.toggle('on',ov.danger);
+    var _rt=menu.querySelector('[data-ov="routes"]'); if(_rt) _rt.classList.toggle('on',ov.routes);
+    var _ct=menu.querySelector('[data-ov="controlled"]'); if(_ct) _ct.classList.toggle('on',ov.controlled);
     menu.querySelector('[data-ov="terrain"]').classList.toggle('on',ov.terrain);
     btn.classList.toggle('any-on',anyOn());
   }
