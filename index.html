@@ -2898,6 +2898,18 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ctaf-f{display:inline-block;background:rgba(255,176,32,.92);color:#0a0e13;font-family:var(--mono);font-weight:700;font-size:12px;padding:1px 7px;border-radius:4px;letter-spacing:.02em;box-shadow:0 1px 3px rgba(0,0,0,.55)}
   .ctaf-hf{margin-top:2px;font-family:var(--mono);font-size:9px;color:#e6edf4;letter-spacing:.03em;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 3px rgba(0,0,0,.8)}
   /* MBZ (Mandatory Broadcast Zone) layer label */
+  .da-lab{transform:translate(-50%,-50%);font:600 10px/1 var(--sans,system-ui);color:#ff9088;background:rgba(22,10,10,.74);border:1px solid #7a2b28;border-radius:3px;padding:2px 4px;text-shadow:0 0 3px #000;white-space:nowrap;letter-spacing:.03em;cursor:pointer}
+  .da-pop .leaflet-popup-content-wrapper{background:#15100f;color:var(--text,#e6edf3);border:1px solid #5a2320;border-radius:9px;box-shadow:0 8px 30px rgba(0,0,0,.55)}
+  .da-pop .leaflet-popup-tip{background:#15100f;border:1px solid #5a2320}
+  .da-card{font:12px/1.4 var(--sans,system-ui);min-width:200px}
+  .da-h{display:flex;align-items:center;gap:8px}
+  .da-id{font-family:var(--mono,monospace);font-weight:700;font-size:13px;color:#fff}
+  .da-cls{font-size:10px;text-transform:uppercase;letter-spacing:.06em;border:1px solid #7a2b28;color:#ff9088;border-radius:4px;padding:1px 5px}
+  .da-nm{font-weight:600;margin-top:2px}
+  .da-lim{font-family:var(--mono,monospace);color:#ff9088;font-size:11px;margin-top:2px}
+  .da-rem{color:var(--text-faint,#8aa0b4);font-size:11px;margin-top:5px}
+  .da-approx{color:#ffb27a;font-size:11px;margin-top:5px;border-top:1px solid #33242a;padding-top:5px}
+  .da-ed{color:#6a7c8c;font-size:10px;margin-top:6px}
   .mbz-lab{transform:translate(-50%,-50%);text-align:center;white-space:nowrap;pointer-events:none}
   .mbz-n{display:inline-block;background:rgba(179,136,255,.16);color:#d9c6ff;font-family:var(--sans);font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:4px 4px 0 0;text-shadow:0 1px 2px rgba(0,0,0,.8)}
   .mbz-f{display:block;background:rgba(179,136,255,.92);color:#160a2e;font-family:var(--mono);font-weight:700;font-size:12px;padding:1px 7px;border-radius:0 0 4px 4px;letter-spacing:.02em;box-shadow:0 1px 3px rgba(0,0,0,.55)}
@@ -2948,6 +2960,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .nav-name{background:rgba(13,18,25,.92);border:1px solid #6a4a8e;color:#c792ea;font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
   .enr-dot{width:11px;height:11px;border:2px solid #e0479e;border-radius:50%;background:rgba(224,71,158,.25)}
   .enr-name{background:rgba(13,18,25,.92);border:1px solid #8a2f66;color:#e0479e;font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
+  .leaflet-popup-content-wrapper{background:#11161d;color:var(--text,#e6edf3);border:1px solid var(--border-strong,#243244);border-radius:9px;box-shadow:0 10px 34px rgba(0,0,0,.5)}
+  .leaflet-popup-tip{background:#11161d;border:1px solid var(--border-strong,#243244)}
+  .leaflet-popup-close-button{color:#8aa0b4}
+  .leaflet-popup-close-button:hover{color:#fff}
   .enr-pop{min-width:148px}
   .enr-h{display:flex;align-items:center;gap:6px;margin-bottom:5px}
   .enr-h b{font-family:var(--mono);font-size:14px;color:#fff;letter-spacing:.03em}
@@ -2974,6 +2990,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ap-item.ap-wpt .ap-icao{color:#e8f0f8}
   .ap-item.ap-wpt .ap-name{color:#e8f0f8;font-weight:700}
   .ap-item.ap-village .ap-icao{color:var(--accent-2);font-size:9px}
+  .ap-item.ap-fix .ap-icao{color:#e0479e;font-size:11px}
+  .ap-item.ap-air .ap-icao{color:#ff5a52;font-size:9px}
+  .ap-item.ap-air-mbz .ap-icao{color:#b388ff}
+  .ap-item.ap-air-noloc{opacity:.6}
   .ap-item.ap-saved .ap-icao{color:var(--accent);font-size:12px}
   .ap-region{color:var(--text-faint);font-size:10px;font-weight:400}
   .ap-sep{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);padding:6px 12px 3px;border-top:1px solid var(--border)}
@@ -3746,6 +3766,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <div class="ov-sep"></div>
       <div class="ov-row" data-ov="ctaf"><span class="sw"></span><span class="lbl">CTAF Areas<span class="sub">advisory broadcast zones</span></span></div>
       <div class="ov-row" data-ov="mbz"><span class="sw"></span><span class="lbl">MBZ<span class="sub">mandatory broadcast zones</span></span></div>
+      <div class="ov-row" data-ov="danger"><span class="sw"></span><span class="lbl">Danger / Restricted<span class="sub">hazard + restricted areas · advisory</span></span></div>
       <div class="ov-row" data-ov="freqs"><span class="sw"></span><span class="lbl">Aerodromes<span class="sub">nearby fields + freqs</span></span></div>
       <div class="ov-row ov-sub" data-ov="afdeclutter"><span class="sw"></span><span class="lbl">Declutter labels<span class="sub">hide strip names when zoomed out</span></span></div>
       <div class="ov-row ov-sub" data-ov="flightcat"><span class="sw"></span><span class="lbl">Flight category<span class="sub">colour dots by live METAR</span></span></div>
@@ -5837,6 +5858,33 @@ const processDebounced = debounce(process, 300);
       + '<span class="ap-name">'+escapeHtml(w.name||'Waypoint')+'</span>'+dot
       + '<button type="button" class="ap-add" data-wptadd="1" data-name="'+escapeAttr(w.name||'')+'" data-coord="'+escapeAttr(coord)+'" title="Add to route" aria-label="Add to route">+</button></div>';
   }
+  function findFixes(q){
+    if(!q || q.length < 2 || !(window.NMEnroute && window.NMEnroute.data)) return [];
+    var Q=q.toUpperCase();
+    return (window.NMEnroute.data()||[]).map(function(f){ var nm=(f.n||'').toUpperCase(), s=99; if(nm===Q)s=0; else if(nm.indexOf(Q)===0)s=1; else if(nm.indexOf(Q)>-1)s=4; return {f:f,s:s}; })
+      .filter(function(x){return x.s<99;}).sort(function(a,b){return a.s-b.s||a.f.n.localeCompare(b.f.n);}).slice(0,6).map(function(x){return x.f;});
+  }
+  function findAirspace(q){
+    if(!q || q.length < 2 || !(window.NMAirspace && window.NMAirspace.list)) return [];
+    var Q=q.toUpperCase();
+    return (window.NMAirspace.list()||[]).map(function(z){ var nm=(z.name||'').toUpperCase(), id=(z.id||'').toUpperCase(), s=99; if(id===Q||nm===Q)s=0; else if(id.indexOf(Q)===0||nm.indexOf(Q)===0)s=1; else if(id.indexOf(Q)>-1||nm.indexOf(Q)>-1)s=4; return {z:z,s:s}; })
+      .filter(function(x){return x.s<99;}).sort(function(a,b){return a.s-b.s||(a.z.id||'').localeCompare(b.z.id||'');}).slice(0,8).map(function(x){return x.z;});
+  }
+  function fixHtml(f){
+    return '<div class="ap-item ap-fix" data-fix="1" data-lat="'+f.a+'" data-lon="'+f.o+'" data-name="'+escapeAttr(f.n)+'">'
+      + '<span class="ap-icao">\u2726</span><span class="ap-iata"></span>'
+      + '<span class="ap-name">'+escapeHtml(f.n)+'</span>'
+      + '<span class="ap-type">fix</span></div>';
+  }
+  function airHtml(z){
+    var kc = z.kind==='MBZ' ? 'mbz' : 'haz';
+    var noloc = (z.lat==null || z.lon==null);
+    return '<div class="ap-item ap-air ap-air-'+kc+(noloc?' ap-air-noloc':'')+'"'
+      + (noloc ? '' : ' data-air="1" data-lat="'+z.lat+'" data-lon="'+z.lon+'" data-name="'+escapeAttr(z.id)+'"')
+      + '><span class="ap-icao">\u25B2</span><span class="ap-iata"></span>'
+      + '<span class="ap-name">'+escapeHtml(z.id)+' '+escapeHtml(z.name)+'</span>'
+      + '<span class="ap-type">'+escapeHtml(z.kind.toLowerCase())+(noloc?' \u00b7 reserved':'')+'</span></div>';
+  }
   function goWpt(id){
     if(window.NMShowWpt) window.NMShowWpt(id);
     input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; input.blur();
@@ -5846,20 +5894,28 @@ const processDebounced = debounce(process, 300);
     const q = input.value.trim().toLowerCase();
     const hits = find(input.value);
     const wptHits = findWpts(q);
+    const fixHits = findFixes(q);
+    const airHits = findAirspace(q);
     active = 0;
     let html = hits.map(itemHtml).join('');
     if(wptHits.length){
       html += '<div class="ap-sep">Your saved waypoints</div>' + wptHits.map(wptHtml).join('');
+    }
+    if(fixHits.length){
+      html += '<div class="ap-sep">Enroute fixes</div>' + fixHits.map(fixHtml).join('');
+    }
+    if(airHits.length){
+      html += '<div class="ap-sep">Airspace areas</div>' + airHits.map(airHtml).join('');
     }
     if(q.length >= 3){
       if(curOnline === undefined){
         html += '<div class="ap-foot">Searching villages\u2026</div>';
       } else if(curOnline.length){
         html += '<div class="ap-sep">Villages \u00b7 OpenStreetMap (online)</div>' + curOnline.map(villageHtml).join('');
-      } else if(!hits.length && !wptHits.length){
+      } else if(!hits.length && !wptHits.length && !fixHits.length && !airHits.length){
         html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
       }
-    } else if(!hits.length && !wptHits.length){
+    } else if(!hits.length && !wptHits.length && !fixHits.length && !airHits.length){
       html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
     }
     results.innerHTML = html;
@@ -5932,6 +5988,18 @@ const processDebounced = debounce(process, 300);
     input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; input.blur();
     box.classList.remove('focused');
   }
+  function goPin(lat, lon, label, zoom){
+    if(!isFinite(lat) || !isFinite(lon)) return;
+    map.setView([lat, lon], Math.max(map.getZoom()||0, zoom||11));
+    clearVillagePin();
+    villageLayer = L.marker([lat, lon], { interactive:false, keyboard:false, icon: L.divIcon({
+      className:'', iconSize:null, iconAnchor:[7,7],
+      html:'<div class="mapsearch-vpin">\u25CF<span>'+escapeHtml(label||'')+'</span></div>' }) }).addTo(map);
+    input.value = label || ''; results.innerHTML=''; clearBtn.hidden = !(label); active=0; curOnline=undefined; lastQ=''; input.blur();
+    box.classList.remove('focused');
+  }
+  function goFix(f){ if(f) goPin(f.a, f.o, f.n, 11); }
+  function goArea(z){ if(z && z.lat!=null && z.lon!=null) goPin(z.lat, z.lon, z.id, 10); }
   input.addEventListener('input', paint);
   input.addEventListener('focus', () => { box.classList.add('focused'); if(input.value.trim().length>=2 && !results.innerHTML) paint(); });
   input.addEventListener('keydown', e => {
@@ -5939,7 +6007,7 @@ const processDebounced = debounce(process, 300);
     const items = results.querySelectorAll('.ap-item');
     if(e.key==='ArrowDown'){ e.preventDefault(); setActive(active+1); }
     else if(e.key==='ArrowUp'){ e.preventDefault(); setActive(active-1); }
-    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else if(pick.dataset.wptid){ goWpt(pick.dataset.wptid); } else { go(byId(pick.dataset.id)); } } }
+    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else if(pick.dataset.fix){ goFix({n:pick.dataset.name, a:+pick.dataset.lat, o:+pick.dataset.lon}); } else if(pick.dataset.air){ goArea({id:pick.dataset.name, lat:+pick.dataset.lat, lon:+pick.dataset.lon}); } else if(pick.dataset.wptid){ goWpt(pick.dataset.wptid); } else { go(byId(pick.dataset.id)); } } }
     else if(e.key==='Escape'){ e.preventDefault(); input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; curOnline=undefined; lastQ=''; input.blur(); box.classList.remove('focused'); clearVillagePin(); if(window.NMClearPin) window.NMClearPin(); }
   });
   results.addEventListener('click', e => {
@@ -5964,6 +6032,8 @@ const processDebounced = debounce(process, 300);
     const it = e.target.closest('.ap-item');
     if(it){
       if(it.dataset.online){ goVillage(+it.dataset.lat, +it.dataset.lon, it.dataset.name); }
+      else if(it.dataset.fix){ goFix({n:it.dataset.name, a:+it.dataset.lat, o:+it.dataset.lon}); }
+      else if(it.dataset.air){ goArea({id:it.dataset.name, lat:+it.dataset.lat, lon:+it.dataset.lon}); }
       else if(it.dataset.wptid){ goWpt(it.dataset.wptid); }
       else go(byId(it.dataset.id));
     }
@@ -8602,14 +8672,38 @@ document.getElementById('plotBtn').addEventListener('click', () => {
       if(s >= 0) asc.push({a, s});
     }
     asc.sort((x,y) => x.s - y.s || x.a.name.localeCompare(y.a.name));
+    // 2.5) enroute significant points (published RNAV fixes) \u2014 official nav data, after fields, before villages.
+    const fsc = [];
+    if(window.NMEnroute && window.NMEnroute.data){
+      for(const f of window.NMEnroute.data()){
+        const nm = (f.n||'').toUpperCase();
+        let s = -1;
+        if(nm === q) s = 0; else if(nm.startsWith(q)) s = 1; else if(nm.includes(q)) s = 2;
+        if(s >= 0) fsc.push({f, s});
+      }
+      fsc.sort((x,y) => x.s - y.s || x.f.n.localeCompare(y.f.n));
+    }
     // 3) saved villages (kept separate so they don't crowd out airfields).
     const vsc = [];
     for(const w of all){ if((w.kind||'wpt')!=='village') continue; const s=scoreName(w.name); if(s>=0) vsc.push({w,s}); }
     vsc.sort((x,y) => x.s - y.s || (x.w.name||'').localeCompare(y.w.name||''));
+    // airspace (danger / restricted / training / MBZ / ADIZ) — reference areas, after fixes.
+    const arsp = [];
+    if(window.NMAirspace && window.NMAirspace.list){
+      for(const z of window.NMAirspace.list()){
+        const anm=(z.name||'').toUpperCase(), aid=(z.id||'').toUpperCase();
+        let s=-1;
+        if(aid===q||anm===q) s=0; else if(aid.startsWith(q)||anm.startsWith(q)) s=1; else if(aid.includes(q)||anm.includes(q)) s=2;
+        if(s>=0) arsp.push({z, s});
+      }
+      arsp.sort((x,y) => x.s - y.s || (x.z.id||'').localeCompare(y.z.id||''));
+    }
     const items = wsc.map(r => ({type:'wpt', w:r.w}))
       .concat(asc.map(r => ({type:'af', a:r.a})))
+      .concat(fsc.map(r => ({type:'fix', f:r.f})))
+      .concat(arsp.map(r => ({type:'air', z:r.z})))
       .concat(vsc.map(r => ({type:'village', w:r.w})));
-    return items.slice(0, 7);
+    return items.slice(0, 9);
   }
 
   const PHOTON = 'https://photon.komoot.io/api/';
@@ -8635,6 +8729,23 @@ document.getElementById('plotBtn').addEventListener('click', () => {
         + `<span class="ap-icao">\u25CF</span><span class="ap-iata"></span>`
         + `<span class="ap-name">${escapeHtml(it.name)}${it.region?` <span class="ap-region">${escapeHtml(it.region)}</span>`:''}</span>`
         + `<span class="ap-type">village</span></div>`;
+    }
+    if(it.type === 'fix'){
+      const f = it.f;
+      return `<div class="ap-item ap-fix" data-fix="1" data-lat="${f.a}" data-lon="${f.o}" data-name="${escapeAttr(f.n)}">`
+        + `<span class="ap-icao">\u2726</span><span class="ap-iata"></span>`
+        + `<span class="ap-name">${escapeHtml(f.n)}</span>`
+        + `<span class="ap-type">fix</span></div>`;
+    }
+    if(it.type === 'air'){
+      const z = it.z;
+      const kc = z.kind === 'MBZ' ? 'mbz' : 'haz';
+      const noloc = (z.lat == null || z.lon == null);
+      return `<div class="ap-item ap-air ap-air-${kc}${noloc?' ap-air-noloc':''}"`
+        + (noloc ? '' : ` data-air="1" data-lat="${z.lat}" data-lon="${z.lon}" data-name="${escapeAttr(z.id)}"`)
+        + `><span class="ap-icao">\u25B2</span><span class="ap-iata"></span>`
+        + `<span class="ap-name">${escapeHtml(z.id)} ${escapeHtml(z.name)}</span>`
+        + `<span class="ap-type">${escapeHtml(z.kind.toLowerCase())}${noloc?' \u00b7 reserved':''}</span></div>`;
     }
     const a = it.a;
     return `<div class="ap-item" data-ident="${escapeAttr(a.ident)}">`
@@ -8740,6 +8851,8 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     processDebounced();
   }
   function pickEl(el){
+    if(el.dataset.fix === '1'){ fillRow(el.dataset.name || 'FIX', +el.dataset.lat, +el.dataset.lon); return; }
+    if(el.dataset.air === '1'){ fillRow(el.dataset.name || 'AREA', +el.dataset.lat, +el.dataset.lon); return; }
     if(el.dataset.online === '1'){
       const lat = +el.dataset.lat, lon = +el.dataset.lon, name = el.dataset.name || 'Village';
       fillRow(name, lat, lon);
@@ -9365,7 +9478,8 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     return [la2*180/Math.PI, lo2*180/Math.PI];
   }
   function rwyLabel(n){ return L.divIcon({className:'rwy-ic',html:'<span class="rwy-num">'+escapeHtml(n)+'</span>',iconSize:[0,0],iconAnchor:[0,0]}); }
-  var ov={freqs:false,mywpts:false,navaids:false,enroute:false,runways:false,terrain:false,ctaf:false,mbz:false,sat:false};
+  const PNG_DANGER=[{"id":"AYR920","name":"GOLDIE RIVER","cls":"R","up":"9000 ft","lo":"SFC","remark":"Artillery. Hours by NOTAM. Dept of Defence.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-9.3,147.26667],[-9.36667,147.26667],[-9.36667,147.33333],[-9.3,147.33333],[-9.3,147.26667]],"approx":false,"note":""},{"id":"AYR921","name":"PORT MORESBY","cls":"R","up":"20000 ft","lo":"SFC","remark":"Gunnery. Hours by NOTAM. Dept of Defence.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-9.63333,146.86667],[-9.69167,146.925],[-9.91667,146.83333],[-9.73333,146.64167],[-9.63333,146.86667]],"approx":false,"note":""},{"id":"AYR959","name":"SEPIK PLAINS","cls":"R","up":"9000 ft","lo":"SFC","remark":"Mortar firing. Hours by NOTAM. Dept of Defence. When active, confine to north of Sepik Plains airstrip.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-3.90833,143.56667],[-3.88333,143.65833],[-3.97083,143.71667],[-4.0,143.575],[-3.90833,143.56667]],"approx":false,"note":""},{"id":"AYR962","name":"ADMIRALTY ISLANDS","cls":"R","up":"20000 ft","lo":"SFC","remark":"Gunnery & weapon firing. Hours by NOTAM. Dept of Defence.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-0.78333,147.0],[-0.78333,147.66667],[-1.78333,147.66667],[-1.78333,147.0],[-0.78333,147.0]],"approx":false,"note":""},{"id":"AYD901","name":"DAUGO","cls":"D","up":"4000 ft","lo":"SFC","remark":"Flying Training. Hours HJ. CASA.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-9.45833,147.075],[-9.55833,147.13333],[-9.66622,146.96717],[-9.65421,146.95658],[-9.64172,146.94658],[-9.62877,146.93721],[-9.61539,146.92847],[-9.60161,146.92039],[-9.58747,146.91299],[-9.573,146.90628],[-9.55823,146.90028],[-9.54319,146.895],[-9.52792,146.89046],[-9.51246,146.88667],[-9.49683,146.88362],[-9.48108,146.88134],[-9.46524,146.87982],[-9.44934,146.87907],[-9.43343,146.87909]],"approx":true,"note":"Approximate: the south edge is a 20 NM arc centred on Port Moresby, drawn as a polyline."},{"id":"AYD903","name":"MOUNT HAGEN","cls":"D","up":"10000 ft","lo":"SFC","remark":"Hours HJ. Low flying, subject to CAR 91.131. CASA.","ed":"ENR 5.2 · 11 JUL 2024","geom":"poly","ring":[[-5.78333,144.36667],[-5.78333,144.46667],[-5.75,144.48333],[-5.66667,144.46667],[-5.66667,144.36667],[-5.75,144.33333],[-5.78333,144.36667]],"approx":true,"note":"Boundary per ENR 5.2 (current edition); the ENR 5.1 (2020) page prints a different, partly-truncated outline."},{"id":"AYD904A/B","name":"KUTUBU / GOBE","cls":"D","up":"8000 ft","lo":"SFC","remark":"Low Level Rotor-wing operations. Hours HJ. CASA.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-6.2,143.56667],[-6.16667,143.01667],[-6.35,142.91667],[-6.36667,142.96667],[-6.8,143.5],[-7.31667,144.18333],[-7.0,144.33333],[-6.66667,144.05],[-6.2,143.56667]],"approx":true,"note":"Approximate: part of the boundary follows the Hegigio river (drawn straight here). A/B share this footprint; divider line shown separately.","divider":[[-6.36667,143.73333],[-6.86667,143.6]]},{"id":"AYD905","name":"NAPA NAPA","cls":"D","up":"600 ft","lo":"SFC","remark":"Flame from flare at Napa Napa refinery.","ed":"ENR 5.1 · 23 APR 2020","geom":"circle","c":[-9.45833,147.11472],"rNm":1,"approx":false,"note":""},{"id":"AYD907","name":"WAGHI","cls":"D","up":"10000 ft","lo":"SFC","remark":"Flying Training. Hours HJ. Low flying, subject to CAR 91.131. CASA.","ed":"ENR 5.1 · 23 APR 2020","geom":"poly","ring":[[-5.74583,144.50833],[-5.6875,144.5375],[-5.74583,144.69167],[-5.81667,144.66111],[-5.74583,144.50833]],"approx":true,"note":"Approximate: part of the boundary follows the old Highlands Highway (drawn straight here)."},{"id":"AYD908","name":"KOMO","cls":"D","up":"6800 ft","lo":"SFC","remark":"Flammable Gas With Heat Radiation. Hours HJ. CAR 91.129. 5 NM NW of Komo (AYXM).","ed":"ENR 5.1 · 23 APR 2020","geom":"circle","c":[-6.00402,142.81767],"rNm":1,"approx":false,"note":""},{"id":"AYD909","name":"KOMO","cls":"D","up":"9500 ft","lo":"SFC","remark":"Flammable Gas With Heat Radiation. Hours HJ. CAR 91.129. 12.60 NM NW of Komo (AYXM).","ed":"ENR 5.1 · 23 APR 2020","geom":"circle","c":[-5.92953,142.71386],"rNm":1,"approx":false,"note":""},{"id":"AYD910","name":"LEALEA","cls":"D","up":"2400 ft","lo":"SFC","remark":"Gas Flare Stack. Hours H24. CAR 91.129. 15 NM NW of Port Moresby (AYPY).","ed":"ENR 5.1 · 23 APR 2020","geom":"circle","c":[-9.32989,147.01907],"rNm":1,"approx":false,"note":""}];
+  var ov={freqs:false,mywpts:false,navaids:false,enroute:false,runways:false,terrain:false,ctaf:false,mbz:false,danger:false,sat:false};
   try{ var s=JSON.parse(localStorage.getItem(OV_KEY)); if(s) ov=Object.assign(ov,s); }catch(_){}
   function saveOv(){ try{ localStorage.setItem(OV_KEY, JSON.stringify(ov)); }catch(_){} }
   var wpts=[];
@@ -10632,6 +10746,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     if(ov.runways){ runwayLayer.addTo(map); renderRunways(); } else map.removeLayer(runwayLayer);
     if(ov.ctaf){ ctafLayer.addTo(map); renderCtaf(); } else map.removeLayer(ctafLayer);
     if(ov.mbz){ mbzLayer.addTo(map); renderMbz(); } else map.removeLayer(mbzLayer);
+    if(ov.danger){ daLayer.addTo(map); renderDanger(); } else map.removeLayer(daLayer);
     if(ov.terrain){ terrLayer.addTo(map); terrLayer.setZIndex(6); if(tPanel) tPanel.classList.add('show'); } else { map.removeLayer(terrLayer); if(tPanel) tPanel.classList.remove('show'); }
   }
 
@@ -10740,12 +10855,62 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     renderMbzList(); renderMbzForm(); renderMbz();
   }
 
+  /* ---- Danger / Restricted areas (ENR 5.1 / 5.2) ---- */
+  var daLayer=L.layerGroup();
+  function daCardHtml(a){
+    var cls = a.cls==='R' ? 'Restricted' : 'Danger';
+    var h='<div class="da-card">';
+    h+='<div class="da-h"><span class="da-id">'+escapeHtml(a.id)+'</span><span class="da-cls da-'+a.cls+'">'+cls+'</span></div>';
+    h+='<div class="da-nm">'+escapeHtml(a.name)+'</div>';
+    h+='<div class="da-lim">'+escapeHtml(a.up||'')+' \u2192 '+escapeHtml(a.lo||'')+'</div>';
+    if(a.remark) h+='<div class="da-rem">'+escapeHtml(a.remark)+'</div>';
+    if(a.approx && a.note) h+='<div class="da-approx">'+escapeHtml(a.note)+'</div>';
+    h+='<div class="da-ed">'+escapeHtml(a.ed)+' \u00b7 advisory only, confirm against current AIP</div>';
+    return h+'</div>';
+  }
+  function daLabelIcon(a){ return L.divIcon({className:'', html:'<div class="da-lab da-lab-'+a.cls+'">'+escapeHtml(a.id)+'</div>', iconSize:null}); }
+  function renderDanger(){
+    daLayer.clearLayers();
+    if(!ov.danger) return;
+    PNG_DANGER.forEach(function(a){
+      var extra = a.approx ? {dashArray:'6 5'} : {};
+      var base = {color:'#ff5a52',weight:1.6,opacity:.9,fillColor:'#ff5a52',fillOpacity:.06,interactive:false};
+      var centre;
+      if(a.geom==='circle'){
+        var r=(Number(a.rNm)||0)*1852;
+        L.circle(a.c,Object.assign({radius:r},base,extra)).addTo(daLayer);
+        centre=a.c;
+      } else {
+        var poly=L.polygon(a.ring,Object.assign({},base,extra)).addTo(daLayer);
+        centre=poly.getBounds().getCenter();
+        if(a.divider) L.polyline(a.divider,{color:'#ff5a52',weight:1.2,opacity:.85,dashArray:'2 5',interactive:false}).addTo(daLayer);
+      }
+      L.marker(centre,{icon:daLabelIcon(a),interactive:true,keyboard:false}).addTo(daLayer)
+        .bindPopup(daCardHtml(a),{className:'da-pop',maxWidth:280,autoPan:true});
+    });
+  }
+  window.NMDanger={ data:function(){ return PNG_DANGER; }, render:function(){ if(ov.danger) renderDanger(); } };
+  window.NMEnroute={ data:function(){ return PNG_ENROUTE; } };
+  var PNG_TRAINING=[{id:'AYD901',name:'DAUGO'},{id:'AYD903',name:'MOUNT HAGEN'},{id:'AYD907',name:'WAGHI'}];
+  var PNG_ADIZ=[{id:'AYR906',name:'(Reserved)'},{id:'AYR916',name:'(Reserved)'}];
+  function daCentre(a){ if(a.geom==='circle') return a.c.slice();
+    var mLa=1/0,xLa=-1/0,mLo=1/0,xLo=-1/0; a.ring.forEach(function(p){ if(p[0]<mLa)mLa=p[0]; if(p[0]>xLa)xLa=p[0]; if(p[1]<mLo)mLo=p[1]; if(p[1]>xLo)xLo=p[1]; });
+    return [ +(((mLa+xLa)/2).toFixed(5)), +(((mLo+xLo)/2).toFixed(5)) ]; }
+  window.NMAirspace={ list:function(){
+    var out=[];
+    PNG_DANGER.forEach(function(a){ var c=daCentre(a); out.push({id:a.id,name:a.name,kind:(a.cls==='R'?'Restricted':'Danger'),lat:c[0],lon:c[1]}); });
+    PNG_TRAINING.forEach(function(t){ var d=null; for(var i=0;i<PNG_DANGER.length;i++){ if(PNG_DANGER[i].id===t.id){ d=PNG_DANGER[i]; break; } } if(d){ var c=daCentre(d); out.push({id:t.id,name:t.name,kind:'Training',lat:c[0],lon:c[1]}); } });
+    loadMbz().forEach(function(z){ var la=Number(z.lat),lo=Number(z.lon); if(isFinite(la)&&isFinite(lo)) out.push({id:z.id,name:z.name,kind:'MBZ',lat:la,lon:lo}); });
+    PNG_ADIZ.forEach(function(z){ out.push({id:z.id,name:z.name,kind:'ADIZ',lat:null,lon:null}); });
+    return out;
+  } };
+
   var fqBtn=document.getElementById('fqOverlayToggle');
   function freqsOn(){ return !!(fqBtn && fqBtn.classList.contains('active')); }
   function setFreqs(on){ if(freqsOn()!==on && fqBtn) fqBtn.click(); }
 
   var btn=document.getElementById('overlaysBtn'), menu=document.getElementById('overlaysMenu');
-  function anyOn(){ return ov.mywpts||ov.navaids||ov.enroute||ov.runways||ov.terrain||ov.ctaf||ov.mbz||ov.sat||freqsOn(); }
+  function anyOn(){ return ov.mywpts||ov.navaids||ov.enroute||ov.runways||ov.terrain||ov.ctaf||ov.mbz||ov.danger||ov.sat||freqsOn(); }
   function syncMenu(){
     menu.querySelector('[data-ov="sat"]').classList.toggle('on',ov.sat);
     menu.querySelector('[data-ov="freqs"]').classList.toggle('on',freqsOn());
@@ -10757,6 +10922,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     menu.querySelector('[data-ov="runways"]').classList.toggle('on',ov.runways);
     menu.querySelector('[data-ov="ctaf"]').classList.toggle('on',ov.ctaf);
     menu.querySelector('[data-ov="mbz"]').classList.toggle('on',ov.mbz);
+    var _da=menu.querySelector('[data-ov="danger"]'); if(_da) _da.classList.toggle('on',ov.danger);
     menu.querySelector('[data-ov="terrain"]').classList.toggle('on',ov.terrain);
     btn.classList.toggle('any-on',anyOn());
   }
