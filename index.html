@@ -2946,6 +2946,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .uw-name{background:rgba(13,18,25,.92);border:1px solid #3a4a5e;color:#e8f0f8;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
   .nav-dot{width:11px;height:11px;border:2px solid #c792ea;border-radius:50%;background:rgba(199,146,234,.25)}
   .nav-name{background:rgba(13,18,25,.92);border:1px solid #6a4a8e;color:#c792ea;font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
+  .enr-dot{width:11px;height:11px;border:2px solid #e0479e;border-radius:50%;background:rgba(224,71,158,.25)}
+  .enr-name{background:rgba(13,18,25,.92);border:1px solid #8a2f66;color:#e0479e;font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
+  .enr-pop{min-width:148px}
+  .enr-h{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+  .enr-h b{font-family:var(--mono);font-size:14px;color:#fff;letter-spacing:.03em}
+  .enr-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#e0479e;border:1px solid #8a2f66;border-radius:4px;padding:1px 5px}
+  .enr-co{display:flex;flex-direction:column;gap:1px;margin-bottom:6px;font-family:var(--mono);font-size:11.5px}
+  .enr-co .dms{color:#cfe1f0}
+  .enr-co .dec{color:#8aa0b4}
+  .enr-rt{font-size:11px;color:#8aa0b4;margin-bottom:7px;line-height:1.35}
+  .enr-add{border:1px solid #8a2f66;background:#0f141b;color:#e0479e;border-radius:5px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer}
   .rwy-num{display:inline-block;transform:translate(-50%,-50%);background:#eef2f7;color:#0a0e13;font-family:var(--mono);
     font-size:10px;font-weight:800;line-height:1;padding:2px 4px;border-radius:3px;border:1px solid #0a0e13;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.5)}
   .uw-edit{min-width:208px;max-width:240px;padding-top:16px}
@@ -3740,6 +3751,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <div class="ov-row ov-sub" data-ov="flightcat"><span class="sw"></span><span class="lbl">Flight category<span class="sub">colour dots by live METAR</span></span></div>
       <div class="ov-row" data-ov="runways"><span class="sw"></span><span class="lbl">Runways<span class="sub">magnetic · advisory</span></span></div>
       <div class="ov-row" data-ov="navaids"><span class="sw"></span><span class="lbl">Navaids<span class="sub">VOR / NDB / DME</span></span></div>
+      <div class="ov-row" data-ov="enroute"><span class="sw"></span><span class="lbl">Enroute Fixes<span class="sub">named RNAV waypoints · advisory</span></span></div>
       <div class="ov-sep"></div>
       <div class="ov-row" data-ov="mywpts"><span class="sw"></span><span class="lbl">My Waypoints<span class="sub">your saved points</span></span></div>
       <div class="ov-sep"></div>
@@ -7999,9 +8011,10 @@ document.getElementById('plotBtn').addEventListener('click', () => {
         L.marker([f.lat, f.lon], {icon: markerHtml(f), interactive:false}).addTo(fqOverlayLayer);
       }
     });
-    // Browse-mode POC: pull live category for the reporting-capable fields in view.
-    // (Corridor/route case is wired next round.) Bush strips are never asked.
-    if(fc && browse){
+    // Pull live category for the reporting-capable fields currently shown -- the
+    // in-view fields when browsing, or the corridor fields when a route is plotted.
+    // Bush strips are never asked (they don't report).
+    if(fc){
       fcEnsure(fields.filter(f => f.type === 'large_airport' || f.type === 'medium_airport').map(f => f.ident));
     }
   }
@@ -9337,6 +9350,7 @@ try { loadRouteFromUrl(); } catch(e){}
 // offline PWA cache still works there.
 /* ============ Map overlays: menu + My Waypoints + Navaids ============ */
 const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.66701,"f":"269"},{"i":"DAU","t":"NDB-DME","n":"Daru","a":-9.07502,"o":143.213,"f":"290"},{"i":"FIN","t":"NDB-DME","n":"Finschhafen","a":-6.61498,"o":147.858,"f":"232"},{"i":"GA","t":"NDB","n":"Goroka","a":-6.07782,"o":145.39,"f":"173"},{"i":"GBE","t":"NDB-DME","n":"Gobe","a":-6.89032,"o":143.679,"f":"215"},{"i":"GNY","t":"VOR-DME","n":"Gurney","a":-10.3158,"o":150.362,"f":"115600"},{"i":"GNY","t":"NDB","n":"Gurney","a":-10.3175,"o":150.366,"f":"162"},{"i":"GUA","t":"NDB-DME","n":"Girua","a":-8.73611,"o":148.254,"f":"224"},{"i":"HKN","t":"NDB-DME","n":"Hoskins","a":-5.45903,"o":150.414,"f":"251"},{"i":"JSN","t":"NDB","n":"Jackson","a":-9.37615,"o":147.177,"f":"380"},{"i":"KAV","t":"VOR-DME","n":"Kavieng","a":-2.60383,"o":150.83701,"f":"116400"},{"i":"KAV","t":"NDB","n":"Kavieng","a":-2.58651,"o":150.813,"f":"368"},{"i":"KIK","t":"NDB","n":"Kikori","a":-7.42747,"o":144.25101,"f":"308"},{"i":"KIU","t":"NDB-DME","n":"Kiunga","a":-6.1216,"o":141.287,"f":"169"},{"i":"KRM","t":"NDB-DME","n":"Kerema","a":-7.96262,"o":145.77499,"f":"401"},{"i":"KUB","t":"NDB","n":"Kubuna","a":-8.69305,"o":146.755,"f":"166"},{"i":"KUT","t":"NDB","n":"Kumul Platform","a":-8.06435,"o":144.561,"f":"174"},{"i":"LAE","t":"NDB","n":"Lae","a":-6.73727,"o":146.998,"f":"388"},{"i":"LHR","t":"NDB","n":"Kunaye","a":-3.04482,"o":152.62601,"f":"218"},{"i":"MD","t":"VOR-DME","n":"Madang","a":-5.21163,"o":145.77699,"f":"116300"},{"i":"MD","t":"NDB","n":"Madang","a":-5.21285,"o":145.784,"f":"362"},{"i":"MH","t":"NDB-DME","n":"Mount Hagen","a":-5.83787,"o":144.30901,"f":"169"},{"i":"MIS","t":"NDB","n":"Misima","a":-10.6882,"o":152.83501,"f":"218"},{"i":"MOE","t":"NDB-DME","n":"Momote","a":-2.06142,"o":147.42599,"f":"212"},{"i":"MOR","t":"NDB-DME","n":"Moro","a":-6.36287,"o":143.254,"f":"164"},{"i":"NZ","t":"VOR-DME","n":"Nadzab","a":-6.56833,"o":146.709,"f":"113900"},{"i":"NZ","t":"NDB","n":"Nadzab","a":-6.57,"o":146.70799,"f":"162"},{"i":"OKT","t":"NDB-DME","n":"Ok Tedi","a":-5.4099,"o":141.319,"f":"163"},{"i":"PRE","t":"NDB","n":"Parer","a":-9.32667,"o":147.14,"f":"395"},{"i":"PY","t":"VOR-DME","n":"Port Moresby","a":-9.45296,"o":147.215,"f":"117000"},{"i":"PY","t":"NDB","n":"Port Moresby","a":-9.46105,"o":147.233,"f":"368"},{"i":"TOK","t":"VOR-DME","n":"Tokua","a":-4.3465,"o":152.39799,"f":"113600"},{"i":"TOK","t":"NDB","n":"Tokua","a":-4.34533,"o":152.397,"f":"227"},{"i":"TVI","t":"NDB","n":"Tavai","a":-9.71797,"o":147.472,"f":"350"},{"i":"VNO","t":"NDB-DME","n":"Vanimo","a":-2.6789,"o":141.30299,"f":"257"},{"i":"WK","t":"VOR-DME","n":"Wewak","a":-3.58352,"o":143.67599,"f":"116600"},{"i":"WK","t":"NDB","n":"Wewak","a":-3.58137,"o":143.67799,"f":"336"}];
+  const PNG_ENROUTE=[{"n":"ADBON","a":-0.0,"o":154.22917,"r":"A597"},{"n":"AKBOK","a":-6.14195,"o":153.33076,"r":"H422"},{"n":"ALBUP","a":-5.21167,"o":145.77667,"r":"H401, H414, H415, H416, H417, H418, H419, H531, H779, H781, H785, H799"},{"n":"ANLOB","a":-9.31174,"o":147.12559,"r":"AYPY STAR/SID"},{"n":"ANNIR","a":-4.24787,"o":153.64796,"r":"H657"},{"n":"ANULO","a":-7.30949,"o":145.64333,"r":"H537"},{"n":"APISO","a":-12.0,"o":147.60667,"r":"B462"},{"n":"APUKA","a":-12.0,"o":144.96222,"r":"A216"},{"n":"ARAWE","a":-6.10479,"o":148.99879,"r":"H410"},{"n":"ASIXA","a":-9.07404,"o":143.21243,"r":"A215, H544, H546, H547, H668, H673, H777"},{"n":"ATGAP","a":-4.86928,"o":144.03612,"r":"H667"},{"n":"AVLIX","a":-6.61498,"o":147.85793,"r":"H410, H655, H663, H780, H781, H787, H788, H793, H796, H798"},{"n":"BASSE","a":-8.59293,"o":146.18381,"r":"H797"},{"n":"BELUP","a":-9.43053,"o":146.96269,"r":"AYPY SID, H536, H546"},{"n":"BEMGO","a":-6.53246,"o":146.24222,"r":"H408, H414"},{"n":"BETLA","a":-6.99525,"o":144.24734,"r":"H786"},{"n":"BICHI","a":-6.46332,"o":151.73062,"r":"H533"},{"n":"BINNA","a":-5.92049,"o":150.92685,"r":"H421"},{"n":"BOBEN","a":-7.12943,"o":141.94052,"r":"H547"},{"n":"BOGIA","a":-4.40355,"o":144.73198,"r":"H401"},{"n":"BORBO","a":-5.91754,"o":146.81299,"r":"H781"},{"n":"BOSVI","a":-6.77236,"o":142.75922,"r":"H539"},{"n":"BUTYO","a":-2.92578,"o":148.41847,"r":"H656"},{"n":"CADAM","a":-6.09001,"o":150.99678,"r":"H663"},{"n":"CHAMB","a":-4.18834,"o":143.10892,"r":"H670"},{"n":"COWRY","a":-7.65474,"o":148.66515,"r":"H529"},{"n":"DAKNU","a":-6.99193,"o":149.91888,"r":"H421"},{"n":"DAULI","a":-5.96553,"o":142.97395,"r":"H775"},{"n":"DOMRA","a":-9.81412,"o":148.51698,"r":"H674"},{"n":"DOHRT","a":-0.0,"o":156.83333,"r":"B452"},{"n":"DOTUB","a":-3.58333,"o":143.67667,"r":"B456, H401, H528, H652, H656, H657, H658, H665, H667, H668, H669, H670, H784"},{"n":"DUKIS","a":-8.12226,"o":147.10843,"r":"H405"},{"n":"DUKUB","a":-12.0,"o":149.32667,"r":"B333"},{"n":"EKUTA","a":-6.44905,"o":155.42629,"r":"H545"},{"n":"EMLEN","a":-3.13137,"o":142.48773,"r":"H401, H528"},{"n":"EMPRA","a":-8.70577,"o":146.09686,"r":"B462, H539"},{"n":"ENTOG","a":-9.40594,"o":147.88919,"r":"AYPY STAR, H526"},{"n":"EPKED","a":-7.96258,"o":145.77838,"r":"H413, H536, H537, H538, H544, H777, H778, H779, H784, H786, H791, H797"},{"n":"ESKEL","a":-6.60337,"o":143.77086,"r":"H783"},{"n":"ESKIM","a":-9.765,"o":145.90556,"r":"B598"},{"n":"ESNIV","a":-4.34667,"o":152.39833,"r":"H410, H415, H421, H533, H651, H652, H789"},{"n":"FACED","a":-0.0,"o":144.0,"r":"A216"},{"n":"GIZAR","a":-5.62585,"o":147.76022,"r":"H780, H785"},{"n":"GUARI","a":-8.125,"o":146.98,"r":"H401"},{"n":"GUGPU","a":-7.00148,"o":145.11134,"r":"AYMH STAR, H536"},{"n":"GUMOT","a":-9.45691,"o":149.56855,"r":"H660"},{"n":"GUNKI","a":-9.40795,"o":146.71201,"r":"AYPY SID, H546, H797"},{"n":"GURUG","a":-4.23333,"o":145.9818,"r":"H658"},{"n":"GUVOG","a":-10.15833,"o":152.36167,"r":"B598"},{"n":"HIPEL","a":-4.00004,"o":149.78156,"r":"H655"},{"n":"HOBBO","a":-12.0,"o":153.15833,"r":"R213"},{"n":"HOUJI","a":-4.65851,"o":153.04077,"r":"H789"},{"n":"IDSUT","a":-6.06941,"o":142.66028,"r":"H786"},{"n":"IGPIS","a":-7.72253,"o":143.23333,"r":"H668"},{"n":"IKERU","a":-5.83833,"o":144.30833,"r":"H409, H418, H419, H530, H536, H667, H775, H782, H783"},{"n":"IOKEA","a":-8.40689,"o":146.35646,"r":"H778"},{"n":"IRNUS","a":-9.66508,"o":147.34948,"r":"IAC AYPY"},{"n":"ISKEG","a":-7.21462,"o":147.96533,"r":"H543, H788"},{"n":"ISMAR","a":-3.84039,"o":146.49644,"r":"H416, H652"},{"n":"JAQIN","a":-5.99289,"o":152.50987,"r":"H651"},{"n":"KADAB","a":-4.96556,"o":141.0,"r":"B462"},{"n":"KADKA","a":-4.78993,"o":144.25177,"r":"H784"},{"n":"KAIFU","a":-8.22804,"o":146.64296,"r":"H414"},{"n":"KAKOP","a":-5.64444,"o":157.66861,"r":"A597"},{"n":"KALIN","a":-0.0,"o":142.0,"r":"R204"},{"n":"KALKO","a":-10.315,"o":150.36167,"r":"B598, G205, H411, H532, H533, H549, H674"},{"n":"KAMUL","a":-8.18626,"o":146.73463,"r":"H407"},{"n":"KANTU","a":-6.22239,"o":145.77736,"r":"H409, H779"},{"n":"KAPKI","a":-10.24861,"o":148.29556,"r":"B586, B589A, B598, H532, H660"},{"n":"KAPPU","a":-5.885,"o":142.21,"r":"B462, R204"},{"n":"KAPSO","a":-12.0,"o":146.71667,"r":"R210"},{"n":"KASVA","a":-6.36287,"o":143.25418,"r":"AYMR GPS ARRIVAL, AYMR - GPS DEPARTURE, AYMR - STANDARD DEPARTURE ROUTE, AYGB GPS ARRIVAL, AYXM STAR RWY 16, AYXM SID RWY 34, AYXM RNAV (GNSS) STAR RWY 16, H541, H668, H671, H776, H783, H786"},{"n":"KEMNI","a":-6.54056,"o":143.40639,"r":"IAC - AYMR GPS ARRIVAL"},{"n":"KIBAV","a":-7.42833,"o":144.24833,"r":"A216, B462, H539, H541, H673, H782, H790, H791, H792"},{"n":"KIETA","a":-6.30612,"o":155.728,"r":"H545"},{"n":"KRARI","a":-4.95843,"o":143.46776,"r":"H668"},{"n":"LARID","a":-6.73667,"o":146.99833,"r":"H405, H411, H535, H543, H796"},{"n":"LAROT","a":-8.065,"o":144.56,"r":"H544, H790"},{"n":"LAVUN","a":-4.00969,"o":152.72795,"r":"H527"},{"n":"LEBOK","a":-5.25898,"o":142.66704,"r":"H671"},{"n":"LELID","a":-8.91109,"o":147.11942,"r":"AYPY SID, H401"},{"n":"LEMUP","a":-4.27286,"o":151.50365,"r":"H529, H652"},{"n":"LENAK","a":-10.76,"o":146.96,"r":"R210"},{"n":"LETKA","a":-5.29509,"o":147.26974,"r":"H799"},{"n":"LIDIT","a":-9.3,"o":141.33333,"r":"R204"},{"n":"LOBAU","a":-4.54514,"o":150.92148,"r":"H415"},{"n":"LUDGA","a":-6.95175,"o":147.434,"r":"H543, H798"},{"n":"LUGLI","a":-7.58299,"o":145.78612,"r":"H530"},{"n":"APOMU","a":-8.00122,"o":149.72373,"r":"H422"},{"n":"LUMMI","a":-3.46712,"o":142.04979,"r":"H536"},{"n":"LUNTO","a":-5.44333,"o":154.66667,"r":"B589, H422, H527, H657, H663, H789, H795"},{"n":"MABRO","a":-10.78167,"o":147.155,"r":"R346"},{"n":"MAIPA","a":-8.28613,"o":146.52679,"r":"H665"},{"n":"MAYUI","a":-4.68425,"o":144.43034,"r":"H665"},{"n":"MIKIT","a":-5.37551,"o":148.77356,"r":"H655, H799"},{"n":"MINEN","a":-7.8077,"o":152.57292,"r":"H545"},{"n":"MOKIN","a":-6.40333,"o":153.555,"r":"B589, H795"},{"n":"MORBE","a":-7.71577,"o":147.60857,"r":"H411, H793"},{"n":"MUBEK","a":-3.43782,"o":149.18826,"r":"H531"},{"n":"MUDIX","a":-6.07833,"o":145.39,"r":"AYGA SID, H409, H417, H537, H665"},{"n":"MUKIK","a":-6.37456,"o":146.18645,"r":"AYGA SID, H409, H414"},{"n":"NILAK","a":-3.94941,"o":141.30702,"r":"H672"},{"n":"NIPOK","a":-9.92778,"o":155.0,"r":"B598, R213"},{"n":"NIXUT","a":-9.84452,"o":147.76249,"r":"IAC AYPY"},{"n":"NODAR","a":-6.44637,"o":142.82456,"r":"H791"},{"n":"NOGOT","a":-9.33055,"o":145.86766,"r":"A215, H546"},{"n":"OBLAM","a":-6.29183,"o":142.66779,"r":"H776"},{"n":"ODOLU","a":-4.36517,"o":147.41042,"r":"H531"},{"n":"OKOMM","a":-5.10045,"o":142.25136,"r":"H670"},{"n":"OKTUX","a":-4.30026,"o":147.07103,"r":"H404"},{"n":"OLBOR","a":-4.55511,"o":142.41354,"r":"H669"},{"n":"OLRIG","a":-7.00034,"o":149.40588,"r":"H423"},{"n":"OLSOD","a":-8.53974,"o":144.45265,"r":"H777"},{"n":"OMBOG","a":-7.26237,"o":145.99809,"r":"AYGA SID, H665"},{"n":"ONODO","a":-7.05355,"o":154.16565,"r":"H545"},{"n":"OPILU","a":-5.70613,"o":153.19158,"r":"H663"},{"n":"OREMO","a":-4.09915,"o":149.44832,"r":"H652"},{"n":"OSERO","a":-8.6,"o":141.0,"r":"A215"},{"n":"PADLU","a":-3.25878,"o":146.03821,"r":"H656"},{"n":"PALDO","a":-7.42499,"o":147.42697,"r":"H411, H787"},{"n":"PAPTI","a":-5.6148,"o":142.76914,"r":"H409"},{"n":"PASDU","a":-6.12167,"o":141.28667,"r":"H539, H547, H670, H672, H775, H776"},{"n":"PELCA","a":-7.10635,"o":147.74576,"r":"H543, H793"},{"n":"PIKOK","a":-0.0,"o":141.1425,"r":"B586"},{"n":"PINUR","a":-5.89575,"o":145.77718,"r":"H661, H779"},{"n":"PONOK","a":-5.285,"o":158.25972,"r":"B452"},{"n":"POSOX","a":-10.22444,"o":143.92611,"r":"B598"},{"n":"POXIT","a":-8.17225,"o":146.812,"r":"H535"},{"n":"RAMMU","a":-5.13995,"o":144.95993,"r":"H419"},{"n":"REDOX","a":-10.06667,"o":153.43167,"r":"B598"},{"n":"RENEB","a":-3.04482,"o":152.62642,"r":"IAC - AYKY GPS ARRIVAL, H421, H529, H657"},{"n":"RUMIS","a":-9.71797,"o":147.47222,"r":"IAC AYPY"},{"n":"RUPNO","a":-8.74557,"o":148.25419,"r":"H411, H421, H422, H423, H525, H526, H788"},{"n":"RUTAG","a":-8.3506,"o":146.44114,"r":"H530"},{"n":"RUTUS","a":-0.0,"o":148.82833,"r":"G205"},{"n":"SAKAR","a":-4.88621,"o":148.32793,"r":"H415, H658"},{"n":"SAKTO","a":-8.70286,"o":146.74289,"r":"AYPY STAR, H407, H414, H530, H535, H665, H778, H787"},{"n":"SAPRI","a":-6.89,"o":143.67833,"r":"H792"},{"n":"SEKDI","a":-10.47031,"o":150.75517,"r":"H549, H674"},{"n":"SHAOL","a":-9.76399,"o":147.41226,"r":"IAC AYPY"},{"n":"SLUMI","a":-4.48333,"o":143.01514,"r":"H536"},{"n":"SNAPA","a":-8.52819,"o":146.23755,"r":"H536"},{"n":"SOLOM","a":-8.57024,"o":152.6871,"r":"H651"},{"n":"SONAH","a":-7.00787,"o":150.75224,"r":"H659"},{"n":"STARF","a":-9.12656,"o":146.7253,"r":"AYPY SID, H536, H539"},{"n":"TALPA","a":-7.49814,"o":152.27042,"r":"H795"},{"n":"TASAK","a":-1.44167,"o":160.0,"r":"B589"},{"n":"TAVUK","a":-3.96177,"o":141.98007,"r":"H671"},{"n":"TAXAD","a":-6.43183,"o":148.99565,"r":"H663"},{"n":"TEDED","a":-8.50628,"o":151.08093,"r":"B589, B589A, H525, H533, H545, H659, H660, H795"},{"n":"TEKAN","a":-12.0,"o":150.72444,"r":"B586"},{"n":"TEKEE","a":-3.73577,"o":147.58279,"r":"H780"},{"n":"TESEM","a":-9.46083,"o":147.2325,"r":"IAC AYPY ILS RWY 32R"},{"n":"TOSAS","a":-12.0,"o":147.09833,"r":"R346"},{"n":"UGTOK","a":-6.12914,"o":146.09984,"r":"H414, H661"},{"n":"UKETI","a":-2.82218,"o":145.55686,"r":"H657"},{"n":"UNTIS","a":-6.99661,"o":144.64696,"r":"H538"},{"n":"UPRAP","a":-6.56091,"o":145.77756,"r":"H779"},{"n":"UPSET","a":-8.89633,"o":149.51041,"r":"B589, H545"},{"n":"VANKA","a":-2.72333,"o":141.0,"r":"B456"},{"n":"VATVO","a":-5.45833,"o":150.415,"r":"H410, H423, H529, H658, H659, H799"},{"n":"VEBGO","a":-2.32128,"o":149.09914,"r":"H657"},{"n":"VEVEK","a":-8.74667,"o":150.12667,"r":"G205"},{"n":"VIDOT","a":-6.84854,"o":146.35397,"r":"IAC AYNZ, H413, H414"},{"n":"VIPAM","a":-12.0,"o":148.02,"r":"B220"},{"n":"WEENA","a":-12.0,"o":150.3,"r":"G205"},{"n":"WESFI","a":-6.55044,"o":146.40752,"r":"IAC AYNZ RWY 09 IAF, H408"},{"n":"WILEK","a":-8.62724,"o":149.68228,"r":"H525"},{"n":"YABAL","a":-5.94897,"o":144.8071,"r":"H409, H784"},{"n":"YALOL","a":-6.99746,"o":151.68131,"r":"H422"}];
 (function(){
   if (typeof map === 'undefined' || !map) return;
   var OV_KEY='nmplotter_overlays', UW_KEY='nmplotter_userwpts';
@@ -9351,7 +9365,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     return [la2*180/Math.PI, lo2*180/Math.PI];
   }
   function rwyLabel(n){ return L.divIcon({className:'rwy-ic',html:'<span class="rwy-num">'+escapeHtml(n)+'</span>',iconSize:[0,0],iconAnchor:[0,0]}); }
-  var ov={freqs:false,mywpts:false,navaids:false,runways:false,terrain:false,ctaf:false,mbz:false,sat:false};
+  var ov={freqs:false,mywpts:false,navaids:false,enroute:false,runways:false,terrain:false,ctaf:false,mbz:false,sat:false};
   try{ var s=JSON.parse(localStorage.getItem(OV_KEY)); if(s) ov=Object.assign(ov,s); }catch(_){}
   function saveOv(){ try{ localStorage.setItem(OV_KEY, JSON.stringify(ov)); }catch(_){} }
   var wpts=[];
@@ -9359,7 +9373,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   function saveWpts(){ try{ localStorage.setItem(UW_KEY, JSON.stringify(wpts)); }catch(_){} }
   var wptSeq=wpts.reduce(function(m,x){return Math.max(m,x.id||0);},0);
 
-  var wptLayer=L.layerGroup(), navLayer=L.layerGroup(), runwayLayer=L.layerGroup(), ctafLayer=L.layerGroup();
+  var wptLayer=L.layerGroup(), navLayer=L.layerGroup(), enrLayer=L.layerGroup(), runwayLayer=L.layerGroup(), ctafLayer=L.layerGroup();
 
   /* ---- Terrain altitude-shading layer (Terrarium terrain-RGB, decoded per pixel) ---- */
   var TERR={url:'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',maxNativeZoom:14,above:[240,60,60],near:[255,176,32]};
@@ -9895,6 +9909,8 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   var wptLabel=function(n){return L.divIcon({className:'',html:'<div class="uw-name">'+escapeHtml(n)+'</div>',iconSize:null,iconAnchor:[-9,7]});};
   var navDot=function(){return L.divIcon({className:'',html:'<div class="nav-dot"></div>',iconSize:[12,12],iconAnchor:[6,6]});};
   var navLabel=function(id){return L.divIcon({className:'',html:'<div class="nav-name">'+escapeHtml(id)+'</div>',iconSize:null,iconAnchor:[-9,7]});};
+  var enrDot=function(){return L.divIcon({className:'',html:'<div class="enr-dot"></div>',iconSize:[12,12],iconAnchor:[6,6]});};
+  var enrLabel=function(id){return L.divIcon({className:'',html:'<div class="enr-name">'+escapeHtml(id)+'</div>',iconSize:null,iconAnchor:[-8,7]});};
 
   function wptTipHtml(w){
     var sub=(w.kind==='village')?'Village':'Waypoint';
@@ -9943,6 +9959,24 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       m.bindPopup(html);
       m.on('popupopen',function(e){
         var b=e.popup.getElement().querySelector('.nav-add');
+        if(b) b.addEventListener('click',function(){ if(window.addFieldToRoute) window.addFieldToRoute(b.dataset.id,b.dataset.c); map.closePopup(); });
+      });
+    });
+  }
+  function renderEnroute(){
+    enrLayer.clearLayers();
+    PNG_ENROUTE.forEach(function(w){
+      var m=L.marker([w.a,w.o],{icon:enrDot()}).addTo(enrLayer);
+      L.marker([w.a,w.o],{icon:enrLabel(w.n),interactive:false}).addTo(enrLayer);
+      var dms=escapeHtml(toDms(w.a,true)+'  '+toDms(w.o,false));
+      var dec=escapeHtml(w.a.toFixed(5)+', '+w.o.toFixed(5));
+      var rt=w.r?('<div class="enr-rt">'+escapeHtml(w.r)+'</div>'):'';
+      var html='<div class="enr-pop"><div class="enr-h"><b>'+escapeHtml(w.n)+'</b><span class="enr-tag">Enroute fix</span></div>'+
+        '<div class="enr-co"><span class="dms">'+dms+'</span><span class="dec">'+dec+'</span></div>'+rt+
+        '<button type="button" class="enr-add" data-id="'+escapeAttr(w.n)+'" data-c="'+w.a.toFixed(6)+', '+w.o.toFixed(6)+'">+ Add to route</button></div>';
+      m.bindPopup(html);
+      m.on('popupopen',function(e){
+        var b=e.popup.getElement().querySelector('.enr-add');
         if(b) b.addEventListener('click',function(){ if(window.addFieldToRoute) window.addFieldToRoute(b.dataset.id,b.dataset.c); map.closePopup(); });
       });
     });
@@ -10594,6 +10628,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     if(ov.sat){ satLayer.addTo(map); labelsLayer.addTo(map); } else { map.removeLayer(satLayer); map.removeLayer(labelsLayer); }
     if(ov.mywpts){ wptLayer.addTo(map); renderWpts(); } else map.removeLayer(wptLayer);
     if(ov.navaids){ navLayer.addTo(map); renderNavaids(); } else map.removeLayer(navLayer);
+    if(ov.enroute){ enrLayer.addTo(map); renderEnroute(); } else map.removeLayer(enrLayer);
     if(ov.runways){ runwayLayer.addTo(map); renderRunways(); } else map.removeLayer(runwayLayer);
     if(ov.ctaf){ ctafLayer.addTo(map); renderCtaf(); } else map.removeLayer(ctafLayer);
     if(ov.mbz){ mbzLayer.addTo(map); renderMbz(); } else map.removeLayer(mbzLayer);
@@ -10710,7 +10745,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   function setFreqs(on){ if(freqsOn()!==on && fqBtn) fqBtn.click(); }
 
   var btn=document.getElementById('overlaysBtn'), menu=document.getElementById('overlaysMenu');
-  function anyOn(){ return ov.mywpts||ov.navaids||ov.runways||ov.terrain||ov.ctaf||ov.mbz||ov.sat||freqsOn(); }
+  function anyOn(){ return ov.mywpts||ov.navaids||ov.enroute||ov.runways||ov.terrain||ov.ctaf||ov.mbz||ov.sat||freqsOn(); }
   function syncMenu(){
     menu.querySelector('[data-ov="sat"]').classList.toggle('on',ov.sat);
     menu.querySelector('[data-ov="freqs"]').classList.toggle('on',freqsOn());
@@ -10718,6 +10753,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var _fc=menu.querySelector('[data-ov="flightcat"]'); if(_fc) _fc.classList.toggle('on', !!(window.NMFlightCat && window.NMFlightCat()));
     menu.querySelector('[data-ov="mywpts"]').classList.toggle('on',ov.mywpts);
     menu.querySelector('[data-ov="navaids"]').classList.toggle('on',ov.navaids);
+    var _enr=menu.querySelector('[data-ov="enroute"]'); if(_enr) _enr.classList.toggle('on',ov.enroute);
     menu.querySelector('[data-ov="runways"]').classList.toggle('on',ov.runways);
     menu.querySelector('[data-ov="ctaf"]').classList.toggle('on',ov.ctaf);
     menu.querySelector('[data-ov="mbz"]').classList.toggle('on',ov.mbz);
