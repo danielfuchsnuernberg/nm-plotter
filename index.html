@@ -10,6 +10,27 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-15  v223: Layers menu groups now behave as an accordion — only one of
+                Airspace / Routes / Stations is open at a time; opening one collapses
+                the others (also when a group is switched on). The open group's label
+                and chevron turn amber so it's obvious which section is expanded.
+    2026-07-15  v222: UI polish. (1) Layers menu on desktop no longer spans the viewport
+                top-to-bottom — a clear gap now sits below the layers icon and a margin
+                off the bottom edge, so it floats as a panel (scrolls internally when
+                long). Desktop-scoped; iPad/iPhone placements untouched. (2) Terrain
+                Profile window reads in one voice now: title, subtitle, legend and
+                advisory all use the monospace instrument type that the chart body
+                already used (finishing v219). Title trimmed to 13px mono.
+    2026-07-15  v221: Recovers v219 + v220 (lost when a chat hit its length limit) and
+                adds a visible build stamp. v219 = airspace profile SVG typography
+                normalised to monospace at an 8/9px scale. v220 = the three Declutter
+                sub-rows in the Layers menu replaced by inline "Aa" chips on their
+                parent rows (Terminal areas, Aerodromes, Enroute Fixes); a chip lit =
+                that layer's labels/altitudes hide when zoomed out. Chips stopPropagation
+                so a chip tap never toggles the layer. Build stamp added at the foot of
+                Settings so the running version is always visible (root cause of the
+                "can't see v220" confusion). NOTE: this in-file log had gone stale after
+                v97; entries v98-v218 live in the session tracker, not here.
     2026-06-27  v97: Cache bump so the service worker re-downloads a wider png.pmtiles
                 (extended west to cover Moro/Komo/Tari, which sat just outside the old
                 143.5E edge and rendered black). No code change; the SW must re-cache or
@@ -1609,6 +1630,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
      Hidden by default; shown only >900px (mobile/iPad keep a single column). */
   .col-resizer, .col-reopen{ display:none }
   @media (min-width:901px){
+    /* Layers menu: clear gap below the icon + a margin off the bottom edge, so it
+       floats as a panel instead of spanning the viewport top-to-bottom. */
+    .ov-menu{ top:60px; max-height:calc(100vh - 140px) }
     .col-resizer{ position:absolute; top:0; bottom:0; width:9px; z-index:480;
       display:flex; align-items:center; justify-content:center; cursor:col-resize;
       background:transparent; transition:background .12s; }
@@ -1806,14 +1830,14 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .prof-overlay.show{display:flex}
   .prof-modal{background:var(--panel);border:1px solid var(--border-strong);border-radius:12px;width:min(880px,96vw);max-height:92vh;overflow:auto;padding:16px 18px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
   .prof-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
-  .prof-modal-head h3{font-size:14px;letter-spacing:.04em;color:var(--text);margin:0}
+  .prof-modal-head h3{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--text);margin:0}
   .prof-close{background:var(--bg-2);border:1px solid var(--border);color:var(--text-dim);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
   .prof-close:hover{color:var(--text)}
   .prof-sub{font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:10px}
   .prof-body{min-height:140px;display:flex;align-items:center;justify-content:center}
   .prof-svg{width:100%;height:auto;display:block;background:#0c1117;border:1px solid var(--border);border-radius:8px}
   .prof-msg{padding:34px 12px;text-align:center;color:var(--text-faint);font-size:12px;line-height:1.5}
-  .prof-legend{display:flex;gap:16px;margin-top:10px;font-size:10px;color:var(--text-dim);flex-wrap:wrap;align-items:center}
+  .prof-legend{display:flex;gap:16px;margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--text-dim);flex-wrap:wrap;align-items:center}
   .prof-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:5px}
   .prof-legend .prof-adv{margin-left:auto;color:var(--text-faint);font-style:italic}
   .exp-wrap{position:relative;flex:0 0 auto;display:flex}
@@ -2892,11 +2916,18 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ov-row.on .sw::after{transform:translateX(14px);background:#0a0e13}
   .ov-row .lbl{flex:1;font-size:13px;color:var(--text);line-height:1.25}
   .ov-row .lbl .sub{display:block;font-size:10px;color:var(--text-faint);font-weight:400;letter-spacing:0;text-transform:none}
+  .ov-chip{display:inline-flex;align-items:center;justify-content:center;height:19px;padding:0 7px;border-radius:6px;border:1px solid var(--border-strong);background:var(--bg-2);color:var(--text-faint);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.02em;cursor:pointer;flex:0 0 auto;user-select:none;transition:background .12s,color .12s,border-color .12s}
+  .ov-chip.on{color:#0a0e13;background:var(--accent);border-color:var(--accent)}
+  .ov-chip:not(.on):hover{color:var(--text-dim);border-color:var(--text-fainter)}
   .ov-row.ov-sub{margin-left:16px;border-left:1px solid var(--border)}
   .ov-grp{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:7px;cursor:pointer;user-select:none}
   .ov-grp .grp-chev{font-size:10px;color:var(--dim);width:9px;display:inline-block;transition:transform .15s;flex:0 0 auto}
   .ov-menu.exp-airspace [data-grp="airspace"] .grp-chev,.ov-menu.exp-routes [data-grp="routes"] .grp-chev{transform:rotate(90deg)}
   .ov-grp .grp-lbl{flex:1;font-size:13px;font-weight:600;color:var(--text)}
+  /* The currently-expanded group reads amber (label + chevron) so it's obvious which section is open. */
+  .ov-menu.exp-airspace [data-grp="airspace"] .grp-lbl,.ov-menu.exp-airspace [data-grp="airspace"] .grp-chev,
+  .ov-menu.exp-routes [data-grp="routes"] .grp-lbl,.ov-menu.exp-routes [data-grp="routes"] .grp-chev,
+  .ov-menu.exp-stations [data-grp="stations"] .grp-lbl,.ov-menu.exp-stations [data-grp="stations"] .grp-chev{color:var(--accent)}
   .ov-grp .sw{width:34px;height:20px;border-radius:11px;background:#26303d;position:relative;flex:0 0 auto;transition:background .15s}
   .ov-grp .sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#8a9bb0;transition:transform .15s}
   .ov-grp.on .sw{background:var(--accent)} .ov-grp.on .sw::after{transform:translateX(14px);background:#0a0e13}
@@ -3213,6 +3244,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .set-sec{margin-bottom:16px}
   .set-sec .fq-radius{margin-bottom:0}
   .set-note{font-size:10px;color:var(--text-faint);line-height:1.55;margin-top:2px}
+  .set-ver{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--text-fainter);text-align:center;margin-top:14px}
   .map-near-box{margin-top:7px;border-top:1px solid var(--border-strong);padding-top:8px}
   .map-near-box .mn-h{font-size:11px;color:var(--text);margin-bottom:6px;line-height:1.4}
   .map-near-box .mn-h b{color:var(--accent)}
@@ -3814,19 +3846,16 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <div class="ov-row ov-child" data-parent="airspace" data-ov="mbz"><span class="sw"></span><span class="lbl">MBZ<span class="sub">mandatory broadcast zones</span></span></div>
       <div class="ov-row ov-child" data-parent="airspace" data-ov="danger"><span class="sw"></span><span class="lbl">Danger / Restricted<span class="sub">hazard + restricted areas · advisory</span></span></div>
       <div class="ov-row ov-child" data-parent="airspace" data-ov="ctlz"><span class="sw"></span><span class="lbl">Control zones<span class="sub">CTR / ATZ · advisory</span></span></div>
-      <div class="ov-row ov-child" data-parent="airspace" data-ov="ctla"><span class="sw"></span><span class="lbl">Terminal areas<span class="sub">TMA / CTA · advisory</span></span></div>
-      <div class="ov-row ov-child ov-sub" data-parent="airspace" data-ov="tmadeclutter"><span class="sw"></span><span class="lbl">Declutter altitudes<span class="sub">hide numbers when zoomed out</span></span></div>
+      <div class="ov-row ov-child" data-parent="airspace" data-ov="ctla"><span class="sw"></span><span class="lbl">Terminal areas<span class="sub">TMA / CTA · advisory</span></span><span class="ov-chip" data-decl="tma" title="Hide altitude numbers when zoomed out">Aa</span></div>
       <div class="ov-grp" data-grp="routes"><span class="grp-chev">&#x25B8;</span><span class="grp-lbl">Routes</span><span class="sw"></span></div>
       <div class="ov-row ov-child" data-parent="routes" data-ov="routes"><span class="sw"></span><span class="lbl">ATS routes<span class="sub">lower ATS airways · advisory</span></span></div>
       <div class="ov-row ov-child" data-parent="routes" data-ov="upper"><span class="sw"></span><span class="lbl">Upper ATS routes<span class="sub">FL245+ airways · advisory</span></span></div>
       <div class="ov-grp" data-grp="stations"><span class="grp-chev">&#x25B8;</span><span class="grp-lbl">Stations</span><span class="sw"></span></div>
-      <div class="ov-row ov-child" data-parent="stations" data-ov="freqs"><span class="sw"></span><span class="lbl">Aerodromes<span class="sub">nearby fields + freqs</span></span></div>
-      <div class="ov-row ov-child ov-sub" data-parent="stations" data-ov="afdeclutter"><span class="sw"></span><span class="lbl">Declutter labels<span class="sub">hide strip names when zoomed out</span></span></div>
+      <div class="ov-row ov-child" data-parent="stations" data-ov="freqs"><span class="sw"></span><span class="lbl">Aerodromes<span class="sub">nearby fields + freqs</span></span><span class="ov-chip" data-decl="af" title="Hide strip names when zoomed out">Aa</span></div>
       <div class="ov-row ov-child ov-sub" data-parent="stations" data-ov="flightcat"><span class="sw"></span><span class="lbl">Flight category<span class="sub">colour dots by live METAR</span></span></div>
       <div class="ov-row ov-child" data-parent="stations" data-ov="runways"><span class="sw"></span><span class="lbl">Runways<span class="sub">magnetic · advisory</span></span></div>
       <div class="ov-row ov-child" data-parent="stations" data-ov="navaids"><span class="sw"></span><span class="lbl">Navaids<span class="sub">VOR / NDB / DME</span></span></div>
-      <div class="ov-row" data-ov="enroute"><span class="sw"></span><span class="lbl">Enroute Fixes<span class="sub">named RNAV waypoints · advisory</span></span></div>
-      <div class="ov-row ov-sub" data-ov="enrdeclutter"><span class="sw"></span><span class="lbl">Declutter labels<span class="sub">hide fix names when zoomed out</span></span></div>
+      <div class="ov-row" data-ov="enroute"><span class="sw"></span><span class="lbl">Enroute Fixes<span class="sub">named RNAV waypoints · advisory</span></span><span class="ov-chip" data-decl="enr" title="Hide fix names when zoomed out">Aa</span></div>
       <div class="ov-sep"></div>
       <div class="ov-row" data-ov="mywpts"><span class="sw"></span><span class="lbl">My Waypoints<span class="sub">your saved points</span></span></div>
       <div class="ov-sep"></div>
@@ -9836,21 +9865,21 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     if(near>0 && near<yMax){ var ny=Y(near); svg+='<line x1="'+x0+'" y1="'+ny.toFixed(1)+'" x2="'+x1+'" y2="'+ny.toFixed(1)+'" stroke="#ffb020" stroke-width="1" stroke-dasharray="2,4" opacity="0.45"/>'; }
     if(alt>0 && alt<yMax){ var ay=Y(alt);
       svg+='<line x1="'+x0+'" y1="'+ay.toFixed(1)+'" x2="'+x1+'" y2="'+ay.toFixed(1)+'" stroke="#ffb020" stroke-width="1.5" stroke-dasharray="6,4"/>';
-      svg+='<text x="'+x1+'" y="'+(ay-4).toFixed(1)+'" fill="#ffb020" font-size="10" text-anchor="end" font-family="monospace">planned '+Math.round(alt).toLocaleString()+' ft</text>';
+      svg+='<text x="'+x1+'" y="'+(ay-4).toFixed(1)+'" fill="#ffb020" font-size="9" text-anchor="end" font-family="monospace">planned '+Math.round(alt).toLocaleString()+' ft</text>';
     }
     var lastLabelX=-999;
     prof.wpNm.forEach(function(nm,i3){ var xx=X(nm);
       svg+='<line x1="'+xx.toFixed(1)+'" y1="'+y0+'" x2="'+xx.toFixed(1)+'" y2="'+y1+'" stroke="#33414f" stroke-width="1" opacity="0.5"/>';
       if(xx-lastLabelX>42 || i3===prof.wpNm.length-1){
         var lab=(prof.labels[i3]||('P'+(i3+1))); if(lab.length>8) lab=lab.slice(0,8);
-        svg+='<text x="'+xx.toFixed(1)+'" y="'+(y0+9)+'" fill="#8a9bb0" font-size="8" text-anchor="middle" font-family="sans-serif">'+escapeHtml(lab)+'</text>';
+        svg+='<text x="'+xx.toFixed(1)+'" y="'+(y0+9)+'" fill="#8a9bb0" font-size="8" text-anchor="middle" font-family="monospace">'+escapeHtml(lab)+'</text>';
         lastLabelX=xx;
       }
     });
     svg+='<circle cx="'+X(maxAt).toFixed(1)+'" cy="'+Y(maxFt).toFixed(1)+'" r="3" fill="#f4623a"/>';
     svg+='<text x="'+X(maxAt).toFixed(1)+'" y="'+(Y(maxFt)-6).toFixed(1)+'" fill="#f4623a" font-size="9" text-anchor="middle" font-family="monospace">'+Math.round(maxFt).toLocaleString()+' ft</text>';
     for(var k=0;k<=5;k++){ var nmv=prof.total*k/5, xx2=X(nmv); svg+='<text x="'+xx2.toFixed(1)+'" y="'+(y1+16)+'" fill="#5a6b7d" font-size="9" text-anchor="middle" font-family="monospace">'+Math.round(nmv)+'</text>'; }
-    svg+='<text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(H-2)+'" fill="#5a6b7d" font-size="9" text-anchor="middle" font-family="sans-serif">Distance (NM)</text>';
+    svg+='<text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(H-2)+'" fill="#5a6b7d" font-size="9" text-anchor="middle" font-family="monospace">Distance (NM)</text>';
     return '<svg viewBox="0 0 '+W+' '+H+'" class="prof-svg" preserveAspectRatio="xMidYMid meet">'+svg+'</svg>';
   }
   window.NMShowProfile=function(){
@@ -9938,20 +9967,20 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       prof.samples.forEach(function(s){ if(s.flownFt!=null&&isFinite(s.flownFt)){ fl+=(started?' L ':'M ')+X(s.nm).toFixed(1)+' '+Y(s.flownFt).toFixed(1); started=true; } });
       if(started) svg+='<path d="'+fl+'" fill="none" stroke="#7fb3d5" stroke-width="2"/>';
       var lastF=null; for(var z=prof.samples.length-1;z>=0;z--){ if(prof.samples[z].flownFt!=null&&isFinite(prof.samples[z].flownFt)){ lastF=prof.samples[z]; break; } }
-      if(lastF) svg+='<text x="'+x1+'" y="'+(Y(lastF.flownFt)-4).toFixed(1)+'" fill="#7fb3d5" font-size="10" text-anchor="end" font-family="monospace">flown</text>';
+      if(lastF) svg+='<text x="'+x1+'" y="'+(Y(lastF.flownFt)-4).toFixed(1)+'" fill="#7fb3d5" font-size="9" text-anchor="end" font-family="monospace">flown</text>';
     } else if(refAlt>0 && refAlt<yMax){
       var ay=Y(refAlt);
       svg+='<line x1="'+x0+'" y1="'+ay.toFixed(1)+'" x2="'+x1+'" y2="'+ay.toFixed(1)+'" stroke="#ffb020" stroke-width="1.5" stroke-dasharray="6,4"/>';
-      svg+='<text x="'+x1+'" y="'+(ay-4).toFixed(1)+'" fill="#ffb020" font-size="10" text-anchor="end" font-family="monospace">planned '+Math.round(refAlt).toLocaleString()+' ft</text>';
+      svg+='<text x="'+x1+'" y="'+(ay-4).toFixed(1)+'" fill="#ffb020" font-size="9" text-anchor="end" font-family="monospace">planned '+Math.round(refAlt).toLocaleString()+' ft</text>';
     }
     [0, prof.total].forEach(function(nm,idx){ var xx=X(nm);
       svg+='<line x1="'+xx.toFixed(1)+'" y1="'+y0+'" x2="'+xx.toFixed(1)+'" y2="'+y1+'" stroke="#33414f" stroke-width="1" opacity="0.5"/>';
-      svg+='<text x="'+xx.toFixed(1)+'" y="'+(y0+9)+'" fill="#8a9bb0" font-size="8" text-anchor="'+(idx===0?'start':'end')+'" font-family="sans-serif">'+(idx===0?'Start':'End')+'</text>';
+      svg+='<text x="'+xx.toFixed(1)+'" y="'+(y0+9)+'" fill="#8a9bb0" font-size="8" text-anchor="'+(idx===0?'start':'end')+'" font-family="monospace">'+(idx===0?'Start':'End')+'</text>';
     });
     svg+='<circle cx="'+X(maxAt).toFixed(1)+'" cy="'+Y(maxFt).toFixed(1)+'" r="3" fill="#f4623a"/>';
     svg+='<text x="'+X(maxAt).toFixed(1)+'" y="'+(Y(maxFt)-6).toFixed(1)+'" fill="#f4623a" font-size="9" text-anchor="middle" font-family="monospace">'+Math.round(maxFt).toLocaleString()+' ft</text>';
     for(var k=0;k<=5;k++){ var nmv=prof.total*k/5, xx2=X(nmv); svg+='<text x="'+xx2.toFixed(1)+'" y="'+(y1+16)+'" fill="#5a6b7d" font-size="9" text-anchor="middle" font-family="monospace">'+Math.round(nmv)+'</text>'; }
-    svg+='<text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(H-2)+'" fill="#5a6b7d" font-size="9" text-anchor="middle" font-family="sans-serif">Distance (NM)</text>';
+    svg+='<text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(H-2)+'" fill="#5a6b7d" font-size="9" text-anchor="middle" font-family="monospace">Distance (NM)</text>';
     return '<svg viewBox="0 0 '+W+' '+H+'" class="prof-svg" preserveAspectRatio="xMidYMid meet">'+svg+'</svg>';
   }
   window.NMShowFlightProfile=function(points, name){
@@ -11234,9 +11263,9 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   function syncMenu(){
     menu.querySelector('[data-ov="sat"]').classList.toggle('on',ov.sat);
     menu.querySelector('[data-ov="freqs"]').classList.toggle('on',freqsOn());
-    var _dcl=menu.querySelector('[data-ov="afdeclutter"]'); if(_dcl) _dcl.classList.toggle('on', !!(window.NMAfDeclutter && window.NMAfDeclutter()));
-    var _edc=menu.querySelector('[data-ov="enrdeclutter"]'); if(_edc) _edc.classList.toggle('on', enrDeclutter());
-    var _tdc=menu.querySelector('[data-ov="tmadeclutter"]'); if(_tdc) _tdc.classList.toggle('on', tmaDeclutter());
+    var _dcl=menu.querySelector('.ov-chip[data-decl="af"]'); if(_dcl) _dcl.classList.toggle('on', !!(window.NMAfDeclutter && window.NMAfDeclutter()));
+    var _edc=menu.querySelector('.ov-chip[data-decl="enr"]'); if(_edc) _edc.classList.toggle('on', enrDeclutter());
+    var _tdc=menu.querySelector('.ov-chip[data-decl="tma"]'); if(_tdc) _tdc.classList.toggle('on', tmaDeclutter());
     var _fc=menu.querySelector('[data-ov="flightcat"]'); if(_fc) _fc.classList.toggle('on', !!(window.NMFlightCat && window.NMFlightCat()));
     menu.querySelector('[data-ov="mywpts"]').classList.toggle('on',ov.mywpts);
     menu.querySelector('[data-ov="navaids"]').classList.toggle('on',ov.navaids);
@@ -11265,11 +11294,20 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     row.addEventListener('click',function(){
       var k=row.dataset.ov;
       if(k==='freqs'){ setFreqs(!freqsOn()); ov.freqs=freqsOn(); saveOv(); }
-      else if(k==='afdeclutter'){ if(window.NMAfSetDeclutter) window.NMAfSetDeclutter(!(window.NMAfDeclutter && window.NMAfDeclutter())); if(window.NMRenderOverlay) window.NMRenderOverlay(); }
-      else if(k==='enrdeclutter'){ enrSetDeclutter(!enrDeclutter()); if(ov.enroute) renderEnroute(); }
-      else if(k==='tmadeclutter'){ tmaSetDeclutter(!tmaDeclutter()); }
       else if(k==='flightcat'){ if(window.NMSetFlightCat) window.NMSetFlightCat(!(window.NMFlightCat && window.NMFlightCat())); }
       else { ov[k]=!ov[k]; saveOv(); applyLayers(); }
+      syncMenu();
+    });
+  });
+  // Declutter "Aa" chips live on their parent layer rows; a chip tap toggles that
+  // layer's label/altitude declutter without toggling the layer itself (stopPropagation).
+  menu.querySelectorAll('.ov-chip').forEach(function(chip){
+    chip.addEventListener('click',function(e){
+      e.stopPropagation();
+      var d=chip.dataset.decl;
+      if(d==='af'){ if(window.NMAfSetDeclutter) window.NMAfSetDeclutter(!(window.NMAfDeclutter && window.NMAfDeclutter())); if(window.NMRenderOverlay) window.NMRenderOverlay(); }
+      else if(d==='enr'){ enrSetDeclutter(!enrDeclutter()); if(ov.enroute) renderEnroute(); }
+      else if(d==='tma'){ tmaSetDeclutter(!tmaDeclutter()); }
       syncMenu();
     });
   });
@@ -11280,9 +11318,16 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
         var allOn=Array.prototype.every.call(kids,function(r){ var k=r.dataset.ov; return k==='freqs'?freqsOn():ov[k]; });
         kids.forEach(function(r){ var k=r.dataset.ov; if(k==='freqs'){ setFreqs(!allOn); ov.freqs=freqsOn(); } else ov[k]=!allOn; });
         saveOv(); applyLayers();
-        if(!allOn) menu.classList.add('exp-'+grp);
+        // Turning a group on auto-expands it — and, accordion-style, collapses the others.
+        if(!allOn){ menu.classList.remove('exp-airspace','exp-routes','exp-stations'); menu.classList.add('exp-'+grp); }
         syncMenu();
-      } else { menu.classList.toggle('exp-'+grp); }
+      } else {
+        // Accordion: one group open at a time. Clicking the open group closes it;
+        // clicking a closed group opens it and collapses the rest.
+        var wasOpen=menu.classList.contains('exp-'+grp);
+        menu.classList.remove('exp-airspace','exp-routes','exp-stations');
+        if(!wasOpen) menu.classList.add('exp-'+grp);
+      }
     });
   });
   var markBtn=menu.querySelector('[data-act="mark"]'); var markHtml=markBtn.innerHTML;
@@ -12214,6 +12259,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v223 &middot; 2026-07-15</div>
       </div>
     </div>
   </div>
