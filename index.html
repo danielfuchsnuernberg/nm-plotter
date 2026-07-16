@@ -10,6 +10,14 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v232: Fix — the warped plate drifted on zoom and never sat on its true ground
+                footprint. The RotatedOverlay built its CSS matrix() with the translation hardcoded
+                to 0,0 (the preceding setPosition(tl) was immediately overwritten), so the plate got
+                the correct stretch but no position — its top-left pinned to the map corner and only
+                scaled with zoom, which is why it looked ~right only at the calibration zoom and slid
+                away everywhere else (fix markers were always geo-anchored and correct). Now bakes the
+                true top-left layer point (tl.x, tl.y) into the matrix translation. Both the static
+                redraw and the zoom-animation path share _matrixFrom, so both are corrected.
     2026-07-16  v231: Fix — procedure fixes weren't appearing on the plate. The plate-name
                 matcher used \\b word boundaries, but filenames delimit with underscores
                 (AYPY_ILS_RWY_32R_PROC_A_…), which are word characters, so AYPY/ILS never
@@ -12201,7 +12209,7 @@ if (navigator.storage && navigator.storage.persist) {
         var ax = (tr.x - tl.x) / this._imgW, ay = (tr.y - tl.y) / this._imgW,
             bx = (bl.x - tl.x) / this._imgH, by = (bl.y - tl.y) / this._imgH;
         L.DomUtil.setPosition(this._image, tl);
-        this._image.style.transform = 'matrix(' + ax + ',' + ay + ',' + bx + ',' + by + ',0,0)';
+        this._image.style.transform = 'matrix(' + ax + ',' + ay + ',' + bx + ',' + by + ',' + tl.x + ',' + tl.y + ')';
       },
       _reset: function(){
         var m = this._map;
