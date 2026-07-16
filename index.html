@@ -10,6 +10,12 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-16  v228: Fixes for the plate-calibration Calibrate button. It was rendering with the
+                app's global uppercase pill styling (the button base rule leaked text-transform
+                and letter-spacing through) — now neutralised so it reads as a compact
+                Calibrate control. And the calibration modal opened behind the chart viewer
+                (viewer z-index 5000 vs modal 4000), so the button appeared to do nothing;
+                the modal now sits above the viewer. No behaviour change to the calibration flow.
     2026-07-16  v227: Georeferenced plate calibration (Phase 1, Round 1) — advisory only,
                 Garmin remains primary. Image charts in the chart viewer gain a Calibrate
                 action: drag a crosshair onto three printed graticule crossings, assign each
@@ -1139,7 +1145,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 	}
 
   /* ===== Georeferenced plate calibration (Phase 1, advisory) ===== */
-  .pcal-ov{position:fixed;inset:0;z-index:4000;background:#0b0f14;display:flex;flex-direction:column;color:#e6edf3;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .pcal-ov{position:fixed;inset:0;z-index:6000;background:#0b0f14;display:flex;flex-direction:column;color:#e6edf3;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
   .pcal-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#111820;border-bottom:1px solid #1e2a36}
   .pcal-ttl{font-weight:600;font-size:14px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pcal-x{background:none;border:none;color:#9fb0c0;font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
@@ -1162,7 +1168,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .pcal-gates{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#cdd9e5}
   .pcal-adv{padding:8px 14px;font-size:11px;color:#7d8ea0;background:#0b1117;border-top:1px solid #16212c}
   .pcal-good{color:#34d399}.pcal-warn{color:#f0a500}.pcal-bad{color:#ff5a52}
-  .chart-ov-cal{background:transparent;border:1px solid #2a3a49;color:#cdd9e5;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;margin-right:6px}
+  .chart-ov-cal{background:transparent;border:1px solid #2a3a49;color:#cdd9e5;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;line-height:1.2;text-transform:none;letter-spacing:0;cursor:pointer;margin-right:6px}
+  .pcal-ov button,.pcal-ov select{text-transform:none;letter-spacing:normal}
   .chart-ov-cal.fit-good{border-color:#34d399;color:#34d399}
   .chart-ov-cal.fit-warn{border-color:#f0a500;color:#f0a500}
 
