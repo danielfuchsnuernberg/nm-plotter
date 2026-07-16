@@ -10,6 +10,14 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-16  v230: ENR 4.3 procedure fixes on the plate (AYPY). When a calibrated plate is
+                overlaid, the matching procedure's ENR 4.3 fixes now render on it — lime marker,
+                designator + role (IAF/IF/FAF/MAPT/MATF/SDF/MAHF), placed at true lat/lon so they
+                sit correctly on the warp. Fixes are matched to the plate by airport+type+runway,
+                so a plate shows only its own procedure's fixes (ILS 32R -> TESEM; RNAV 32R and
+                RNAV 14L -> their role-tagged sets once those plates are calibrated). Not connected
+                by tracks — the plate supplies sequence/altitude the AIP list does not. Danny-verified
+                transcription, AYPY only for now (expands region by region). Advisory; Garmin primary.
     2026-07-16  v229: Plate overlay (Round 2). A calibrated approach plate can now be warped
                 onto the moving map. Each calibrated chart row (good/warn) gains a fit tag and
                 a Map action; tapping it warps the plate via the stored georef transform into a
@@ -3405,6 +3413,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .nmpo-b{flex:1;text-align:center;border:1px solid #2a3a49;background:transparent;color:#e6edf3;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;font-family:var(--sans)}
   .nmpo-b:active{background:#18222c}
   .nmpo-adv{margin-top:9px;font-size:10px;color:#6b7b8c;line-height:1.35}
+  .nmpo-fix{pointer-events:none}
+  .nmpo-fix svg{display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.65))}
+  .nmpo-fix .lbl{position:absolute;left:23px;top:50%;transform:translateY(-50%);white-space:nowrap;display:flex;flex-direction:column;line-height:1.05}
+  .nmpo-fix .lbl b{font-family:var(--sans);font-size:11px;font-weight:700;color:#cdeeb0;text-shadow:0 1px 3px #000,0 0 2px #000}
+  .nmpo-fix .lbl i{font-family:var(--sans);font-style:normal;font-size:9px;font-weight:700;letter-spacing:.04em;color:#8de84a;text-shadow:0 1px 3px #000,0 0 2px #000}
   .nmpo-chip{position:absolute;left:12px;bottom:12px;z-index:1200;display:none;align-items:center;gap:6px;background:rgba(17,24,32,.94);border:1px solid #2a3a49;border-radius:9px;padding:8px 12px;font-family:var(--sans);font-size:12px;font-weight:600;color:#f0a500;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
   .chart-ov{position:fixed;inset:0;z-index:5000;background:rgba(8,11,16,.97);display:flex;flex-direction:column}
   .chart-ov-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--panel)}
@@ -12101,6 +12114,58 @@ if (navigator.storage && navigator.storage.persist) {
     var opacity = 0.66;
     try { var _sv = localStorage.getItem('nmPlateOpacity'); if(_sv != null){ var _n = parseFloat(_sv); if(isFinite(_n) && _n >= 0.2 && _n <= 1) opacity = _n; } } catch(e){}
 
+    /* ---- ENR 4.3 procedure fixes, rendered on the active plate ----
+       Advisory. Danny-verified transcription (AIP ENR 4.3.2 / 4.3.1, Port Moresby FIR).
+       A plate shows only the fixes whose procedure matches it (airport + type + runway).
+       Fixes sit at true lat/lon on the map, so they land correctly on the warped plate;
+       the plate supplies the tracks, altitudes and sequence the AIP list does not. */
+    var fixLayer = null;
+    var PROC_FIXES = [
+      // AYPY ILS RWY 32R (ENR 4.3.1)
+      {id:'TESEM', role:'IAF/HOLD', lat:-9.460833, lon:147.232500, ap:'AYPY', ty:'ILS',  rwy:'32R'},
+      // AYPY RNAV (GNSS) RWY 32R (ENR 4.3.2)
+      {id:'YPYST', role:'MATF',  lat:-9.380683, lon:147.182919, ap:'AYPY', ty:'RNAV', rwy:'32R'},
+      {id:'YPYSM', role:'MAPT',  lat:-9.476325, lon:147.241975, ap:'AYPY', ty:'RNAV', rwy:'32R'},
+      {id:'YPYSF', role:'FAF',   lat:-9.533744, lon:147.277425, ap:'AYPY', ty:'RNAV', rwy:'32R'},
+      {id:'YPYSH', role:'MAHF',  lat:-9.578206, lon:147.147314, ap:'AYPY', ty:'RNAV', rwy:'32R'},
+      {id:'ISLOK', role:'IF/IAF',lat:-9.632806, lon:147.338636, ap:'AYPY', ty:'RNAV', rwy:'32R'},
+      // AYPY RNAV (GNSS) RWY 14L (ENR 4.3.2)
+      {id:'YPYNF', role:'FAF',   lat:-9.361511, lon:147.171086, ap:'AYPY', ty:'RNAV', rwy:'14L'},
+      {id:'YPYNZ', role:'SDF',   lat:-9.390061, lon:147.188711, ap:'AYPY', ty:'RNAV', rwy:'14L'},
+      {id:'YPYNM', role:'MAPT',  lat:-9.430858, lon:147.213903, ap:'AYPY', ty:'RNAV', rwy:'14L'},
+      {id:'YPYNT', role:'MATF',  lat:-9.502236, lon:147.257975, ap:'AYPY', ty:'RNAV', rwy:'14L'},
+      {id:'YPYNH', role:'MAF',   lat:-9.518744, lon:147.127589, ap:'AYPY', ty:'RNAV', rwy:'14L'},
+      {id:'VIMIB', role:'IF/IAF',lat:-9.275856, lon:147.118225, ap:'AYPY', ty:'RNAV', rwy:'14L'}
+    ];
+    function parsePlate(name){
+      name = String(name || '').toUpperCase();
+      var ap = (name.match(/\bAY[A-Z]{2}\b/) || [])[0] || null;
+      var ty = /RNAV|GNSS|RNP/.test(name) ? 'RNAV'
+             : (/\bILS\b|\bLOC\b/.test(name) ? 'ILS'
+             : (/\bVOR\b|TACAN/.test(name) ? 'VOR'
+             : (/\bNDB\b/.test(name) ? 'NDB' : null)));
+      var rm = name.match(/RWY\s*0*(\d{1,2}[LRC]?)/) || name.match(/\b0*(\d{2}[LRC]?)\b/);
+      return { ap:ap, ty:ty, rwy: rm ? rm[1] : null };
+    }
+    function matchFixes(name){
+      var p = parsePlate(name);
+      if(!p.ap || !p.ty || !p.rwy) return [];
+      return PROC_FIXES.filter(function(f){ return f.ap===p.ap && f.ty===p.ty && f.rwy===p.rwy; });
+    }
+    function fixIcon(f){
+      var star = '<svg viewBox="0 0 22 22" width="20" height="20"><path d="M11 2 L13 9 L20 11 L13 13 L11 20 L9 13 L2 11 L9 9 Z" fill="#8de84a" stroke="#0d1117" stroke-width="1.2"/></svg>';
+      return L.divIcon({ className:'nmpo-fix', html: star + '<span class="lbl"><b>'+f.id+'</b><i>'+f.role+'</i></span>', iconSize:[20,20], iconAnchor:[10,10] });
+    }
+    function clearFixes(){ if(fixLayer){ try { map.removeLayer(fixLayer); } catch(e){} fixLayer = null; } }
+    function renderFixes(item){
+      clearFixes();
+      var list = matchFixes(item && item.name);
+      if(!list.length) return;
+      fixLayer = L.layerGroup();
+      list.forEach(function(f){ L.marker([f.lat, f.lon], { icon: fixIcon(f), interactive:false, keyboard:false }).addTo(fixLayer); });
+      fixLayer.addTo(map);
+    }
+
     var RotatedOverlay = L.Layer.extend({
       initialize: function(url, tl, tr, bl, imgW, imgH, opts){
         this._url = url; this._tl = tl; this._tr = tr; this._bl = bl;
@@ -12167,6 +12232,7 @@ if (navigator.storage && navigator.storage.persist) {
     function fitBand(g){ return (g && g.fitStatus === 'warn') ? 'warn' : 'good'; }
 
     function removeOverlay(){
+      clearFixes();
       if(current){ try { map.removeLayer(current); } catch(e){} current = null; }
       if(currentUrl){ try { URL.revokeObjectURL(currentUrl); } catch(e){} currentUrl = null; }
     }
@@ -12219,6 +12285,7 @@ if (navigator.storage && navigator.storage.persist) {
       var c = cornersFromGeoref(item.georef);
       current = new RotatedOverlay(currentUrl, c.tl, c.tr, c.bl, item.georef.imgW, item.georef.imgH, { opacity: opacity }).addTo(map);
       buildControls(item);
+      renderFixes(item);
       if(chipEl) chipEl.style.display = 'none';
       return true;
     }
