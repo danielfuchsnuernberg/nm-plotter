@@ -10,6 +10,14 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-16  v229: Plate overlay (Round 2). A calibrated approach plate can now be warped
+                onto the moving map. Each calibrated chart row (good/warn) gains a fit tag and
+                a Map action; tapping it warps the plate via the stored georef transform into a
+                dedicated pane sitting above the basemap/terrain but below the route line,
+                waypoints, airspace and GPS dot (never hides own track). On-map control strip:
+                opacity slider (persisted), Hide (drops to a reopen chip), Fullscreen (opens the
+                chart viewer). One plate at a time; selecting another replaces it. Gated on
+                georef.fitStatus (bad/uncalibrated show no Map action). Advisory only; Garmin primary.
     2026-07-16  v228: Fixes for the plate-calibration Calibrate button. It was rendering with the
                 app's global uppercase pill styling (the button base rule leaked text-transform
                 and letter-spacing through) — now neutralised so it reads as a compact
@@ -3374,6 +3382,30 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .af-chart-del{position:absolute;top:-7px;right:-7px;width:19px;height:19px;border-radius:50%;background:var(--bad);color:#fff;border:2px solid var(--panel);font-size:12px;line-height:1;cursor:pointer;align-items:center;justify-content:center;padding:0;display:none}
   .af-chart:hover .af-chart-del{display:flex}
   .af-chart-busy{font-family:var(--sans);font-size:12px;color:var(--text-faint)}
+  /* Round 2: plate-overlay row action + on-map control strip */
+  .af-chart-fit{font-family:var(--sans);font-size:9px;letter-spacing:.04em;text-transform:uppercase;font-weight:700;margin-top:2px;display:flex;align-items:center;gap:4px;line-height:1}
+  .af-chart-fit .d{width:6px;height:6px;border-radius:50%;flex:none}
+  .af-chart-fit.good{color:#34d399} .af-chart-fit.good .d{background:#34d399}
+  .af-chart-fit.warn{color:#f0a500} .af-chart-fit.warn .d{background:#f0a500}
+  .af-chart-map{margin-top:4px;display:inline-flex;align-items:center;gap:5px;border:1px solid #f0a500;color:#f0a500;background:transparent;border-radius:6px;padding:3px 8px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;line-height:1.1}
+  .af-chart-map:active{background:rgba(240,165,0,.14)}
+  .af-chart-map svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2}
+  .nmpo-ctrl{position:absolute;left:12px;bottom:12px;z-index:1200;width:248px;max-width:calc(100% - 24px);background:rgba(17,24,32,.94);border:1px solid #2a3a49;border-radius:11px;padding:11px 12px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 8px 24px rgba(0,0,0,.45);font-family:var(--sans);color:#e6edf3}
+  .nmpo-ctrl.hidden{display:none}
+  .nmpo-ch{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+  .nmpo-ch .nm{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nmpo-ch .fit{flex:none;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;padding:2px 7px;border-radius:20px;border:1px solid #34d399;color:#34d399}
+  .nmpo-op{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+  .nmpo-op label{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9fb0c0;font-weight:700}
+  .nmpo-op input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:3px;border-radius:3px;background:#2a3a49;outline:none;margin:0}
+  .nmpo-op input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:#f0a500;cursor:pointer}
+  .nmpo-op input[type=range]::-moz-range-thumb{width:16px;height:16px;border:none;border-radius:50%;background:#f0a500;cursor:pointer}
+  .nmpo-op .pc{font-family:var(--mono,monospace);font-size:12px;width:38px;text-align:right}
+  .nmpo-row{display:flex;gap:8px}
+  .nmpo-b{flex:1;text-align:center;border:1px solid #2a3a49;background:transparent;color:#e6edf3;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;font-family:var(--sans)}
+  .nmpo-b:active{background:#18222c}
+  .nmpo-adv{margin-top:9px;font-size:10px;color:#6b7b8c;line-height:1.35}
+  .nmpo-chip{position:absolute;left:12px;bottom:12px;z-index:1200;display:none;align-items:center;gap:6px;background:rgba(17,24,32,.94);border:1px solid #2a3a49;border-radius:9px;padding:8px 12px;font-family:var(--sans);font-size:12px;font-weight:600;color:#f0a500;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
   .chart-ov{position:fixed;inset:0;z-index:5000;background:rgba(8,11,16,.97);display:flex;flex-direction:column}
   .chart-ov-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--panel)}
   .chart-ov-ttl{font-family:var(--sans);font-size:14px;color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:12px}
@@ -8446,6 +8478,16 @@ document.getElementById('plotBtn').addEventListener('click', () => {
             : '<img class="af-chart-thumb" src="' + url + '" alt="">';
           cell.innerHTML = thumb + '<div class="af-chart-nm">' + escapeHtml(it.name||'') + '</div><button type="button" class="af-chart-del" title="Delete chart">\u00d7</button>';
           cell.addEventListener('click', e => { if(e.target.classList.contains('af-chart-del')) return; openChartViewer(it); });
+          if(it.georef && it.georef.transform && it.georef.fitStatus && it.georef.fitStatus !== 'bad'){
+            const _band = it.georef.fitStatus === 'warn' ? 'warn' : 'good';
+            const _tag = document.createElement('div'); _tag.className = 'af-chart-fit ' + _band;
+            _tag.innerHTML = '<span class="d"></span>' + (_band === 'warn' ? 'Calibrated \u00b7 warn' : 'Calibrated \u00b7 good');
+            cell.appendChild(_tag);
+            const _mb = document.createElement('button'); _mb.type = 'button'; _mb.className = 'af-chart-map';
+            _mb.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21"></polygon><line x1="8" y1="3" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="21"></line></svg>Map';
+            _mb.addEventListener('click', ev => { ev.stopPropagation(); if(window.NMPlateOverlay){ window.NMPlateOverlay.show(it); try{ map.closePopup(); }catch(_e){} } });
+            cell.appendChild(_mb);
+          }
           cell.querySelector('.af-chart-del').addEventListener('click', e => {
             e.stopPropagation();
             if(!confirm('Delete "' + (it.name||'this chart') + '"?')) return;
@@ -12045,6 +12087,160 @@ if (navigator.storage && navigator.storage.persist) {
      Stores georef on the chart record via NMCharts.saveGeoref. Does NOT touch
      the moving map (that is Round 2). Garmin remains primary throughout.
      ============================================================ */
+  /* ============================================================
+     NMPlateOverlay (Round 2): warp a calibrated approach plate onto
+     the moving map. Advisory only; Garmin remains primary. Uses the
+     georef transform stored by NMPlateCal (pixel = a*world + b) to
+     derive the plate's three corner lat/lons, then warps the image
+     via an affine CSS matrix in a dedicated pane below route/markers.
+     ============================================================ */
+  window.NMPlateOverlay = (function(){
+    var PANE = 'nmPlateOverlay';
+    var current = null, currentUrl = null, lastItem = null;
+    var ctrlEl = null, chipEl = null;
+    var opacity = 0.66;
+    try { var _sv = localStorage.getItem('nmPlateOpacity'); if(_sv != null){ var _n = parseFloat(_sv); if(isFinite(_n) && _n >= 0.2 && _n <= 1) opacity = _n; } } catch(e){}
+
+    var RotatedOverlay = L.Layer.extend({
+      initialize: function(url, tl, tr, bl, imgW, imgH, opts){
+        this._url = url; this._tl = tl; this._tr = tr; this._bl = bl;
+        this._imgW = imgW; this._imgH = imgH;
+        L.setOptions(this, L.extend({ opacity: 1, pane: PANE }, opts));
+      },
+      onAdd: function(map){
+        this._map = map;
+        var img = this._image = L.DomUtil.create('img', 'leaflet-image-layer leaflet-zoom-animated');
+        img.src = this._url;
+        img.style.width = this._imgW + 'px'; img.style.height = this._imgH + 'px';
+        img.style.transformOrigin = '0 0'; img.style.opacity = this.options.opacity;
+        img.style.pointerEvents = 'none';
+        (map.getPane(this.options.pane) || map.getPanes().overlayPane).appendChild(img);
+        this._reset();
+      },
+      onRemove: function(){ if(this._image) L.DomUtil.remove(this._image); },
+      getEvents: function(){
+        var ev = { zoom: this._reset, viewreset: this._reset, move: this._reset };
+        if(this._map.options.zoomAnimation) ev.zoomanim = this._animateZoom;
+        return ev;
+      },
+      setOpacity: function(o){ this.options.opacity = o; if(this._image) this._image.style.opacity = o; return this; },
+      _matrixFrom: function(tl, tr, bl){
+        var ax = (tr.x - tl.x) / this._imgW, ay = (tr.y - tl.y) / this._imgW,
+            bx = (bl.x - tl.x) / this._imgH, by = (bl.y - tl.y) / this._imgH;
+        L.DomUtil.setPosition(this._image, tl);
+        this._image.style.transform = 'matrix(' + ax + ',' + ay + ',' + bx + ',' + by + ',0,0)';
+      },
+      _reset: function(){
+        var m = this._map;
+        this._matrixFrom(m.latLngToLayerPoint(this._tl), m.latLngToLayerPoint(this._tr), m.latLngToLayerPoint(this._bl));
+      },
+      _animateZoom: function(e){
+        var m = this._map;
+        this._matrixFrom(m._latLngToNewLayerPoint(this._tl, e.zoom, e.center),
+                         m._latLngToNewLayerPoint(this._tr, e.zoom, e.center),
+                         m._latLngToNewLayerPoint(this._bl, e.zoom, e.center));
+      }
+    });
+
+    function ensurePane(){
+      if(!map.getPane(PANE)){
+        var p = map.createPane(PANE);
+        p.style.zIndex = 350;             // above tiles/terrain (<400), below route/markers/airspace (>=400)
+        p.style.pointerEvents = 'none';
+      }
+    }
+
+    // Invert the calibration transform (pixel = a*world + b, world in local
+    // metres y-down) to recover a plate pixel's lat/lon. cosL from stored LAT0.
+    function cornersFromGeoref(g){
+      var t = g.transform, ar = t.ar, ai = t.ai, br = t.br, bi = t.bi, LAT0 = t.LAT0, LON0 = t.LON0;
+      var cosL = Math.cos(LAT0 * Math.PI / 180), det = ar * ar + ai * ai;
+      function px2ll(px, py){
+        var dr = px - br, di = py - bi;
+        var wr = (dr * ar + di * ai) / det;   // east metres
+        var wi = (di * ar - dr * ai) / det;   // y-down metres = -(lat-LAT0)*111320
+        return L.latLng(LAT0 - wi / 111320, LON0 + wr / (111320 * cosL));
+      }
+      return { tl: px2ll(0, 0), tr: px2ll(g.imgW, 0), bl: px2ll(0, g.imgH) };
+    }
+
+    function fitBand(g){ return (g && g.fitStatus === 'warn') ? 'warn' : 'good'; }
+
+    function removeOverlay(){
+      if(current){ try { map.removeLayer(current); } catch(e){} current = null; }
+      if(currentUrl){ try { URL.revokeObjectURL(currentUrl); } catch(e){} currentUrl = null; }
+    }
+    function removeControls(){
+      if(ctrlEl && ctrlEl.parentNode) ctrlEl.parentNode.removeChild(ctrlEl); ctrlEl = null;
+      if(chipEl && chipEl.parentNode) chipEl.parentNode.removeChild(chipEl); chipEl = null;
+    }
+
+    function buildControls(item){
+      removeControls();
+      var band = fitBand(item.georef);
+      ctrlEl = document.createElement('div'); ctrlEl.className = 'nmpo-ctrl';
+      ctrlEl.innerHTML =
+        '<div class="nmpo-ch"><span class="nm"></span><span class="fit"></span></div>' +
+        '<div class="nmpo-op"><label>Opacity</label><input type="range" min="20" max="100"><span class="pc"></span></div>' +
+        '<div class="nmpo-row"><button type="button" class="nmpo-b" data-a="hide">Hide</button><button type="button" class="nmpo-b" data-a="full">Fullscreen</button></div>' +
+        '<div class="nmpo-adv">Advisory overlay \u2014 Garmin remains primary. One plate at a time.</div>';
+      ctrlEl.querySelector('.nm').textContent = item.name || 'Approach plate';
+      var ft = ctrlEl.querySelector('.fit');
+      ft.textContent = band;
+      ft.style.borderColor = band === 'warn' ? '#f0a500' : '#34d399';
+      ft.style.color = band === 'warn' ? '#f0a500' : '#34d399';
+      var rng = ctrlEl.querySelector('input[type=range]'), pc = ctrlEl.querySelector('.pc');
+      rng.value = Math.round(opacity * 100); pc.textContent = rng.value + '%';
+      rng.addEventListener('input', function(){
+        opacity = rng.value / 100; pc.textContent = rng.value + '%';
+        if(current) current.setOpacity(opacity);
+        try { localStorage.setItem('nmPlateOpacity', String(opacity)); } catch(e){}
+      });
+      ctrlEl.querySelector('[data-a=hide]').addEventListener('click', function(){ hide(true); });
+      ctrlEl.querySelector('[data-a=full]').addEventListener('click', function(){ if(window.NMDocView && lastItem) window.NMDocView(lastItem); });
+      L.DomEvent.disableClickPropagation(ctrlEl);
+      L.DomEvent.disableScrollPropagation(ctrlEl);
+      map.getContainer().appendChild(ctrlEl);
+
+      chipEl = document.createElement('div'); chipEl.className = 'nmpo-chip';
+      chipEl.textContent = '\u25a4 ' + (item.name || 'Plate') + ' \u00b7 overlay';
+      L.DomEvent.disableClickPropagation(chipEl);
+      chipEl.addEventListener('click', function(){ reopen(); });
+      map.getContainer().appendChild(chipEl);
+    }
+
+    function show(item){
+      if(!item || !item.georef || !item.georef.transform || item.georef.fitStatus === 'bad') return false;
+      if(!item.blob){ return false; }
+      ensurePane();
+      removeOverlay();
+      lastItem = item;
+      currentUrl = URL.createObjectURL(item.blob);
+      var c = cornersFromGeoref(item.georef);
+      current = new RotatedOverlay(currentUrl, c.tl, c.tr, c.bl, item.georef.imgW, item.georef.imgH, { opacity: opacity }).addTo(map);
+      buildControls(item);
+      if(chipEl) chipEl.style.display = 'none';
+      return true;
+    }
+    function hide(keepChip){
+      removeOverlay();
+      if(ctrlEl) ctrlEl.classList.add('hidden');
+      if(keepChip && chipEl) chipEl.style.display = 'flex';
+    }
+    function reopen(){ if(lastItem) show(lastItem); }
+    function toggle(item){
+      if(current && lastItem && item && lastItem.id === item.id){ hide(true); return false; }
+      return show(item);
+    }
+
+    return {
+      show: show,
+      toggle: toggle,
+      hide: function(){ removeOverlay(); removeControls(); },
+      isActive: function(){ return !!current; }
+    };
+  })();
+
   window.NMPlateCal = (function(){
     var NS='http://www.w3.org/2000/svg';
     var GOOD=0.25, WARN=0.6;                 // NM banding
