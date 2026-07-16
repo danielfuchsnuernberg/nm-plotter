@@ -10,6 +10,11 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-16  v231: Fix — procedure fixes weren't appearing on the plate. The plate-name
+                matcher used \\b word boundaries, but filenames delimit with underscores
+                (AYPY_ILS_RWY_32R_PROC_A_…), which are word characters, so AYPY/ILS never
+                matched and the runway grabbed '12' from the date. Now normalises separators
+                to spaces before parsing; TESEM renders on the ILS 32R plate as intended.
     2026-07-16  v230: ENR 4.3 procedure fixes on the plate (AYPY). When a calibrated plate is
                 overlaid, the matching procedure's ENR 4.3 fixes now render on it — lime marker,
                 designator + role (IAF/IF/FAF/MAPT/MATF/SDF/MAHF), placed at true lat/lon so they
@@ -12138,13 +12143,16 @@ if (navigator.storage && navigator.storage.persist) {
       {id:'VIMIB', role:'IF/IAF',lat:-9.275856, lon:147.118225, ap:'AYPY', ty:'RNAV', rwy:'14L'}
     ];
     function parsePlate(name){
-      name = String(name || '').toUpperCase();
-      var ap = (name.match(/\bAY[A-Z]{2}\b/) || [])[0] || null;
-      var ty = /RNAV|GNSS|RNP/.test(name) ? 'RNAV'
-             : (/\bILS\b|\bLOC\b/.test(name) ? 'ILS'
-             : (/\bVOR\b|TACAN/.test(name) ? 'VOR'
-             : (/\bNDB\b/.test(name) ? 'NDB' : null)));
-      var rm = name.match(/RWY\s*0*(\d{1,2}[LRC]?)/) || name.match(/\b0*(\d{2}[LRC]?)\b/);
+      // Normalise separators (underscores, dots, hyphens) to spaces FIRST so \b
+      // word boundaries fire around tokens like AYPY_ILS_RWY_32R and the date
+      // fragments (…_2024-12-30…) can't be mistaken for a runway.
+      var s = String(name || '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ');
+      var ap = (s.match(/\bAY[A-Z]{2}\b/) || [])[0] || null;
+      var ty = /\bRNAV\b|\bGNSS\b|\bRNP\b/.test(s) ? 'RNAV'
+             : (/\bILS\b|\bLOC\b/.test(s) ? 'ILS'
+             : (/\bVOR\b|\bTACAN\b/.test(s) ? 'VOR'
+             : (/\bNDB\b/.test(s) ? 'NDB' : null)));
+      var rm = s.match(/\bRWY\s*(\d{1,2}[LRC]?)\b/);
       return { ap:ap, ty:ty, rwy: rm ? rm[1] : null };
     }
     function matchFixes(name){
