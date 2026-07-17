@@ -10,6 +10,19 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v237: Letter-designated approaches + AYMD/AYMH fixes. (1) parsePlate/matchFixes now
+                recognise a procedure LETTER (e.g. "RNAV (GNSS) A") as an alternative key to the runway,
+                so approaches designated by letter can match their fixes; runway matching unchanged and
+                a STAR that merely contains "(RNAV)" does NOT false-match. (2) Added AYMD Madang RNAV
+                RWY 25 (6 fixes) and RWY 07 (8 fixes), and AYMH Mt Hagen RNAV (GNSS) A (5 fixes, proc:'A';
+                YMHEB also feeds the STAR). All Danny-verified against ENR 4.3.2 (eff 18 MAY 2023) before
+                shipping. Advisory; Garmin primary.
+    2026-07-17  v236: Fix — RNAV SID/STAR plates were mis-sorting into the Approach tab. PNG names its
+                SID/STAR charts "..._DEPARTURE_(RNAV)" / "..._ARRIVAL_(RNAV)", and the "(RNAV)" tripped
+                the Approach keyword test, which ran before the SID/STAR test. autoCat now decides
+                Departure/Arrival by SID/STAR intent first, so ~8 SID and ~6 STAR plates land in the
+                right tabs; plain approaches (ILS/RNAV/VOR by runway) still classify as Approach.
+                Verified against Danny's real AYPY/AYNZ/AYMH/AYMD plate filenames.
     2026-07-17  v235: ENR 4.3 fixes extended to AYNZ Nadzab (home base). Added the RNAV (GNSS) RWY 27
                 set (YNZEI/IF, YNZEZ/SDF, YNZEF/FAF, YNZEM/MAPT, YNZEH/MATF) and the RWY 09 set
                 (YNZWA/IAF, WESFI/IAF, YNZWI/IF, YNZWF/FAF, YNZWM/MAPT, YNZWH/MATF) to PROC_FIXES.
@@ -8543,9 +8556,12 @@ document.getElementById('plotBtn').addEventListener('click', () => {
       var s=' '+String(name||'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim()+' ';
       function tok(w){ return s.indexOf(' '+w+' ')>=0; }
       function sub(w){ return s.indexOf(w)>=0; }
+      // Decide Departure/Arrival by SID/STAR intent FIRST — PNG names its SID/STAR plates
+      // "..._DEPARTURE_(RNAV)" / "..._ARRIVAL_(RNAV)", and the "(RNAV)" would otherwise pull
+      // them into Approach. Approach keywords are only reached if it isn't a SID/STAR.
+      if(tok('SID')||sub('DEPARTURE')||tok('DEP')) return 'departure';
+      if(tok('STAR')||sub('ARRIVAL')||tok('ARR')) return 'arrival';
       if(sub('ILS')||sub('RNAV')||sub('GNSS')||sub('RNP')||sub('VOR')||sub('NDB')||sub('LOC')||sub('LLZ')||sub('PROC')||sub('APPROACH')||sub('IAC')||tok('APP')) return 'approach';
-      if(tok('SID')||sub('DEP')||sub('DEPARTURE')) return 'departure';
-      if(tok('STAR')||tok('ARR')||sub('ARRIVAL')) return 'arrival';
       if(sub('AERODROME')||sub('DIAGRAM')||sub('APRON')||sub('TAXI')||sub('PARKING')||tok('AD')) return 'airport';
       return 'other';
     }
@@ -12273,7 +12289,29 @@ if (navigator.storage && navigator.storage.persist) {
       {id:'YNZWI', role:'IF',    lat:-6.554300, lon:146.547397, ap:'AYNZ', ty:'RNAV', rwy:'09'},
       {id:'YNZWF', role:'FAF',   lat:-6.561544, lon:146.630811, ap:'AYNZ', ty:'RNAV', rwy:'09'},
       {id:'YNZWM', role:'MAPT',  lat:-6.568867, lon:146.715258, ap:'AYNZ', ty:'RNAV', rwy:'09'},
-      {id:'YNZWH', role:'MATF',  lat:-6.576083, lon:146.798678, ap:'AYNZ', ty:'RNAV', rwy:'09'}
+      {id:'YNZWH', role:'MATF',  lat:-6.576083, lon:146.798678, ap:'AYNZ', ty:'RNAV', rwy:'09'},
+      // AYMD Madang RNAV (GNSS) RWY 25 (ENR 4.3.2, eff 18 MAY 2023)
+      {id:'YMDNA', role:'IAF',   lat:-5.063208, lon:145.967194, ap:'AYMD', ty:'RNAV', rwy:'25'},
+      {id:'YMDNC', role:'IAF',   lat:-5.137464, lon:146.055125, ap:'AYMD', ty:'RNAV', rwy:'25'},
+      {id:'YMDND', role:'IAF',   lat:-5.245714, lon:146.015606, ap:'AYMD', ty:'RNAV', rwy:'25'},
+      {id:'YMDNI', role:'IF',    lat:-5.163294, lon:145.958269, ap:'AYMD', ty:'RNAV', rwy:'25'},
+      {id:'YMDNF', role:'FAF',   lat:-5.184808, lon:145.877550, ap:'AYMD', ty:'RNAV', rwy:'25'},
+      {id:'YMDNM', role:'MAPT',  lat:-5.207039, lon:145.794097, ap:'AYMD', ty:'RNAV', rwy:'25'},
+      // AYMD Madang RNAV (GNSS) RWY 07 (ENR 4.3.2)
+      {id:'YMDWD', role:'IAF',   lat:-5.393931, lon:145.622708, ap:'AYMD', ty:'RNAV', rwy:'07'},
+      {id:'YMDWE', role:'IAF',   lat:-5.339561, lon:145.521269, ap:'AYMD', ty:'RNAV', rwy:'07'},
+      {id:'YMDWG', role:'IAF',   lat:-5.225475, lon:145.537550, ap:'AYMD', ty:'RNAV', rwy:'07'},
+      {id:'YMDWI', role:'IF',    lat:-5.294169, lon:145.610708, ap:'AYMD', ty:'RNAV', rwy:'07'},
+      {id:'YMDWF', role:'FAF',   lat:-5.256333, lon:145.685231, ap:'AYMD', ty:'RNAV', rwy:'07'},
+      {id:'YMDWZ', role:'SDF',   lat:-5.232569, lon:145.732025, ap:'AYMD', ty:'RNAV', rwy:'07'},
+      {id:'YMDWM', role:'MAPT',  lat:-5.213644, lon:145.769292, ap:'AYMD', ty:'RNAV', rwy:'07'},
+      {id:'YMDWH', role:'MAHF',  lat:-5.175786, lon:145.843792, ap:'AYMD', ty:'RNAV', rwy:'07'},
+      // AYMH Mt Hagen RNAV (GNSS) A — letter-designated (no runway); YMHEB also feeds the STAR (A/STAR)
+      {id:'YMHEA', role:'IAF',   lat:-5.611569, lon:144.563975, ap:'AYMH', ty:'RNAV', proc:'A'},
+      {id:'YMHEB', role:'IAF',   lat:-5.819050, lon:144.589378, ap:'AYMH', ty:'RNAV', proc:'A'},
+      {id:'YMHEI', role:'IF',    lat:-5.767586, lon:144.503206, ap:'AYMH', ty:'RNAV', proc:'A'},
+      {id:'YMHEF', role:'FAF',   lat:-5.765669, lon:144.419622, ap:'AYMH', ty:'RNAV', proc:'A'},
+      {id:'YMHEM', role:'MAPT',  lat:-5.827550, lon:144.306658, ap:'AYMH', ty:'RNAV', proc:'A'}
     ];
     function parsePlate(name){
       // Normalise separators (underscores, dots, hyphens) to spaces FIRST so \b
@@ -12286,15 +12324,27 @@ if (navigator.storage && navigator.storage.persist) {
              : (/\bVOR\b|\bTACAN\b/.test(s) ? 'VOR'
              : (/\bNDB\b/.test(s) ? 'NDB' : null)));
       var rm = s.match(/\bRWY\s*(\d{1,2}[LRC]?)\b/);
-      return { ap:ap, ty:ty, rwy: rm ? rm[1] : null };
+      var rwy = rm ? rm[1] : null;
+      // Letter-designated approaches (e.g. "RNAV (GNSS) A") carry a procedure LETTER, not a runway.
+      // Only look when there's no runway; the letter is a single token right after the approach type.
+      var proc = null;
+      if(!rwy){
+        var pm = s.match(/\b(?:GNSS|RNAV|RNP|VOR|NDB|ILS|LOC|TACAN)\s+([A-Z])\b/);
+        if(pm) proc = pm[1];
+      }
+      return { ap:ap, ty:ty, rwy:rwy, proc:proc };
     }
     function matchFixes(name){
       var p = parsePlate(name);
-      if(!p.ap || !p.ty || !p.rwy) return [];
+      if(!p.ap || !p.ty || !(p.rwy || p.proc)) return [];
       // Runway compare ignores a leading zero so a "RWY 9" plate still matches "09" data (and vice versa).
       function nr(x){ return String(x||'').replace(/^0+(?=\d)/, ''); }
-      var prwy = nr(p.rwy);
-      return PROC_FIXES.filter(function(f){ return f.ap===p.ap && f.ty===p.ty && nr(f.rwy)===prwy; });
+      return PROC_FIXES.filter(function(f){
+        if(f.ap!==p.ap || f.ty!==p.ty) return false;
+        if(p.rwy && f.rwy) return nr(f.rwy)===nr(p.rwy);   // runway-designated approach
+        if(p.proc && f.proc) return f.proc===p.proc;       // letter-designated approach (RNAV A/B)
+        return false;
+      });
     }
     function fixIcon(f){
       var star = '<svg viewBox="0 0 22 22" width="20" height="20"><path d="M11 2 L13 9 L20 11 L13 13 L11 20 L9 13 L2 11 L9 9 Z" fill="#8de84a" stroke="#0d1117" stroke-width="1.2"/></svg>';
