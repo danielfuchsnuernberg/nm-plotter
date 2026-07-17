@@ -10,6 +10,18 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v248: Chart section keeps a constant height across the Airport/Departure/Arrival/Approach/
+                Other tabs, so the airfield card no longer grows/shrinks (jumps) as you switch tabs. The
+                height is sized once to the airport's fullest tab (approach counts its runway sub-headers),
+                floored ~76px and capped ~300px, then the list scrolls; empty tabs centre their message in
+                the same box. Replaces v247's max-height-only behaviour. Advisory; Garmin primary.
+    2026-07-17  v247: Charts as a compact scrollable list (was tiles). Each plate is now a row (small
+                thumbnail, filename, Map button, and the move/delete actions) instead of a 72px tile, so
+                fields with many plates read cleanly. The chart list has a fixed max-height (264px) and
+                scrolls after that; runway sub-headers scroll with it. The move (...) and delete (x)
+                buttons are now always visible (were hover-only, so unreachable on the iPad), and the
+                "Move to" menu is a fixed popover so the scroll area can't clip it. All scoped to the
+                charts grid; waypoint-doc thumbnails are unchanged. Advisory; Garmin primary.
     2026-07-17  v246: Plate window no longer covers the terrain window. Both sit bottom-left; the plate
                 control window now stacks above the terrain window whenever it's showing, and follows it
                 via a ResizeObserver so it moves as the terrain window collapses/expands/opens/closes. Falls
@@ -3556,7 +3568,22 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .af-ptab .c{margin-left:2px;font-size:8.5px;opacity:.7}
   .af-ptab.active{background:var(--panel);color:var(--accent)}
   .af-ptab:not(.active):hover{color:var(--text-dim)}
-  .af-charts-grid{display:flex;flex-wrap:wrap;gap:8px;width:100%}
+  .af-charts-grid{display:flex;flex-direction:column;flex-wrap:nowrap;gap:4px;width:100%;overflow-y:auto;overflow-x:hidden;padding-right:2px}
+  .af-charts-grid .af-charts-none{margin:auto 0}
+  .af-charts-grid .af-pgroup-h{width:100%;margin:7px 0 1px}
+  .af-charts-grid .af-pgroup-h:first-child{margin-top:0}
+  .af-charts-grid .af-chart{width:100%;display:flex;align-items:center;gap:9px;padding:5px 7px;border:1px solid var(--border);border-radius:8px;background:var(--bg-2)}
+  .af-charts-grid .af-chart:hover{border-color:var(--border-strong)}
+  .af-charts-grid .af-chart-thumb,.af-charts-grid .af-chart-pdf{width:46px;height:34px;flex:0 0 auto}
+  .af-charts-grid .af-chart-pdf{font-size:11px}
+  .af-charts-grid .af-chart-mid{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .af-charts-grid .af-chart-nm{margin-top:0;max-height:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;word-break:normal}
+  .af-charts-grid .af-chart-map{margin-top:0;align-self:flex-start}
+  .af-charts-grid .af-chart-actions{flex:0 0 auto;display:flex;align-items:center;gap:5px}
+  .af-charts-grid .af-chart-del,.af-charts-grid .af-chart-more{position:static;display:flex;top:auto;left:auto;width:26px;height:26px;border:1px solid var(--border-strong);background:transparent}
+  .af-charts-grid .af-chart-del{color:var(--bad)}
+  .af-charts-grid .af-chart-more{color:var(--text-dim);font-size:15px}
+  .af-charts-grid .af-chart:hover .af-chart-del,.af-charts-grid .af-chart:hover .af-chart-more{display:flex}
   .af-pgroup-h{width:100%;font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin:2px 0 -2px}
   .af-chart-more{position:absolute;top:-7px;left:-7px;width:19px;height:19px;border-radius:50%;background:var(--border-strong);color:#e6edf3;border:2px solid var(--panel);font-size:12px;line-height:1;cursor:pointer;align-items:center;justify-content:center;padding:0;display:none}
   .af-chart:hover .af-chart-more{display:flex}
@@ -8837,9 +8864,12 @@ document.getElementById('plotBtn').addEventListener('click', () => {
           var thumb = it.type === 'pdf'
             ? '<div class="af-chart-pdf">PDF</div>'
             : '<img class="af-chart-thumb" src="' + url + '" alt="">';
-          cell.innerHTML = thumb + '<div class="af-chart-nm">' + escapeHtml(it.name||'') + '</div>'
-            + '<button type="button" class="af-chart-del" title="Delete chart">\u00d7</button>'
-            + '<button type="button" class="af-chart-more" title="Move to\u2026">\u22ef</button>';
+          cell.innerHTML = thumb
+            + '<div class="af-chart-mid"><div class="af-chart-nm">' + escapeHtml(it.name||'') + '</div></div>'
+            + '<div class="af-chart-actions">'
+            +   '<button type="button" class="af-chart-more" title="Move to\u2026">\u22ef</button>'
+            +   '<button type="button" class="af-chart-del" title="Delete chart">\u00d7</button>'
+            + '</div>';
           cell.addEventListener('click', function(e){ if(e.target.closest('.af-chart-del,.af-chart-more,.af-chart-menu,.af-chart-map')) return; openChartViewer(it); });
           if(it.georef && it.georef.transform && it.georef.fitStatus && it.georef.fitStatus !== 'bad'){
             var _band = it.georef.fitStatus === 'warn' ? 'warn' : 'good';
@@ -8847,7 +8877,7 @@ document.getElementById('plotBtn').addEventListener('click', () => {
             _mb.title = (_band === 'warn' ? 'Calibrated \u00b7 warn' : 'Calibrated \u00b7 good') + ' \u2014 overlay on map';
             _mb.innerHTML = '<span class="dot"></span><svg viewBox="0 0 24 24"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21"></polygon><line x1="8" y1="3" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="21"></line></svg>Map';
             _mb.addEventListener('click', function(ev){ ev.stopPropagation(); if(window.NMPlateOverlay){ window.NMPlateOverlay.show(it); try{ map.closePopup(); }catch(_e){} } });
-            cell.appendChild(_mb);
+            (cell.querySelector('.af-chart-mid') || cell).appendChild(_mb);
           }
           cell.querySelector('.af-chart-del').addEventListener('click', function(e){
             e.stopPropagation();
@@ -8856,7 +8886,7 @@ document.getElementById('plotBtn').addEventListener('click', () => {
           });
           cell.querySelector('.af-chart-more').addEventListener('click', function(e){
             e.stopPropagation();
-            var open = listEl.querySelector('.af-chart-menu'); if(open) open.remove();
+            var open = document.querySelector('.af-chart-menu'); if(open) open.remove();
             var menu = document.createElement('div'); menu.className = 'af-chart-menu';
             menu.innerHTML = '<div class="mh">Move to</div>';
             var cur = catOf(it, catOverrides());
@@ -8866,7 +8896,13 @@ document.getElementById('plotBtn').addEventListener('click', () => {
               bb.addEventListener('click', function(ev){ ev.stopPropagation(); setCatOverride(it.id, pair[0]); activeTab = pair[0]; render(); });
               menu.appendChild(bb);
             });
-            cell.appendChild(menu);
+            document.body.appendChild(menu);
+            menu.style.position = 'fixed'; menu.style.zIndex = '4000';
+            var r = e.currentTarget.getBoundingClientRect();
+            var mw = menu.offsetWidth || 118, mh = menu.offsetHeight || 150;
+            var mtop = r.bottom + 4; if(mtop + mh > window.innerHeight - 8) mtop = Math.max(8, r.top - mh - 4);
+            var mleft = Math.max(8, Math.min(r.left, window.innerWidth - mw - 8));
+            menu.style.top = mtop + 'px'; menu.style.left = mleft + 'px';
             setTimeout(function(){ document.addEventListener('click', function h(){ menu.remove(); document.removeEventListener('click', h); }, { once:true }); }, 0);
           });
           return cell;
@@ -8883,6 +8919,20 @@ document.getElementById('plotBtn').addEventListener('click', () => {
         });
         listEl.appendChild(tabs);
         var grid = document.createElement('div'); grid.className = 'af-charts-grid';
+        (function(){
+          function estH(cat){
+            var arr = groups[cat]; if(!arr.length) return 0;
+            var h = arr.length * 48;
+            if(cat === 'approach'){
+              var rset = {}; arr.forEach(function(it){ rset[rwyOf(it.name) || 'Unassigned'] = 1; });
+              var rn = Object.keys(rset).length;
+              if(rn > 1 || !rset['Unassigned']) h += rn * 22;   // runway sub-headers
+            }
+            return h;
+          }
+          var target = Math.max(estH('airport'), estH('departure'), estH('arrival'), estH('approach'), estH('other'));
+          grid.style.height = Math.min(300, Math.max(76, target + 8)) + 'px';   // same for every tab; scrolls past the cap
+        })();
         var list = groups[activeTab];
         if(!list.length){
           var lbl = (CATS.filter(function(p){ return p[0]===activeTab; })[0] || ['','this'])[1];
