@@ -10,6 +10,15 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v233: Procedures tabs. The airfield card's Charts section is now organised into
+                tabs — Airport / Departure / Arrival / Approach / Other — instead of one flat list.
+                Charts are auto-sorted by filename keywords (ILS/RNAV/VOR/PROC/IAC -> Approach,
+                SID/DEP -> Departure, STAR/ARR -> Arrival, AERODROME/DIAGRAM/AD -> Airport, else
+                Other); a per-chart "... -> Move to" override (persisted in localStorage) corrects any
+                the filename gets wrong. The Approach tab is sub-grouped by runway. The plate overlay
+                and ENR 4.3 fix code are unchanged — the Map button just now lives inside the tabbed
+                cell. Shared charts component, so this appears on all devices (say the word to gate it
+                to desktop only). Advisory; Garmin primary.
     2026-07-17  v232: Fix — the warped plate drifted on zoom and never sat on its true ground
                 footprint. The RotatedOverlay built its CSS matrix() with the translation hardcoded
                 to 0,0 (the preceding setPosition(tl) was immediately overwritten), so the plate got
@@ -3411,6 +3420,20 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .af-chart-map{margin-top:4px;display:inline-flex;align-items:center;gap:5px;border:1px solid #f0a500;color:#f0a500;background:transparent;border-radius:6px;padding:3px 8px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;line-height:1.1}
   .af-chart-map:active{background:rgba(240,165,0,.14)}
   .af-chart-map svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2}
+  /* Procedures tabs (v233) — reorganise the charts list into Airport/Departure/Arrival/Approach/Other */
+  .af-ptabs{display:flex;gap:2px;width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:2px;background:var(--bg-2)}
+  .af-ptab{flex:1;text-align:center;border:none;background:transparent;color:var(--text-faint);font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:5px 2px;border-radius:6px;cursor:pointer;line-height:1.1;white-space:nowrap}
+  .af-ptab .c{margin-left:3px;font-size:9px;opacity:.75}
+  .af-ptab.active{background:var(--panel);color:var(--accent)}
+  .af-ptab:not(.active):hover{color:var(--text-dim)}
+  .af-charts-grid{display:flex;flex-wrap:wrap;gap:8px;width:100%}
+  .af-pgroup-h{width:100%;font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin:2px 0 -2px}
+  .af-chart-more{position:absolute;top:-7px;left:-7px;width:19px;height:19px;border-radius:50%;background:var(--border-strong);color:#e6edf3;border:2px solid var(--panel);font-size:12px;line-height:1;cursor:pointer;align-items:center;justify-content:center;padding:0;display:none}
+  .af-chart:hover .af-chart-more{display:flex}
+  .af-chart-menu{position:absolute;z-index:30;top:15px;left:-6px;background:var(--panel);border:1px solid var(--border-strong);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:118px}
+  .af-chart-menu .mh{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);padding:3px 8px 4px}
+  .af-chart-menu button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--text-dim);font-family:var(--sans);font-size:12px;padding:6px 8px;border-radius:5px;cursor:pointer;text-transform:none;letter-spacing:0}
+  .af-chart-menu button:hover{background:var(--bg-2);color:#e6edf3}
   .nmpo-ctrl{position:absolute;left:12px;bottom:12px;z-index:1200;width:248px;max-width:calc(100% - 24px);background:rgba(17,24,32,.94);border:1px solid #2a3a49;border-radius:11px;padding:11px 12px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 8px 24px rgba(0,0,0,.45);font-family:var(--sans);color:#e6edf3}
   .nmpo-ctrl.hidden{display:none}
   .nmpo-ch{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
@@ -8489,38 +8512,105 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     const hSpan = wrap.querySelector('.af-charts-h span');
     let urls = [];
     function clearUrls(){ urls.forEach(u => { try{ URL.revokeObjectURL(u); }catch(e){} }); urls = []; }
+    // ---- Procedures-tabs (v233): auto-sort charts into Airport/Departure/Arrival/Approach/Other ----
+    // Category is derived from the filename; a per-chart override (localStorage) handles exceptions.
+    // The overlay/fix code is unchanged — this only reorganises where charts (and the Map button) live.
+    var CATS = [['airport','Airport'],['departure','Departure'],['arrival','Arrival'],['approach','Approach'],['other','Other']];
+    var activeTab = null;
+    function catOverrides(){ try { return JSON.parse(localStorage.getItem('nmChartCat')||'{}'); } catch(e){ return {}; } }
+    function setCatOverride(id,cat){ var m=catOverrides(); m[id]=cat; try{ localStorage.setItem('nmChartCat',JSON.stringify(m)); }catch(e){} }
+    function autoCat(name){
+      var s=' '+String(name||'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim()+' ';
+      function tok(w){ return s.indexOf(' '+w+' ')>=0; }
+      function sub(w){ return s.indexOf(w)>=0; }
+      if(sub('ILS')||sub('RNAV')||sub('GNSS')||sub('RNP')||sub('VOR')||sub('NDB')||sub('LOC')||sub('LLZ')||sub('PROC')||sub('APPROACH')||sub('IAC')||tok('APP')) return 'approach';
+      if(tok('SID')||sub('DEP')||sub('DEPARTURE')) return 'departure';
+      if(tok('STAR')||tok('ARR')||sub('ARRIVAL')) return 'arrival';
+      if(sub('AERODROME')||sub('DIAGRAM')||sub('APRON')||sub('TAXI')||sub('PARKING')||tok('AD')) return 'airport';
+      return 'other';
+    }
+    function catOf(it,ov){ return (ov && ov[it.id]) || autoCat(it.name); }
+    function rwyOf(name){ var m=String(name||'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').match(/\bRWY\s*(\d{1,2}[LRC]?)\b/); return m?('RWY '+m[1]):null; }
     function render(){
       clearUrls();
       window.NMCharts.list(f.ident).then(items => {
         items.sort((a,b) => a.addedAt - b.addedAt);
         if(hSpan) hSpan.textContent = 'Charts' + (items.length ? ' (' + items.length + ')' : '');
         if(!items.length){ listEl.innerHTML = '<div class="af-charts-none">None yet \u2014 add an approach plate, aerodrome chart or PDF for offline use.</div>'; if(pop) pop.update(); return; }
-        listEl.innerHTML = '';
-        items.forEach(it => {
-          const url = URL.createObjectURL(it.blob); urls.push(url);
-          const cell = document.createElement('div'); cell.className = 'af-chart';
-          const thumb = it.type === 'pdf'
+        var ov = catOverrides();
+        var groups = { airport:[], departure:[], arrival:[], approach:[], other:[] };
+        items.forEach(function(it){ (groups[catOf(it,ov)] || groups.other).push(it); });
+        if(!activeTab || !groups[activeTab] || !groups[activeTab].length){
+          var order = ['approach','arrival','departure','airport','other'];
+          activeTab = order.filter(function(c){ return groups[c].length; })[0] || 'airport';
+        }
+        function cellFor(it){
+          var url = URL.createObjectURL(it.blob); urls.push(url);
+          var cell = document.createElement('div'); cell.className = 'af-chart';
+          var thumb = it.type === 'pdf'
             ? '<div class="af-chart-pdf">PDF</div>'
             : '<img class="af-chart-thumb" src="' + url + '" alt="">';
-          cell.innerHTML = thumb + '<div class="af-chart-nm">' + escapeHtml(it.name||'') + '</div><button type="button" class="af-chart-del" title="Delete chart">\u00d7</button>';
-          cell.addEventListener('click', e => { if(e.target.classList.contains('af-chart-del')) return; openChartViewer(it); });
+          cell.innerHTML = thumb + '<div class="af-chart-nm">' + escapeHtml(it.name||'') + '</div>'
+            + '<button type="button" class="af-chart-del" title="Delete chart">\u00d7</button>'
+            + '<button type="button" class="af-chart-more" title="Move to\u2026">\u22ef</button>';
+          cell.addEventListener('click', function(e){ if(e.target.closest('.af-chart-del,.af-chart-more,.af-chart-menu,.af-chart-map')) return; openChartViewer(it); });
           if(it.georef && it.georef.transform && it.georef.fitStatus && it.georef.fitStatus !== 'bad'){
-            const _band = it.georef.fitStatus === 'warn' ? 'warn' : 'good';
-            const _tag = document.createElement('div'); _tag.className = 'af-chart-fit ' + _band;
+            var _band = it.georef.fitStatus === 'warn' ? 'warn' : 'good';
+            var _tag = document.createElement('div'); _tag.className = 'af-chart-fit ' + _band;
             _tag.innerHTML = '<span class="d"></span>' + (_band === 'warn' ? 'Calibrated \u00b7 warn' : 'Calibrated \u00b7 good');
             cell.appendChild(_tag);
-            const _mb = document.createElement('button'); _mb.type = 'button'; _mb.className = 'af-chart-map';
+            var _mb = document.createElement('button'); _mb.type = 'button'; _mb.className = 'af-chart-map';
             _mb.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21"></polygon><line x1="8" y1="3" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="21"></line></svg>Map';
-            _mb.addEventListener('click', ev => { ev.stopPropagation(); if(window.NMPlateOverlay){ window.NMPlateOverlay.show(it); try{ map.closePopup(); }catch(_e){} } });
+            _mb.addEventListener('click', function(ev){ ev.stopPropagation(); if(window.NMPlateOverlay){ window.NMPlateOverlay.show(it); try{ map.closePopup(); }catch(_e){} } });
             cell.appendChild(_mb);
           }
-          cell.querySelector('.af-chart-del').addEventListener('click', e => {
+          cell.querySelector('.af-chart-del').addEventListener('click', function(e){
             e.stopPropagation();
             if(!confirm('Delete "' + (it.name||'this chart') + '"?')) return;
             window.NMCharts.del(it.id).then(render).catch(render);
           });
-          listEl.appendChild(cell);
+          cell.querySelector('.af-chart-more').addEventListener('click', function(e){
+            e.stopPropagation();
+            var open = listEl.querySelector('.af-chart-menu'); if(open) open.remove();
+            var menu = document.createElement('div'); menu.className = 'af-chart-menu';
+            menu.innerHTML = '<div class="mh">Move to</div>';
+            var cur = catOf(it, catOverrides());
+            CATS.forEach(function(pair){
+              if(pair[0] === cur) return;
+              var bb = document.createElement('button'); bb.type = 'button'; bb.textContent = pair[1];
+              bb.addEventListener('click', function(ev){ ev.stopPropagation(); setCatOverride(it.id, pair[0]); activeTab = pair[0]; render(); });
+              menu.appendChild(bb);
+            });
+            cell.appendChild(menu);
+            setTimeout(function(){ document.addEventListener('click', function h(){ menu.remove(); document.removeEventListener('click', h); }, { once:true }); }, 0);
+          });
+          return cell;
+        }
+        listEl.innerHTML = '';
+        var tabs = document.createElement('div'); tabs.className = 'af-ptabs';
+        CATS.forEach(function(pair){
+          var n = groups[pair[0]].length;
+          var b = document.createElement('button'); b.type = 'button';
+          b.className = 'af-ptab' + (pair[0] === activeTab ? ' active' : '');
+          b.innerHTML = escapeHtml(pair[1]) + (n ? '<span class="c">' + n + '</span>' : '');
+          b.addEventListener('click', function(){ activeTab = pair[0]; render(); });
+          tabs.appendChild(b);
         });
+        listEl.appendChild(tabs);
+        var grid = document.createElement('div'); grid.className = 'af-charts-grid';
+        var list = groups[activeTab];
+        if(activeTab === 'approach'){
+          var byR = {}, rorder = [];
+          list.forEach(function(it){ var r = rwyOf(it.name) || 'Unassigned'; if(!byR[r]){ byR[r]=[]; rorder.push(r); } byR[r].push(it); });
+          rorder.sort(function(a,b){ if(a==='Unassigned') return 1; if(b==='Unassigned') return -1; return a.localeCompare(b, undefined, {numeric:true}); });
+          rorder.forEach(function(r){
+            if(rorder.length > 1 || r !== 'Unassigned'){ var h = document.createElement('div'); h.className = 'af-pgroup-h'; h.textContent = r; grid.appendChild(h); }
+            byR[r].forEach(function(it){ grid.appendChild(cellFor(it)); });
+          });
+        } else {
+          list.forEach(function(it){ grid.appendChild(cellFor(it)); });
+        }
+        listEl.appendChild(grid);
         if(pop) pop.update();
       }).catch(() => { listEl.innerHTML = '<div class="af-charts-none">Charts unavailable on this device.</div>'; if(pop) pop.update(); });
     }
