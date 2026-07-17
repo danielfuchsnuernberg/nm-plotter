@@ -10,6 +10,16 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v246: Plate window no longer covers the terrain window. Both sit bottom-left; the plate
+                control window now stacks above the terrain window whenever it's showing, and follows it
+                via a ResizeObserver so it moves as the terrain window collapses/expands/opens/closes. Falls
+                back to bottom:12px when the terrain window is hidden. Observer is torn down with the plate
+                controls. Advisory; Garmin primary.
+    2026-07-17  v245: Plate viewer upgrades. (1) The plate control window now has a "Plate" dropdown listing
+                the other calibrated plates at the same airport (by icao), so you can switch plates without
+                going back to the airfield card; picking one swaps the overlay and re-frames it. Only shows
+                when 2+ calibrated plates exist. (2) Opening a plate now fits the map to the plate's full
+                extent (its three georef corners) so the whole thing is visible at once. Advisory; Garmin primary.
     2026-07-17  v244: GPS coordinate overlay + zoom nudge. (1) New "GPS" button in the toolbar (next to
                 Plot/Copy/Export/Clear) opens an overlay showing the live route's coordinates one point per
                 tab (Departure -> waypoints -> Arrival), big and amber in two lines for punching into the
@@ -3238,6 +3248,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .nm-dct-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(8px);z-index:6000;display:flex;align-items:center;gap:12px;background:#161b22;border:1px solid #c07f00;border-radius:10px;padding:10px 14px;color:#e8f0f8;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .15s,transform .15s}
   .nm-dct-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
   .nm-dct-undo{background:rgba(240,165,0,.16);border:1px solid #f0a500;color:#f0a500;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .nmpo-swwrap{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .nmpo-swwrap label{font-size:11px;color:#8b98a5;flex:0 0 auto}
+  .nmpo-sw{flex:1 1 auto;min-width:0;background:#0f141b;color:#e8f0f8;border:1px solid #243040;border-radius:6px;padding:5px 7px;font-size:12px}
   .gps-ov{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;background:rgba(3,5,8,.66);backdrop-filter:blur(2px)}
   .gps-ov.on{display:flex}
   .gps-win{width:min(420px,94vw);max-height:92vh;background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.6);overflow:hidden;display:flex;flex-direction:column}
@@ -12575,7 +12588,7 @@ if (navigator.storage && navigator.storage.persist) {
      ============================================================ */
   window.NMPlateOverlay = (function(){
     var PANE = 'nmPlateOverlay';
-    var current = null, currentUrl = null, lastItem = null;
+    var current = null, currentUrl = null, lastItem = null, plateTerrObs = null;
     var ctrlEl = null, chipEl = null;
     var opacity = 0.66;
     try { var _sv = localStorage.getItem('nmPlateOpacity'); if(_sv != null){ var _n = parseFloat(_sv); if(isFinite(_n) && _n >= 0.2 && _n <= 1) opacity = _n; } } catch(e){}
@@ -12781,6 +12794,7 @@ if (navigator.storage && navigator.storage.persist) {
       if(currentUrl){ try { URL.revokeObjectURL(currentUrl); } catch(e){} currentUrl = null; }
     }
     function removeControls(){
+      if(plateTerrObs){ try { plateTerrObs.disconnect(); } catch(e){} plateTerrObs = null; }
       if(ctrlEl && ctrlEl.parentNode) ctrlEl.parentNode.removeChild(ctrlEl); ctrlEl = null;
       if(chipEl && chipEl.parentNode) chipEl.parentNode.removeChild(chipEl); chipEl = null;
     }
@@ -12811,6 +12825,49 @@ if (navigator.storage && navigator.storage.persist) {
       L.DomEvent.disableClickPropagation(ctrlEl);
       L.DomEvent.disableScrollPropagation(ctrlEl);
       map.getContainer().appendChild(ctrlEl);
+      // Both the plate window and the terrain window live at bottom-left. Sit the plate
+      // window above the terrain window when it's showing, and follow it as it
+      // collapses/expands/opens/closes (ResizeObserver fires on any of those).
+      (function(){
+        var terrPanel = document.querySelector('.terr-panel');
+        function positionPlate(){
+          if(!ctrlEl) return;
+          var th = (terrPanel && terrPanel.classList.contains('show') && terrPanel.offsetParent !== null) ? terrPanel.offsetHeight : 0;
+          ctrlEl.style.bottom = (th > 0 ? (12 + th + 8) : 12) + 'px';
+        }
+        positionPlate();
+        if(terrPanel && 'ResizeObserver' in window){
+          try { plateTerrObs = new ResizeObserver(positionPlate); plateTerrObs.observe(terrPanel); } catch(e){}
+        }
+      })();
+
+      // Switcher: jump to another calibrated plate at the same airport without leaving the map.
+      if(item.icao && window.NMCharts && window.NMCharts.list){
+        window.NMCharts.list(item.icao).then(function(recs){
+          if(!ctrlEl) return;
+          var showable = (recs || []).filter(function(r){
+            return r && r.blob && r.georef && r.georef.transform && r.georef.fitStatus !== 'bad';
+          });
+          if(showable.length < 2) return;
+          var wrap = document.createElement('div'); wrap.className = 'nmpo-swwrap';
+          var lbl = document.createElement('label'); lbl.textContent = 'Plate';
+          var sel = document.createElement('select'); sel.className = 'nmpo-sw';
+          showable.forEach(function(r){
+            var o = document.createElement('option');
+            o.value = r.id; o.textContent = r.name || 'Plate';
+            if(r.id === item.id) o.selected = true;
+            sel.appendChild(o);
+          });
+          sel.addEventListener('change', function(){
+            var rec = showable.filter(function(r){ return r.id === sel.value; })[0];
+            if(rec) show(rec);
+          });
+          L.DomEvent.disableClickPropagation(sel);
+          wrap.appendChild(lbl); wrap.appendChild(sel);
+          var opRow = ctrlEl.querySelector('.nmpo-op');
+          if(opRow) ctrlEl.insertBefore(wrap, opRow); else ctrlEl.appendChild(wrap);
+        }).catch(function(){});
+      }
 
       chipEl = document.createElement('div'); chipEl.className = 'nmpo-chip';
       chipEl.textContent = '\u25a4 ' + (item.name || 'Plate') + ' \u00b7 overlay';
@@ -12828,6 +12885,8 @@ if (navigator.storage && navigator.storage.persist) {
       currentUrl = URL.createObjectURL(item.blob);
       var c = cornersFromGeoref(item.georef);
       current = new RotatedOverlay(currentUrl, c.tl, c.tr, c.bl, item.georef.imgW, item.georef.imgH, { opacity: opacity }).addTo(map);
+      // Frame the whole plate when it opens (three corners span its full extent).
+      try { map.fitBounds(L.latLngBounds([c.tl, c.tr, c.bl]), { padding: [40, 40] }); } catch(e){}
       buildControls(item);
       renderFixes(item);
       if(chipEl) chipEl.style.display = 'none';
