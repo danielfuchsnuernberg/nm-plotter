@@ -10,6 +10,14 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v241: "Direct to" on every tap-card. A Direct-to button now sits beside "Add to route" on
+                aerodrome, navaid, enroute-fix, procedure-fix, waypoint and village cards. It clears the
+                plan and lays a single leg PPOS (present position) -> the tapped point, fits the map to the
+                leg, and shows a 5s Undo toast (restores the previous plan, fuel settings and all). Needs a
+                live GPS fix (window.NMCurrentFix); with no fix it says so and leaves the plan untouched --
+                never a dangling single point. Popup buttons wired via map 'popupopen' (Leaflet blocks
+                click propagation inside popups); DOM-panel cards via document delegation. Advisory only,
+                Garmin remains primary.
     2026-07-17  v240: Standalone procedure-fix layer + plate Hide fix. (1) New toggleable "Procedure Fixes"
                 layer in the layers menu (lime sibling to the magenta enroute layer) rendering all 49
                 PROC_FIXES independent of any plate. Combines three declutter behaviours: zoom-gate (with
@@ -3210,6 +3218,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .enr-co .dec{color:#8aa0b4}
   .enr-rt{font-size:11px;color:#8aa0b4;margin-bottom:7px;line-height:1.35}
   .enr-add{border:1px solid #8a2f66;background:#0f141b;color:#e0479e;border-radius:5px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer}
+  .nm-dct{margin-left:6px;border:1px solid #c07f00;background:#0f141b;color:#f0a500;border-radius:5px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer}
+  .nm-dct-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(8px);z-index:6000;display:flex;align-items:center;gap:12px;background:#161b22;border:1px solid #c07f00;border-radius:10px;padding:10px 14px;color:#e8f0f8;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .15s,transform .15s}
+  .nm-dct-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  .nm-dct-undo{background:rgba(240,165,0,.16);border:1px solid #f0a500;color:#f0a500;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer}
   .rwy-num{display:inline-block;transform:translate(-50%,-50%);background:#eef2f7;color:#0a0e13;font-family:var(--mono);
     font-size:10px;font-weight:800;line-height:1;padding:2px 4px;border-radius:3px;border:1px solid #0a0e13;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.5)}
   .uw-edit{min-width:208px;max-width:240px;padding-top:16px}
@@ -4945,7 +4957,7 @@ window.NMSpotCard = function(name, lat, lon){
   var coord = '<div class="af-coord"><span class="dms">' + escapeHtml(toDms(lat,true) + '  ' + toDms(lon,false)) + '</span><span class="dec">' + lat.toFixed(5) + ', ' + lon.toFixed(5) + '</span></div>';
   var docsHtml = '<div class="af-charts"><div class="af-charts-h"><span>Docs</span><button type="button" class="af-charts-add">+ Add</button></div><div class="af-charts-list"></div><input type="file" class="af-charts-file" accept="image/*,application/pdf" multiple hidden></div>';
   var notesHtml = '<div class="af-notes"><div class="af-notes-h"><span>My notes</span><span class="af-notes-saved">Saved</span></div><textarea class="af-notes-ta" rows="2" placeholder="Personal notes: hazards, landing spots, contacts"></textarea></div>';
-  var acts = '<button type="button" class="af-route sp-add">+ Route</button>'
+  var acts = '<button type="button" class="af-route sp-add">+ Route</button>' + '<button type="button" class="nm-dct" data-dct-name="'+escapeAttr(name)+'" data-dct-coord="'+escapeAttr(coordStr)+'">Direct to</button>'
     + '<button type="button" class="af-route sp-fc">Forecast</button>'
     + '<button type="button" class="af-edit sp-copy">Copy</button>'
     + '<button type="button" class="af-edit sp-save">Save</button>';
@@ -6654,6 +6666,61 @@ window.addFieldToRoute = function(name, coord){
   renderRows();
   processDebounced();
 };
+
+// Direct-To: clear the plan and lay a single leg present-position -> chosen point.
+// Instant, but recoverable via an Undo toast. Needs a live GPS fix; if there's none
+// it says so and leaves the existing plan untouched (never a dangling single point).
+// Advisory only, Garmin remains primary.
+(function(){
+  var toastEl=null, toastTimer=null;
+  function hideToast(){ if(toastEl) toastEl.classList.remove('show'); }
+  function showToast(msg, undoFn){
+    if(!toastEl){ toastEl=document.createElement('div'); toastEl.className='nm-dct-toast'; document.body.appendChild(toastEl); }
+    clearTimeout(toastTimer);
+    toastEl.innerHTML='';
+    var m=document.createElement('span'); m.textContent=msg; toastEl.appendChild(m);
+    if(undoFn){
+      var u=document.createElement('button'); u.type='button'; u.className='nm-dct-undo'; u.textContent='Undo';
+      u.addEventListener('click', function(){ try{ undoFn(); }catch(_){} hideToast(); });
+      toastEl.appendChild(u);
+    }
+    toastEl.classList.add('show');
+    toastTimer=setTimeout(hideToast, 5000);
+  }
+  window.NMDirectTo=function(name, coord){
+    var fix = (typeof window.NMCurrentFix==='function') ? window.NMCurrentFix() : null;
+    if(!fix){ showToast('No GPS fix \u2014 Direct-to needs your position', null); return; }
+    if(!coord){ return; }
+    var snap = state.rows.map(function(r){ return Object.assign({}, r); });   // for Undo
+    state.rows = [];
+    addRow('PPOS', fix.lat.toFixed(6)+', '+fix.lon.toFixed(6));
+    addRow(name || 'DIRECT', coord);
+    addRow();                                   // trailing empty row (app convention)
+    renderRows(); process();
+    try{
+      var pp=String(coord).split(',').map(function(x){ return parseFloat(x); });
+      if(isFinite(pp[0]) && isFinite(pp[1])) map.fitBounds(L.latLngBounds([[fix.lat,fix.lon],[pp[0],pp[1]]]).pad(0.35), { maxZoom:11 });
+    }catch(_){}
+    try{ map.closePopup(); }catch(_){}
+    showToast('Direct to '+(name||'point'), function(){
+      state.rows = snap.map(function(r){ return Object.assign({}, r); });
+      if(!state.rows.length) addRow();
+      renderRows(); process();
+    });
+  };
+  function fire(b){ if(window.NMDirectTo) window.NMDirectTo(b.dataset.dctName||'', b.dataset.dctCoord||''); }
+  // Popup cards: Leaflet disables click propagation inside popups, so wire on open.
+  map.on('popupopen', function(e){
+    var root = e.popup && e.popup.getElement ? e.popup.getElement() : null; if(!root) return;
+    var b = root.querySelector('.nm-dct');
+    if(b && !b._nmDct){ b._nmDct=true; b.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); fire(b); }); }
+  });
+  // Non-popup DOM cards (e.g. the aerodrome edit panel): plain delegation still reaches document.
+  document.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('.nm-dct') : null; if(!b) return;
+    e.preventDefault(); e.stopPropagation(); fire(b);
+  });
+})();
 
 document.getElementById('exportBtn')?.addEventListener('click', exportPdf);
 document.getElementById('exportGpxBtn')?.addEventListener('click', exportGpx);
@@ -8497,7 +8564,7 @@ document.getElementById('plotBtn').addEventListener('click', () => {
       + '<div class="af-wx"></div>'
       + '<div class="af-charts" data-icao="'+escapeHtml(f.ident)+'"><div class="af-charts-h"><span>Charts</span><button type="button" class="af-charts-add">+ Add</button></div><div class="af-charts-list"></div><input type="file" class="af-charts-file" accept="image/*,application/pdf" multiple hidden></div>'
       + notes
-      + '<div class="af-acts"><button type="button" class="af-route">+ Add to route</button><button type="button" class="af-edit">Edit freqs</button></div>'
+      + '<div class="af-acts"><button type="button" class="af-route">+ Add to route</button><button type="button" class="nm-dct" data-dct-name="'+escapeAttr(f.ident)+'" data-dct-coord="'+f.lat.toFixed(6)+', '+f.lon.toFixed(6)+'">Direct to</button><button type="button" class="af-edit">Edit freqs</button></div>'
       + '</div>';
   }
   // Populate the METAR slot of an open airfield card (async). Only attempts a
@@ -9459,6 +9526,8 @@ document.getElementById('plotBtn').addEventListener('click', () => {
   let prevFix = null;      // {lat,lon,t} for deriving GS/TRK when the OS omits them
   let lastTrack = null;    // remembered heading so TRK doesn't blank while paused
   let everFixed = false;   // have we ever had a valid position?
+  // Exposed for Direct-To: the current position, or null if we've never had a fix.
+  window.NMCurrentFix = function(){ return (everFixed && lastFix) ? { lat: lastFix.latitude, lon: lastFix.longitude } : null; };
   let lastFixAt = 0;       // wall-clock of last fix, for the stall watchdog
 
   const box = document.createElement('div');
@@ -10667,7 +10736,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       var m=L.marker([n.a,n.o],{icon:navDot()}).addTo(navLayer);
       L.marker([n.a,n.o],{icon:navLabel(n.i),interactive:false}).addTo(navLayer);
       var html='<b>'+escapeHtml(n.i)+'</b> '+escapeHtml(n.t)+'<br>'+escapeHtml(n.n)+(n.f?('<br>'+escapeHtml(n.f)+' kHz'):'')+
-        '<br><button type="button" class="nav-add" data-id="'+escapeAttr(n.i)+'" data-c="'+n.a.toFixed(6)+', '+n.o.toFixed(6)+'" style="margin-top:6px;border:1px solid #6a4a8e;background:#0f141b;color:#c792ea;border-radius:5px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer">+ Add to route</button>';
+        '<br><button type="button" class="nav-add" data-id="'+escapeAttr(n.i)+'" data-c="'+n.a.toFixed(6)+', '+n.o.toFixed(6)+'" style="margin-top:6px;border:1px solid #6a4a8e;background:#0f141b;color:#c792ea;border-radius:5px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer">+ Add to route</button>' + '<button type="button" class="nm-dct" data-dct-name="'+escapeAttr(n.i)+'" data-dct-coord="'+n.a.toFixed(6)+', '+n.o.toFixed(6)+'">Direct to</button>';
       m.bindPopup(html);
       m.on('popupopen',function(e){
         var b=e.popup.getElement().querySelector('.nav-add');
@@ -10688,7 +10757,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       var rt=w.r?('<div class="enr-rt">'+escapeHtml(w.r)+'</div>'):'';
       var html='<div class="enr-pop"><div class="enr-h"><b>'+escapeHtml(w.n)+'</b><span class="enr-tag">Enroute fix</span></div>'+
         '<div class="enr-co"><span class="dms">'+dms+'</span><span class="dec">'+dec+'</span></div>'+rt+
-        '<button type="button" class="enr-add" data-id="'+escapeAttr(w.n)+'" data-c="'+w.a.toFixed(6)+', '+w.o.toFixed(6)+'">+ Add to route</button></div>';
+        '<button type="button" class="enr-add" data-id="'+escapeAttr(w.n)+'" data-c="'+w.a.toFixed(6)+', '+w.o.toFixed(6)+'">+ Add to route</button>' + '<button type="button" class="nm-dct" data-dct-name="'+escapeAttr(w.n)+'" data-dct-coord="'+w.a.toFixed(6)+', '+w.o.toFixed(6)+'">Direct to</button></div>';
       m.bindPopup(html);
       m.on('popupopen',function(e){
         var b=e.popup.getElement().querySelector('.enr-add');
@@ -10738,7 +10807,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       var html='<div class="enr-pop"><div class="enr-h"><b>'+escapeHtml(f.id)+'</b><span class="enr-tag">'+escapeHtml(f.role+' \u00b7 '+f.ap)+'</span></div>'+
         '<div class="enr-co"><span class="dms">'+dms+'</span><span class="dec">'+dec+'</span></div>'+
         '<div class="enr-rt">'+escapeHtml(pfContext(f))+' \u00b7 '+pfEdition(f.ap)+'</div>'+
-        '<button type="button" class="enr-add" data-id="'+escapeAttr(f.id)+'" data-c="'+f.lat.toFixed(6)+', '+f.lon.toFixed(6)+'">+ Add to route</button></div>';
+        '<button type="button" class="enr-add" data-id="'+escapeAttr(f.id)+'" data-c="'+f.lat.toFixed(6)+', '+f.lon.toFixed(6)+'">+ Add to route</button>' + '<button type="button" class="nm-dct" data-dct-name="'+escapeAttr(f.id)+'" data-dct-coord="'+f.lat.toFixed(6)+', '+f.lon.toFixed(6)+'">Direct to</button></div>';
       m.bindPopup(html);
       m.on('popupopen',function(e){
         var bt=e.popup.getElement().querySelector('.enr-add');
@@ -10758,7 +10827,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       '<div class="af-h"><span class="af-nm">'+escapeHtml(w.name||('WP '+w.id))+'</span></div>'+
       '<div class="af-meta">'+chips+'</div>'+
       coord+docs+notes+
-      '<div class="af-acts"><button type="button" class="af-route">+ Add to route</button><button type="button" class="af-edit wpt-del">Delete</button></div>'+
+      '<div class="af-acts"><button type="button" class="af-route">+ Add to route</button><button type="button" class="nm-dct" data-dct-name="'+escapeAttr(w.name||'')+'" data-dct-coord="'+w.lat.toFixed(6)+', '+w.lon.toFixed(6)+'">Direct to</button><button type="button" class="af-edit wpt-del">Delete</button></div>'+
       '</div>';
   }
   function wireWptDocs(root, key, pop){
