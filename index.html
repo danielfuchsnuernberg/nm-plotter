@@ -10,6 +10,15 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v234: Procedures-tabs polish + fixes. (1) Tabs no longer overflow the card — they
+                shrink to fit (min-width:0, tighter type, clipped). (2) Decluttered the calibration
+                readout: dropped the "Calibrated / good" text line; the Map button (which only exists
+                for calibrated charts) now carries a small status dot — green = good, amber = warn,
+                with the detail in its tooltip. (3) Fixed a bug where clicking an empty tab (e.g.
+                Departure with no charts) bounced back to Approach: the default-tab pick now only runs
+                on first open, so an explicitly selected empty tab stays put and shows a short "how to
+                add" hint. (4) After an upload, the view jumps to the tab the new chart auto-sorts into,
+                so you see where it landed. Advisory; Garmin primary.
     2026-07-17  v233: Procedures tabs. The airfield card's Charts section is now organised into
                 tabs — Airport / Departure / Arrival / Approach / Other — instead of one flat list.
                 Charts are auto-sorted by filename keywords (ILS/RNAV/VOR/PROC/IAC -> Approach,
@@ -3420,10 +3429,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .af-chart-map{margin-top:4px;display:inline-flex;align-items:center;gap:5px;border:1px solid #f0a500;color:#f0a500;background:transparent;border-radius:6px;padding:3px 8px;font-family:var(--sans);font-size:11px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;line-height:1.1}
   .af-chart-map:active{background:rgba(240,165,0,.14)}
   .af-chart-map svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2}
+  .af-chart-map .dot{width:6px;height:6px;border-radius:50%;flex:none;background:#34d399}
+  .af-chart-map.warn{border-color:#f0a500;color:#f0a500}
+  .af-chart-map.warn .dot{background:#f0a500}
   /* Procedures tabs (v233) — reorganise the charts list into Airport/Departure/Arrival/Approach/Other */
-  .af-ptabs{display:flex;gap:2px;width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:2px;background:var(--bg-2)}
-  .af-ptab{flex:1;text-align:center;border:none;background:transparent;color:var(--text-faint);font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:5px 2px;border-radius:6px;cursor:pointer;line-height:1.1;white-space:nowrap}
-  .af-ptab .c{margin-left:3px;font-size:9px;opacity:.75}
+  .af-ptabs{display:flex;gap:1px;width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;padding:2px;background:var(--bg-2);overflow:hidden}
+  .af-ptab{flex:1 1 0;min-width:0;text-align:center;border:none;background:transparent;color:var(--text-faint);font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:0;text-transform:uppercase;padding:5px 1px;border-radius:6px;cursor:pointer;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .af-ptab .c{margin-left:2px;font-size:8.5px;opacity:.7}
   .af-ptab.active{background:var(--panel);color:var(--accent)}
   .af-ptab:not(.active):hover{color:var(--text-dim)}
   .af-charts-grid{display:flex;flex-wrap:wrap;gap:8px;width:100%}
@@ -8540,10 +8552,11 @@ document.getElementById('plotBtn').addEventListener('click', () => {
         var ov = catOverrides();
         var groups = { airport:[], departure:[], arrival:[], approach:[], other:[] };
         items.forEach(function(it){ (groups[catOf(it,ov)] || groups.other).push(it); });
-        if(!activeTab || !groups[activeTab] || !groups[activeTab].length){
+        if(activeTab === null){
           var order = ['approach','arrival','departure','airport','other'];
           activeTab = order.filter(function(c){ return groups[c].length; })[0] || 'airport';
         }
+        if(!groups[activeTab]) activeTab = 'airport';
         function cellFor(it){
           var url = URL.createObjectURL(it.blob); urls.push(url);
           var cell = document.createElement('div'); cell.className = 'af-chart';
@@ -8556,11 +8569,9 @@ document.getElementById('plotBtn').addEventListener('click', () => {
           cell.addEventListener('click', function(e){ if(e.target.closest('.af-chart-del,.af-chart-more,.af-chart-menu,.af-chart-map')) return; openChartViewer(it); });
           if(it.georef && it.georef.transform && it.georef.fitStatus && it.georef.fitStatus !== 'bad'){
             var _band = it.georef.fitStatus === 'warn' ? 'warn' : 'good';
-            var _tag = document.createElement('div'); _tag.className = 'af-chart-fit ' + _band;
-            _tag.innerHTML = '<span class="d"></span>' + (_band === 'warn' ? 'Calibrated \u00b7 warn' : 'Calibrated \u00b7 good');
-            cell.appendChild(_tag);
-            var _mb = document.createElement('button'); _mb.type = 'button'; _mb.className = 'af-chart-map';
-            _mb.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21"></polygon><line x1="8" y1="3" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="21"></line></svg>Map';
+            var _mb = document.createElement('button'); _mb.type = 'button'; _mb.className = 'af-chart-map ' + _band;
+            _mb.title = (_band === 'warn' ? 'Calibrated \u00b7 warn' : 'Calibrated \u00b7 good') + ' \u2014 overlay on map';
+            _mb.innerHTML = '<span class="dot"></span><svg viewBox="0 0 24 24"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21"></polygon><line x1="8" y1="3" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="21"></line></svg>Map';
             _mb.addEventListener('click', function(ev){ ev.stopPropagation(); if(window.NMPlateOverlay){ window.NMPlateOverlay.show(it); try{ map.closePopup(); }catch(_e){} } });
             cell.appendChild(_mb);
           }
@@ -8599,7 +8610,10 @@ document.getElementById('plotBtn').addEventListener('click', () => {
         listEl.appendChild(tabs);
         var grid = document.createElement('div'); grid.className = 'af-charts-grid';
         var list = groups[activeTab];
-        if(activeTab === 'approach'){
+        if(!list.length){
+          var lbl = (CATS.filter(function(p){ return p[0]===activeTab; })[0] || ['','this'])[1];
+          grid.innerHTML = '<div class="af-charts-none">No ' + escapeHtml(lbl) + ' charts yet. Use <b>+ Add</b> above (charts named for this type file here automatically), or move a chart here with the \u22ef menu.</div>';
+        } else if(activeTab === 'approach'){
           var byR = {}, rorder = [];
           list.forEach(function(it){ var r = rwyOf(it.name) || 'Unassigned'; if(!byR[r]){ byR[r]=[]; rorder.push(r); } byR[r].push(it); });
           rorder.sort(function(a,b){ if(a==='Unassigned') return 1; if(b==='Unassigned') return -1; return a.localeCompare(b, undefined, {numeric:true}); });
@@ -8621,7 +8635,7 @@ document.getElementById('plotBtn').addEventListener('click', () => {
       if(!files.length) return;
       listEl.innerHTML = '<div class="af-chart-busy">Saving\u2026</div>'; if(pop) pop.update();
       Promise.all(files.map(file => window.NMCharts.add(f.ident, file)))
-        .then(() => { fileIn.value = ''; render(); })
+        .then(() => { fileIn.value = ''; activeTab = autoCat(files[0].name); render(); })
         .catch(() => render());
     });
     if(pop && pop.on) pop.on('remove', clearUrls);
