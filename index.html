@@ -10,6 +10,22 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v244: GPS coordinate overlay + zoom nudge. (1) New "GPS" button in the toolbar (next to
+                Plot/Copy/Export/Clear) opens an overlay showing the live route's coordinates one point per
+                tab (Departure -> waypoints -> Arrival), big and amber in two lines for punching into the
+                Garmin, with a DMS <-> D-M.M format toggle (matches whatever the unit is set to; persisted).
+                Reads state.rows via parseCoordinatePair; read-only, advisory. Tabs at the bottom so they
+                sit under the thumb on the phone. (2) wheelPxPerZoomLevel 25->18 for a bit more zoom per
+                scroll. Garmin remains primary.
+    2026-07-17  v243: Zoom feel fix. wheelPxPerZoomLevel 60->25 + zoomDelta 0.5, so scroll/keys zoom without
+                needing many notches, while pinch stays smooth (zoomSnap:0). Advisory; Garmin primary.
+    2026-07-17  v242: Tap-card button polish + smooth zoom. (1) The card action rows no longer wrap text
+                mid-word now that Direct-to is present: Add-to-route and Direct-to sit as equal-width
+                siblings on one row (nowrap), the secondary action (Edit freqs / Delete) drops to its own
+                line, and the airfield card is a touch wider (240->264). Kept text labels rather than icons
+                because Direct-to is destructive (a bare icon is riskier on a touch screen). (2) Map now
+                uses zoomSnap:0 for smooth, continuous pinch/scroll zoom instead of integer steps.
+                Advisory only, Garmin primary.
     2026-07-17  v241: "Direct to" on every tap-card. A Direct-to button now sits beside "Add to route" on
                 aerodrome, navaid, enroute-fix, procedure-fix, waypoint and village cards. It clears the
                 plan and lays a single leg PPOS (present position) -> the tapped point, fits the map to the
@@ -3217,11 +3233,32 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .enr-co .dms{color:#cfe1f0}
   .enr-co .dec{color:#8aa0b4}
   .enr-rt{font-size:11px;color:#8aa0b4;margin-bottom:7px;line-height:1.35}
-  .enr-add{border:1px solid #8a2f66;background:#0f141b;color:#e0479e;border-radius:5px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer}
-  .nm-dct{margin-left:6px;border:1px solid #c07f00;background:#0f141b;color:#f0a500;border-radius:5px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer}
+  .enr-add{border:1px solid #8a2f66;background:#0f141b;color:#e0479e;border-radius:5px;padding:6px 9px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+  .nm-dct{margin-left:6px;border:1px solid #c07f00;background:#0f141b;color:#f0a500;border-radius:5px;padding:6px 9px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
   .nm-dct-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(8px);z-index:6000;display:flex;align-items:center;gap:12px;background:#161b22;border:1px solid #c07f00;border-radius:10px;padding:10px 14px;color:#e8f0f8;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .15s,transform .15s}
   .nm-dct-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
   .nm-dct-undo{background:rgba(240,165,0,.16);border:1px solid #f0a500;color:#f0a500;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .gps-ov{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;background:rgba(3,5,8,.66);backdrop-filter:blur(2px)}
+  .gps-ov.on{display:flex}
+  .gps-win{width:min(420px,94vw);max-height:92vh;background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.6);overflow:hidden;display:flex;flex-direction:column}
+  .gps-h{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border)}
+  .gps-ttl{font-family:var(--mono);font-size:12px;letter-spacing:.05em;color:var(--text-dim);text-transform:uppercase}
+  .gps-ttl b{color:var(--accent)}
+  .gps-fmt{margin-left:auto;display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .gps-fmt button{font-family:var(--mono);font-size:11px;color:var(--text-dim);background:#131a24;border:0;padding:6px 10px;cursor:pointer;line-height:1}
+  .gps-fmt button.on{background:rgba(255,176,32,.16);color:var(--accent)}
+  .gps-x{border:0;background:none;color:var(--text-dim);font-size:22px;line-height:1;cursor:pointer;padding:0 2px}
+  .gps-body{padding:30px 16px 26px;text-align:center}
+  .gps-wpname{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--text-dim);text-transform:uppercase;margin-bottom:16px}
+  .gps-wpname b{color:var(--text)}
+  .gps-line{font-family:var(--mono);font-weight:700;color:var(--accent);font-size:clamp(26px,8vw,38px);line-height:1.5;letter-spacing:.02em;text-shadow:0 0 18px rgba(255,176,32,.18)}
+  .gps-prog{margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.06em}
+  .gps-empty{padding:26px 8px;color:var(--text-dim);font-size:13px;line-height:1.6;text-align:center}
+  .gps-tabs{display:flex;flex-wrap:wrap;border-top:1px solid var(--border);background:#10151c}
+  .gps-tab{flex:1 1 0;min-width:60px;border:0;background:transparent;cursor:pointer;padding:11px 6px;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.03em;color:var(--text-dim);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:2px solid transparent}
+  .gps-tab-role{display:block;font-size:8px;font-weight:600;letter-spacing:.08em;color:#5b6675;margin-bottom:3px}
+  .gps-tab.on{color:var(--accent);border-top-color:var(--accent);background:rgba(255,176,32,.07)}
+  .gps-tab.on .gps-tab-role{color:var(--accent)}
   .rwy-num{display:inline-block;transform:translate(-50%,-50%);background:#eef2f7;color:#0a0e13;font-family:var(--mono);
     font-size:10px;font-weight:800;line-height:1;padding:2px 4px;border-radius:3px;border:1px solid #0a0e13;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.5)}
   .uw-edit{min-width:208px;max-width:240px;padding-top:16px}
@@ -3436,7 +3473,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .map-near-box .mn-f{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);font-variant-numeric:tabular-nums}
   .map-near-box .mn-f b{color:var(--text)}
   .map-near-box .mn-none{font-size:10.5px;color:var(--text-faint)}
-  .af-card{min-width:208px;max-width:240px}
+  .af-card{min-width:208px;max-width:264px}
   .af-h{display:flex;align-items:baseline;gap:7px;padding-right:18px;margin-bottom:9px;line-height:1.3}
   .af-id{font-family:var(--mono);font-weight:700;color:var(--accent);font-size:13px;letter-spacing:.02em;flex:0 0 auto}
   .af-nm{flex:1;min-width:0;font-size:12px;color:var(--text);font-weight:600;line-height:1.3}
@@ -3555,10 +3592,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .db-x:hover{color:var(--text)}
   .db-plot{padding:4px 10px 8px;overflow:hidden}
   .db-svg{display:block;width:100%;height:auto;max-height:30vh;margin:0 auto;touch-action:none}
-  .af-acts{display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
-  .af-route{flex:1;background:var(--accent);color:#0a0e13;border:none;border-radius:5px;padding:7px 10px;font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+  .af-acts{display:flex;flex-wrap:wrap;align-items:center;gap:6px;border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
+  .af-route{flex:1 1 40%;background:var(--accent);color:#0a0e13;border:none;border-radius:5px;padding:7px 10px;font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;white-space:nowrap;cursor:pointer}
   .af-route:hover{background:#ffc24a}
-  .af-edit{flex:0 0 auto;background:transparent;border:none;color:var(--text-dim);font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.04em;cursor:pointer;padding:7px 2px}
+  .af-edit{flex:1 1 100%;background:transparent;border:none;color:var(--text-dim);font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.04em;cursor:pointer;padding:4px 2px 0;text-align:center;white-space:nowrap}
+  .af-acts .nm-dct{flex:1 1 40%;margin-left:0;padding:7px 10px;font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;white-space:nowrap}
   .wpt-card .af-h .af-nm{font-size:13px;color:var(--text);font-weight:700}
   .af-acts .wpt-del{color:var(--bad)}
   .af-edit:hover{color:var(--accent)}
@@ -4035,6 +4073,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
           <button class="ghost" id="exportGpxBtn" type="button">Export GPX</button>
         </div>
       </div>
+      <button class="ghost" id="gpsCoordsBtn" title="Show route coordinates formatted for Garmin entry">GPS</button>
       <button class="ghost" id="clearBtn">Clear</button>
     </div>
   </aside>
@@ -4492,6 +4531,9 @@ const NM_REGION = {
 /* ===== Map ===== */
 const map = L.map('map', {
   zoomControl: true,
+  zoomSnap: 0,               // smooth, continuous pinch zoom (no snapping to integer levels)
+  zoomDelta: 0.5,            // +/- buttons & keys step half a level
+  wheelPxPerZoomLevel: 18,   // quicker scroll/zoom response (Leaflet default 60)
   worldCopyJump: true,
   // Don't auto-fade tiles — cuts down on render thrash when tiles fail
   fadeAnimation: false,
@@ -6723,6 +6765,81 @@ window.addFieldToRoute = function(name, coord){
 })();
 
 document.getElementById('exportBtn')?.addEventListener('click', exportPdf);
+// ---- GPS overlay: live route coordinates formatted for punching into the Garmin ----
+// Reads state.rows, one point per tab (Departure -> waypoints -> Arrival). Amber, two lines,
+// with a DMS <-> D-M.M format toggle to match however the unit is set. Advisory; read-only.
+(function(){
+  var gpsBtn=document.getElementById('gpsCoordsBtn'); if(!gpsBtn) return;
+  var ovEl=null, fmt='dms', idx=0, pts=[];
+  try{ var sv=localStorage.getItem('nmplotter_gps_fmt'); if(sv==='dms'||sv==='ddm') fmt=sv; }catch(_){}
+  function dms(dec,isLat){
+    var hemi=isLat?(dec<0?'S':'N'):(dec<0?'W':'E');
+    var a=Math.abs(dec), d=Math.floor(a), mf=(a-d)*60, m=Math.floor(mf), sec=Math.round((mf-m)*600)/10;
+    if(sec>=60){sec-=60;m++;} if(m>=60){m-=60;d++;}
+    var ss=(sec<10?'0':'')+sec.toFixed(1);
+    return d+'\u00b0'+String(m).padStart(2,'0')+"'"+ss+'"'+hemi;
+  }
+  function ddm(dec,isLat){
+    var hemi=isLat?(dec<0?'S':'N'):(dec<0?'W':'E');
+    var a=Math.abs(dec), d=Math.floor(a), mf=Math.round((a-d)*6000)/100;
+    if(mf>=60){mf-=60;d++;}
+    var dd=isLat?String(d).padStart(2,'0'):String(d).padStart(3,'0');
+    var mm=(mf<10?'0':'')+mf.toFixed(2);
+    return hemi+' '+dd+'\u00b0'+mm+"'";
+  }
+  function collect(){
+    var out=[];
+    for(var i=0;i<state.rows.length;i++){
+      var r=state.rows[i];
+      if(!r.coord || !r.coord.trim()) continue;
+      var c; try{ c=parseCoordinatePair(r.coord); }catch(e){ continue; }
+      out.push({ name:((r.name||'').trim()||('WP'+(out.length+1))), lat:c.lat, lon:c.lon });
+    }
+    return out;
+  }
+  function roleTag(i,n){ return i===0?'DEP':(i===n-1?'ARR':('WPT '+i)); }
+  function roleName(i,n){ return i===0?'Departure':(i===n-1?'Arrival':('Waypoint '+i)); }
+  function render(){
+    if(!ovEl) return;
+    var body=ovEl.querySelector('.gps-body'), tabs=ovEl.querySelector('.gps-tabs');
+    ovEl.querySelectorAll('.gps-fmt button').forEach(function(x){ x.classList.toggle('on', x.dataset.fmt===fmt); });
+    if(!pts.length){
+      body.innerHTML='<div class="gps-empty">No plotted coordinates yet.<br>Add points to your route first.</div>';
+      tabs.innerHTML=''; return;
+    }
+    if(idx>=pts.length) idx=pts.length-1;
+    var f=(fmt==='dms')?dms:ddm, p=pts[idx], n=pts.length;
+    body.innerHTML='<div class="gps-wpname">'+escapeHtml(roleName(idx,n))+' \u00b7 <b>'+escapeHtml(p.name)+'</b></div>'
+      +'<div class="gps-line">'+escapeHtml(f(p.lat,true))+'</div>'
+      +'<div class="gps-line">'+escapeHtml(f(p.lon,false))+'</div>'
+      +'<div class="gps-prog">Point '+(idx+1)+' of '+n+'</div>';
+    tabs.innerHTML='';
+    pts.forEach(function(pp,i){
+      var b=document.createElement('button'); b.type='button'; b.className='gps-tab'+(i===idx?' on':'');
+      b.innerHTML='<span class="gps-tab-role">'+roleTag(i,n)+'</span>'+escapeHtml(pp.name);
+      b.addEventListener('click',function(){ idx=i; render(); });
+      tabs.appendChild(b);
+    });
+  }
+  function build(){
+    ovEl=document.createElement('div'); ovEl.className='gps-ov';
+    ovEl.innerHTML='<div class="gps-win">'
+      +'<div class="gps-h"><span class="gps-ttl"><b>GPS</b> \u00b7 coordinates for entry</span>'
+      +'<span class="gps-fmt"><button type="button" data-fmt="dms">D\u00b0M\'S"</button><button type="button" data-fmt="ddm">D\u00b0M.M\'</button></span>'
+      +'<button type="button" class="gps-x" aria-label="Close">\u00d7</button></div>'
+      +'<div class="gps-body"></div><div class="gps-tabs"></div></div>';
+    document.body.appendChild(ovEl);
+    ovEl.addEventListener('click',function(e){ if(e.target===ovEl) close(); });
+    ovEl.querySelector('.gps-x').addEventListener('click',close);
+    ovEl.querySelectorAll('.gps-fmt button').forEach(function(b){
+      b.addEventListener('click',function(){ fmt=b.dataset.fmt; try{localStorage.setItem('nmplotter_gps_fmt',fmt);}catch(_){} render(); });
+    });
+  }
+  function open(){ if(!ovEl) build(); pts=collect(); idx=0; ovEl.classList.add('on'); render(); }
+  function close(){ if(ovEl) ovEl.classList.remove('on'); }
+  gpsBtn.addEventListener('click',open);
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && ovEl && ovEl.classList.contains('on')) close(); });
+})();
 document.getElementById('exportGpxBtn')?.addEventListener('click', exportGpx);
 (function(){
   const w = document.getElementById('expWrap'), b = document.getElementById('exportMenuBtn');
