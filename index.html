@@ -10,6 +10,14 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v238: AYGA Goroka procedure fixes + RNAV-Y/-Z variant matcher. (1) Added the 7 AYGA
+                RNAV RWY 35L fixes (YGASA/IAF, YGASI/IF, YGASF/FAF, YGASG/SDF, YGASH/MATF, and the two
+                split MAPTs YGASY[Y]/YGASZ[Z]) from ENR 4.3.2 (eff 05 OCT 2023) — Goroka is a parallel-
+                runway field so "35L" is a real designator. (2) parsePlate now reads an RNAV variant
+                letter (Z,Y,X,W — ICAO assigns from Z down) and matchFixes uses it: a variant-tagged fix
+                shows only on its own plate; if the plate's variant can't be read it still shows (never
+                withhold a MAPT). Shared fixes carry no variant and show on either. PROC_FIXES now 49.
+                Danny-verified before shipping. Advisory; Garmin primary.
     2026-07-17  v237: Letter-designated approaches + AYMD/AYMH fixes. (1) parsePlate/matchFixes now
                 recognise a procedure LETTER (e.g. "RNAV (GNSS) A") as an alternative key to the runway,
                 so approaches designated by letter can match their fixes; runway matching unchanged and
@@ -12311,7 +12319,16 @@ if (navigator.storage && navigator.storage.persist) {
       {id:'YMHEB', role:'IAF',   lat:-5.819050, lon:144.589378, ap:'AYMH', ty:'RNAV', proc:'A'},
       {id:'YMHEI', role:'IF',    lat:-5.767586, lon:144.503206, ap:'AYMH', ty:'RNAV', proc:'A'},
       {id:'YMHEF', role:'FAF',   lat:-5.765669, lon:144.419622, ap:'AYMH', ty:'RNAV', proc:'A'},
-      {id:'YMHEM', role:'MAPT',  lat:-5.827550, lon:144.306658, ap:'AYMH', ty:'RNAV', proc:'A'}
+      {id:'YMHEM', role:'MAPT',  lat:-5.827550, lon:144.306658, ap:'AYMH', ty:'RNAV', proc:'A'},
+      // AYGA Goroka RNAV-Y & RNAV-Z (GNSS) RWY 35L (ENR 4.3.2, eff 05 OCT 2023) — parallel-rwy field (17L/35R + 17R/35L).
+      // YGASA/I/F/G/H are shared by both variants (no 'variant' tag); only the MAPT splits Y vs Z.
+      {id:'YGASA', role:'IAF',   lat:-6.477211, lon:145.504133, ap:'AYGA', ty:'RNAV', rwy:'35L'},
+      {id:'YGASI', role:'IF',    lat:-6.330625, lon:145.413050, ap:'AYGA', ty:'RNAV', rwy:'35L'},
+      {id:'YGASF', role:'FAF',   lat:-6.252036, lon:145.406156, ap:'AYGA', ty:'RNAV', rwy:'35L'},
+      {id:'YGASG', role:'SDF',   lat:-6.225853, lon:145.403858, ap:'AYGA', ty:'RNAV', rwy:'35L'},
+      {id:'YGASH', role:'MATF',  lat:-6.251275, lon:145.511700, ap:'AYGA', ty:'RNAV', rwy:'35L'},
+      {id:'YGASY', role:'MAPT',  lat:-6.142067, lon:145.396511, ap:'AYGA', ty:'RNAV', rwy:'35L', variant:'Y'},
+      {id:'YGASZ', role:'MAPT',  lat:-6.155167, lon:145.397661, ap:'AYGA', ty:'RNAV', rwy:'35L', variant:'Z'}
     ];
     function parsePlate(name){
       // Normalise separators (underscores, dots, hyphens) to spaces FIRST so \b
@@ -12332,7 +12349,14 @@ if (navigator.storage && navigator.storage.persist) {
         var pm = s.match(/\b(?:GNSS|RNAV|RNP|VOR|NDB|ILS|LOC|TACAN)\s+([A-Z])\b/);
         if(pm) proc = pm[1];
       }
-      return { ap:ap, ty:ty, rwy:rwy, proc:proc };
+      // RNAV-Y / RNAV-Z style variants: multiple RNAV approaches to the SAME runway.
+      // The variant letter (ICAO assigns from Z downward: Z,Y,X,W...) sits right after
+      // RNAV, optionally after GNSS: "RNAV-Y (GNSS) RWY 35L" or "RNAV (GNSS) Z RWY 35L".
+      // Distinct from the letter-designated approaches above (A/B, which carry NO runway).
+      var variant = null;
+      var vm = s.match(/\bRNAV\s+(?:GNSS\s+)?([V-Z])\b/);
+      if(vm) variant = vm[1];
+      return { ap:ap, ty:ty, rwy:rwy, proc:proc, variant:variant };
     }
     function matchFixes(name){
       var p = parsePlate(name);
@@ -12341,7 +12365,13 @@ if (navigator.storage && navigator.storage.persist) {
       function nr(x){ return String(x||'').replace(/^0+(?=\d)/, ''); }
       return PROC_FIXES.filter(function(f){
         if(f.ap!==p.ap || f.ty!==p.ty) return false;
-        if(p.rwy && f.rwy) return nr(f.rwy)===nr(p.rwy);   // runway-designated approach
+        if(p.rwy && f.rwy){                                 // runway-designated approach
+          if(nr(f.rwy)!==nr(p.rwy)) return false;
+          // RNAV-Y/-Z variants: a variant-tagged fix shows only on its own plate. If the
+          // plate's variant can't be read, show it anyway — never withhold a MAPT.
+          if(f.variant && p.variant) return f.variant===p.variant;
+          return true;
+        }
         if(p.proc && f.proc) return f.proc===p.proc;       // letter-designated approach (RNAV A/B)
         return false;
       });
