@@ -10,6 +10,14 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v235: ENR 4.3 fixes extended to AYNZ Nadzab (home base). Added the RNAV (GNSS) RWY 27
+                set (YNZEI/IF, YNZEZ/SDF, YNZEF/FAF, YNZEM/MAPT, YNZEH/MATF) and the RWY 09 set
+                (YNZWA/IAF, WESFI/IAF, YNZWI/IF, YNZWF/FAF, YNZWM/MAPT, YNZWH/MATF) to PROC_FIXES.
+                Coordinates transcribed from ENR 4.3.2 (eff 18 MAY 2023) + WESFI from ENR 4.3.1, all
+                Danny-verified against the AIP before shipping; RWY 27 has no published IAF on the 4.3.2
+                page (confirmed). These paint on the AYNZ RNAV 09/27 plates once calibrated, exactly like
+                AYPY. Also made runway matching ignore a leading zero (RWY 9 == RWY 09) so a differently
+                spelled plate name can't silently show no fixes. Advisory; Garmin primary.
     2026-07-17  v234: Procedures-tabs polish + fixes. (1) Tabs no longer overflow the card — they
                 shrink to fit (min-width:0, tighter type, clipped). (2) Decluttered the calibration
                 readout: dropped the "Calibrated / good" text line; the Map button (which only exists
@@ -12252,7 +12260,20 @@ if (navigator.storage && navigator.storage.persist) {
       {id:'YPYNM', role:'MAPT',  lat:-9.430858, lon:147.213903, ap:'AYPY', ty:'RNAV', rwy:'14L'},
       {id:'YPYNT', role:'MATF',  lat:-9.502236, lon:147.257975, ap:'AYPY', ty:'RNAV', rwy:'14L'},
       {id:'YPYNH', role:'MAF',   lat:-9.518744, lon:147.127589, ap:'AYPY', ty:'RNAV', rwy:'14L'},
-      {id:'VIMIB', role:'IF/IAF',lat:-9.275856, lon:147.118225, ap:'AYPY', ty:'RNAV', rwy:'14L'}
+      {id:'VIMIB', role:'IF/IAF',lat:-9.275856, lon:147.118225, ap:'AYPY', ty:'RNAV', rwy:'14L'},
+      // AYNZ Nadzab RNAV (GNSS) RWY 27 (ENR 4.3.2, eff 18 MAY 2023) — no IAF published on the 4.3.2 page (Danny-confirmed)
+      {id:'YNZEI', role:'IF',    lat:-6.586811, lon:146.922956, ap:'AYNZ', ty:'RNAV', rwy:'27'},
+      {id:'YNZEZ', role:'SDF',   lat:-6.583214, lon:146.881244, ap:'AYNZ', ty:'RNAV', rwy:'27'},
+      {id:'YNZEF', role:'FAF',   lat:-6.578172, lon:146.822850, ap:'AYNZ', ty:'RNAV', rwy:'27'},
+      {id:'YNZEM', role:'MAPT',  lat:-6.570769, lon:146.737236, ap:'AYNZ', ty:'RNAV', rwy:'27'},
+      {id:'YNZEH', role:'MATF',  lat:-6.563542, lon:146.653819, ap:'AYNZ', ty:'RNAV', rwy:'27'},
+      // AYNZ Nadzab RNAV (GNSS) RWY 09 (ENR 4.3.2; WESFI IAF from ENR 4.3.1, Danny-confirmed onto plate)
+      {id:'YNZWA', role:'IAF',   lat:-6.696111, lon:146.106683, ap:'AYNZ', ty:'RNAV', rwy:'09'},
+      {id:'WESFI', role:'IAF',   lat:-6.550439, lon:146.407517, ap:'AYNZ', ty:'RNAV', rwy:'09'},
+      {id:'YNZWI', role:'IF',    lat:-6.554300, lon:146.547397, ap:'AYNZ', ty:'RNAV', rwy:'09'},
+      {id:'YNZWF', role:'FAF',   lat:-6.561544, lon:146.630811, ap:'AYNZ', ty:'RNAV', rwy:'09'},
+      {id:'YNZWM', role:'MAPT',  lat:-6.568867, lon:146.715258, ap:'AYNZ', ty:'RNAV', rwy:'09'},
+      {id:'YNZWH', role:'MATF',  lat:-6.576083, lon:146.798678, ap:'AYNZ', ty:'RNAV', rwy:'09'}
     ];
     function parsePlate(name){
       // Normalise separators (underscores, dots, hyphens) to spaces FIRST so \b
@@ -12270,7 +12291,10 @@ if (navigator.storage && navigator.storage.persist) {
     function matchFixes(name){
       var p = parsePlate(name);
       if(!p.ap || !p.ty || !p.rwy) return [];
-      return PROC_FIXES.filter(function(f){ return f.ap===p.ap && f.ty===p.ty && f.rwy===p.rwy; });
+      // Runway compare ignores a leading zero so a "RWY 9" plate still matches "09" data (and vice versa).
+      function nr(x){ return String(x||'').replace(/^0+(?=\d)/, ''); }
+      var prwy = nr(p.rwy);
+      return PROC_FIXES.filter(function(f){ return f.ap===p.ap && f.ty===p.ty && nr(f.rwy)===prwy; });
     }
     function fixIcon(f){
       var star = '<svg viewBox="0 0 22 22" width="20" height="20"><path d="M11 2 L13 9 L20 11 L13 13 L11 20 L9 13 L2 11 L9 9 Z" fill="#8de84a" stroke="#0d1117" stroke-width="1.2"/></svg>';
