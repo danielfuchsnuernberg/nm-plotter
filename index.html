@@ -10,6 +10,14 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v239: All 49 procedure fixes now searchable in BOTH search bars. Exposed PROC_FIXES via
+                window.NMProcFix (cross-IIFE, same pattern as NMEnroute/NMAirspace). On-map bar: new
+                "Procedure fixes" section (findProcFixes/procHtml) — picking flies + drops a labelled pin
+                (reuses goFix/goPin). Sidebar Coordinates autocomplete: new pfix rows — picking inserts the
+                fix coordinate into the route row (reuses the data-fix/fillRow path). Lime star, row shows
+                designator + "AYxx . role"; existing enroute-fix/airspace/route search untouched. This is
+                search only — the standalone toggleable procedure-fix LAYER is still parked per Danny.
+                Advisory; Garmin primary.
     2026-07-17  v238: AYGA Goroka procedure fixes + RNAV-Y/-Z variant matcher. (1) Added the 7 AYGA
                 RNAV RWY 35L fixes (YGASA/IAF, YGASI/IF, YGASF/FAF, YGASG/SDF, YGASH/MATF, and the two
                 split MAPTs YGASY[Y]/YGASZ[Z]) from ENR 4.3.2 (eff 05 OCT 2023) — Goroka is a parallel-
@@ -3211,6 +3219,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ap-item.ap-wpt .ap-name{color:#e8f0f8;font-weight:700}
   .ap-item.ap-village .ap-icao{color:var(--accent-2);font-size:9px}
   .ap-item.ap-fix .ap-icao{color:#e0479e;font-size:11px}
+  .ap-item.ap-pfix .ap-icao{color:#8de84a;font-size:11px}
   .ap-item.ap-air .ap-icao{color:#ff5a52;font-size:9px}
   .ap-item.ap-air-mbz .ap-icao{color:#b388ff}
   .ap-item.ap-air-noloc{opacity:.6}
@@ -6140,6 +6149,12 @@ const processDebounced = debounce(process, 300);
     return (window.NMEnroute.data()||[]).map(function(f){ var nm=(f.n||'').toUpperCase(), s=99; if(nm===Q)s=0; else if(nm.indexOf(Q)===0)s=1; else if(nm.indexOf(Q)>-1)s=4; return {f:f,s:s}; })
       .filter(function(x){return x.s<99;}).sort(function(a,b){return a.s-b.s||a.f.n.localeCompare(b.f.n);}).slice(0,6).map(function(x){return x.f;});
   }
+  function findProcFixes(q){
+    if(!q || q.length < 2 || !(window.NMProcFix && window.NMProcFix.data)) return [];
+    var Q=q.toUpperCase();
+    return (window.NMProcFix.data()||[]).map(function(f){ var id=(f.id||'').toUpperCase(), s=99; if(id===Q)s=0; else if(id.indexOf(Q)===0)s=1; else if(id.indexOf(Q)>-1)s=4; return {f:f,s:s}; })
+      .filter(function(x){return x.s<99;}).sort(function(a,b){return a.s-b.s||(a.f.id||'').localeCompare(b.f.id||'');}).slice(0,6).map(function(x){return x.f;});
+  }
   function findRoutes(q){
     if(!q || q.length < 2 || !(window.NMRoutes && window.NMRoutes.data)) return [];
     var Q=q.toUpperCase();
@@ -6164,6 +6179,12 @@ const processDebounced = debounce(process, 300);
       + '<span class="ap-name">'+escapeHtml(f.n)+'</span>'
       + '<span class="ap-type">fix</span></div>';
   }
+  function procHtml(f){
+    return '<div class="ap-item ap-pfix" data-fix="1" data-lat="'+f.lat+'" data-lon="'+f.lon+'" data-name="'+escapeAttr(f.id)+'">'
+      + '<span class="ap-icao">\u2726</span><span class="ap-iata"></span>'
+      + '<span class="ap-name">'+escapeHtml(f.id)+'</span>'
+      + '<span class="ap-type">'+escapeHtml((f.ap||'')+' \u00b7 '+(f.role||''))+'</span></div>';
+  }
   function airHtml(z){
     var kc = z.kind==='MBZ' ? 'mbz' : ((z.kind==='CTR' || z.kind==='ATZ' || z.kind==='TMA' || z.kind==='CTA') ? 'ctl' : 'haz');
     var noloc = (z.lat==null || z.lon==null);
@@ -6183,6 +6204,7 @@ const processDebounced = debounce(process, 300);
     const hits = find(input.value);
     const wptHits = findWpts(q);
     const fixHits = findFixes(q);
+    const procHits = findProcFixes(q);
     const airHits = findAirspace(q);
     const routeHits = findRoutes(q);
     active = 0;
@@ -6192,6 +6214,9 @@ const processDebounced = debounce(process, 300);
     }
     if(fixHits.length){
       html += '<div class="ap-sep">Enroute fixes</div>' + fixHits.map(fixHtml).join('');
+    }
+    if(procHits.length){
+      html += '<div class="ap-sep">Procedure fixes</div>' + procHits.map(procHtml).join('');
     }
     if(airHits.length){
       html += '<div class="ap-sep">Airspace areas</div>' + airHits.map(airHtml).join('');
@@ -6204,10 +6229,10 @@ const processDebounced = debounce(process, 300);
         html += '<div class="ap-foot">Searching villages\u2026</div>';
       } else if(curOnline.length){
         html += '<div class="ap-sep">Villages \u00b7 OpenStreetMap (online)</div>' + curOnline.map(villageHtml).join('');
-      } else if(!hits.length && !wptHits.length && !fixHits.length && !airHits.length && !routeHits.length){
+      } else if(!hits.length && !wptHits.length && !fixHits.length && !procHits.length && !airHits.length && !routeHits.length){
         html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
       }
-    } else if(!hits.length && !wptHits.length && !fixHits.length && !airHits.length && !routeHits.length){
+    } else if(!hits.length && !wptHits.length && !fixHits.length && !procHits.length && !airHits.length && !routeHits.length){
       html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
     }
     results.innerHTML = html;
@@ -9078,6 +9103,17 @@ document.getElementById('plotBtn').addEventListener('click', () => {
       }
       fsc.sort((x,y) => x.s - y.s || x.f.n.localeCompare(y.f.n));
     }
+    // 2.6) published procedure fixes (IAF/IF/FAF/... from ENR 4.3.2) \u2014 official nav data.
+    const psc = [];
+    if(window.NMProcFix && window.NMProcFix.data){
+      for(const f of window.NMProcFix.data()){
+        const nm = (f.id||'').toUpperCase();
+        let s = -1;
+        if(nm === q) s = 0; else if(nm.startsWith(q)) s = 1; else if(nm.includes(q)) s = 2;
+        if(s >= 0) psc.push({p:f, s});
+      }
+      psc.sort((x,y) => x.s - y.s || x.p.id.localeCompare(y.p.id));
+    }
     // 3) saved villages (kept separate so they don't crowd out airfields).
     const vsc = [];
     for(const w of all){ if((w.kind||'wpt')!=='village') continue; const s=scoreName(w.name); if(s>=0) vsc.push({w,s}); }
@@ -9107,6 +9143,7 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     const items = wsc.map(r => ({type:'wpt', w:r.w}))
       .concat(asc.map(r => ({type:'af', a:r.a})))
       .concat(fsc.map(r => ({type:'fix', f:r.f})))
+      .concat(psc.map(r => ({type:'pfix', p:r.p})))
       .concat(arsp.map(r => ({type:'air', z:r.z})))
       .concat(rsc.map(r => ({type:'route', r:r.r})))
       .concat(vsc.map(r => ({type:'village', w:r.w})));
@@ -9136,6 +9173,13 @@ document.getElementById('plotBtn').addEventListener('click', () => {
         + `<span class="ap-icao">\u25CF</span><span class="ap-iata"></span>`
         + `<span class="ap-name">${escapeHtml(it.name)}${it.region?` <span class="ap-region">${escapeHtml(it.region)}</span>`:''}</span>`
         + `<span class="ap-type">village</span></div>`;
+    }
+    if(it.type === 'pfix'){
+      const p = it.p;
+      return `<div class="ap-item ap-pfix" data-fix="1" data-lat="${p.lat}" data-lon="${p.lon}" data-name="${escapeAttr(p.id)}">`
+        + `<span class="ap-icao">\u2726</span><span class="ap-iata"></span>`
+        + `<span class="ap-name">${escapeHtml(p.id)}</span>`
+        + `<span class="ap-type">${escapeHtml((p.ap||'')+' \u00b7 '+(p.role||''))}</span></div>`;
     }
     if(it.type === 'fix'){
       const f = it.f;
@@ -12330,6 +12374,9 @@ if (navigator.storage && navigator.storage.persist) {
       {id:'YGASY', role:'MAPT',  lat:-6.142067, lon:145.396511, ap:'AYGA', ty:'RNAV', rwy:'35L', variant:'Y'},
       {id:'YGASZ', role:'MAPT',  lat:-6.155167, lon:145.397661, ap:'AYGA', ty:'RNAV', rwy:'35L', variant:'Z'}
     ];
+    // Exposed for the two search surfaces (on-map fly-to bar + sidebar autocomplete).
+    // Cross-IIFE, so it must go on window (same pattern as NMEnroute / NMAirspace).
+    window.NMProcFix = { data:function(){ return PROC_FIXES; } };
     function parsePlate(name){
       // Normalise separators (underscores, dots, hyphens) to spaces FIRST so \b
       // word boundaries fire around tokens like AYPY_ILS_RWY_32R and the date
