@@ -10,6 +10,12 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-18  v257: Plate window and My-altitude window are now genuinely the same width. Both
+                share a 248px base, but My-altitude was being narrowed by two media rules the plate
+                window never had -- 196px on a desktop pointer and 210px on small screens -- so they
+                never matched in practice. The plate window now follows the same rules (width, left
+                offset and padding). The iPad band is untouched: there My-altitude moves to the top
+                right at 322px, so the two are not side by side.
     2026-07-18  v256: Procedures list made compact, and the profile is now scrubbable. (1) The
                 procedure rows were wrapping to four lines each and swelling the card. Labels are now
                 short and single-line (RNAV 32R, ILS 32R A) with the full name on hover, Profile and
@@ -3478,11 +3484,12 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .terr-adv{margin-top:8px;font-size:9px;line-height:1.5;color:var(--text-faint)}
   .terr-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:middle;margin-right:3px}
   .terr-leg i.r{background:rgba(240,60,60,.85)} .terr-leg i.a{background:rgba(255,176,32,.85)}
-  @media (max-width:760px){ .terr-panel{width:210px;left:8px;bottom:8px;padding:9px 10px} .terr-alt b{font-size:19px} }
+  @media (max-width:760px){ .terr-panel{width:210px;left:8px;bottom:8px;padding:9px 10px} .nmpo-ctrl{width:210px;left:8px;padding:9px 10px} .terr-alt b{font-size:19px} }
   /* Desktop (mouse/fine pointer): tighten controls — the default sizes are tuned for finger taps on the iPad */
   @media (hover:hover) and (pointer:fine){
     /* Altitude panel */
     .terr-panel{width:196px;padding:8px 9px}
+    .nmpo-ctrl{width:196px;padding:8px 9px}
     .terr-ttl{font-size:9.5px}
     .terr-alt{font-size:11px}
     .terr-alt b{font-size:16px}
@@ -13989,7 +13996,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v256 &middot; 2026-07-18</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v257 &middot; 2026-07-18</div>
       </div>
     </div>
   </div>
