@@ -10,6 +10,14 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-18  v256: Procedures list made compact, and the profile is now scrubbable. (1) The
+                procedure rows were wrapping to four lines each and swelling the card. Labels are now
+                short and single-line (RNAV 32R, ILS 32R A) with the full name on hover, Profile and
+                Edit are uniform 52px buttons, and the whole section is collapsed by default with its
+                count in the header -- matching Charts and My-notes. (2) The briefing profile now has
+                a draggable crosshair like the terrain profile: drag across it to read the distance
+                from the reference point and the profile altitude at that spot, with the nearest fix
+                named when you are close to one.
     2026-07-18  v255: Briefing profile view, the ILS model, and two loose ends. (1) PROFILE: every
                 procedure with profile data now has a Profile button on the airfield card that draws
                 the side view -- each fix at its crossing altitude, descending left-to-right with the
@@ -3599,15 +3607,21 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .af-proc-h{display:flex;align-items:center;margin-bottom:6px}
   .af-proc-h span{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
   .af-proc-list{display:flex;flex-direction:column;gap:5px}
-  .af-proc-item{display:flex;align-items:stretch;gap:6px}
-  .af-proc-sel{flex:1;display:flex;align-items:center;gap:8px;background:var(--inset);border:1px solid var(--border-strong);border-radius:7px;color:var(--text-2);font-family:var(--mono);font-size:12px;padding:8px 10px;cursor:pointer;text-align:left}
+  .af-proc-item{display:flex;align-items:stretch;gap:5px}
+  .af-proc-sel{flex:1;min-width:0;display:flex;align-items:center;gap:6px;background:var(--inset);border:1px solid var(--border-strong);border-radius:7px;color:var(--text-2);font-family:var(--mono);font-size:12px;padding:7px 9px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden}
+  .af-proc-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .af-proc-sel:hover{border-color:var(--accent-2);color:var(--text)}
   .af-proc-item.on .af-proc-sel{border-color:#8de84a;color:#bff29a;background:rgba(141,232,74,.10)}
-  .af-proc-edit,.af-proc-prof{background:var(--inset);border:1px solid var(--border-strong);border-radius:7px;color:var(--text-dim);font-family:var(--sans);font-size:11px;font-weight:600;padding:0 12px;cursor:pointer}
+  .af-proc-edit,.af-proc-prof{flex:0 0 auto;width:52px;background:var(--inset);border:1px solid var(--border-strong);border-radius:7px;color:var(--text-dim);font-family:var(--sans);font-size:10.5px;font-weight:600;padding:0;cursor:pointer;white-space:nowrap}
   .af-proc-edit:hover,.af-proc-prof:hover{border-color:var(--accent-2);color:var(--text)}
   .pv-modal{width:720px}
   .pv-wrap{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:6px 4px;overflow-x:auto}
   .pv-svg{display:block;width:100%;min-width:560px;height:auto}
+  .pv-read{display:flex;gap:16px;align-items:center;margin-top:8px;padding:7px 10px;background:var(--inset);border:1px solid var(--border);border-radius:7px;font-family:var(--mono);font-size:11.5px}
+  .pv-r-d{color:var(--text-2)}
+  .pv-r-a{color:#ffb020;font-weight:600}
+  .pv-r-n{color:#8de84a;margin-left:auto}
+  .pv-svg{touch-action:none;cursor:crosshair}
   .pv-line{margin-top:9px;font-size:12px;color:var(--text-dim);line-height:1.5}
   .pv-line b{color:var(--accent-2);font-weight:600;margin-right:5px}
   .pv-src{margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--text-fainter)}
@@ -3629,7 +3643,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .pa-vf.on{background:#34d399;border-color:#34d399}
   .pa-vf.on::after{content:"";position:absolute;left:7px;top:3px;width:6px;height:11px;border:solid #06241a;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
   .pa-note{margin-top:12px;font-size:11.5px;color:var(--text-dim);line-height:1.5}
-  .af-proc-alt{margin-left:auto;font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:#8de84a;border:1px solid rgba(141,232,74,.4);border-radius:4px;padding:1px 5px}
+  .af-proc-alt{flex:0 0 auto;margin-left:auto;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:#8de84a;border:1px solid rgba(141,232,74,.4);border-radius:4px;padding:1px 4px}
   .enr-alt{margin-top:5px;font-family:var(--mono);font-size:11px;color:#f0a500}
   .pf-sel{display:inline-block;margin-left:3px;white-space:nowrap;font-family:var(--mono);vertical-align:middle;line-height:1.05}
   .pf-sel b{color:#dce6f0;font-size:11px;font-weight:600;text-shadow:0 0 3px #0a0e13,0 0 3px #0a0e13}
@@ -8814,14 +8828,14 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     var procHtml = '';
     if(_procs.length){
       var _selpk = window.NMProcSelected ? window.NMProcSelected() : null;
-      procHtml = '<div class="af-proc af-coll open"><div class="af-proc-h af-coll-h"><span>Procedures</span><i class="af-coll-cv">\u25B6</i></div><div class="af-coll-b"><div class="af-proc-list">'
+      procHtml = '<div class="af-proc af-coll"><div class="af-proc-h af-coll-h"><span>Procedures ('+_procs.length+')</span><i class="af-coll-cv">\u25B6</i></div><div class="af-coll-b"><div class="af-proc-list">'
         + _procs.map(function(p){
             var on=(p.key===_selpk)?' on':'';
             var badge=p.hasAlt?'<span class="af-proc-alt">alt</span>':'';
             var acts='';
             if(p.hasProf) acts+='<button type="button" class="af-proc-prof" data-pk="'+escapeAttr(p.key)+'">Profile</button>';
             if(p.fixes.length) acts+='<button type="button" class="af-proc-edit" data-pk="'+escapeAttr(p.key)+'">Edit</button>';
-            return '<div class="af-proc-item'+on+'" data-pk="'+escapeAttr(p.key)+'"><button type="button" class="af-proc-sel" data-pk="'+escapeAttr(p.key)+'">'+escapeHtml(p.label)+badge+'</button>'+acts+'</div>';
+            return '<div class="af-proc-item'+on+'" data-pk="'+escapeAttr(p.key)+'"><button type="button" class="af-proc-sel" data-pk="'+escapeAttr(p.key)+'" title="'+escapeAttr(p.label)+'"><span class="af-proc-nm">'+escapeHtml(p.short)+'</span>'+badge+'</button>'+acts+'</div>';
           }).join('')
         + '</div></div></div>';
     }
@@ -11186,6 +11200,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   var PF_ROLE_ORD = {'IAF':1,'IF/IAF':1,'IAF/HOLD':1,'IF':2,'FAF':3,'SDF':4,'MAPT':5,'MAHF':6,'MATF':6,'MAF':7,'MAF/HOLD':7};
   function pfKey(f){ return f.ap+'|'+f.ty+'|'+(f.rwy||'')+(f.variant?('|'+f.variant):''); }
   function pfProcLabel(p){ var b=(p.ty==='RNAV'?'RNAV (GNSS)':p.ty)+' RWY '+(p.rwy||''); return p.variant?(b+' '+p.variant):b; }
+  function pfProcShort(p){ var b=(p.ty||'')+' '+(p.rwy||''); if(p.variant){ var w=String(p.variant).split(/\s+/); b+=' '+w[w.length-1]; } return b; }
   function pfProcs(ap){
     var m={}, order=[];
     if(!(window.NMProcFix && window.NMProcFix.data)) return [];
@@ -11200,7 +11215,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       m[k]={key:k, ty:q[1], rwy:q[2], variant:q[3], fixes:[]}; order.push(k);
     });
     return order.map(function(k){
-      var p=m[k]; p.label=pfProcLabel(p);
+      var p=m[k]; p.label=pfProcLabel(p); p.short=pfProcShort(p);
       var meta=PROC_META[k];
       p.hasAlt = p.fixes.some(function(x){return pfEffAlt(x).alt!=null;}) || !!(meta && meta.pts && meta.pts.length);
       p.hasProf = !!(meta && (meta.pts || meta.gp!=null));
@@ -11310,7 +11325,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var W=680,H=330,mL=52,mR=104,mT=22,mB=44,pw=W-mL-mR,ph=H-mT-mB;
     var X=function(x){ return mL+((x-x0)/(x1-x0))*pw; };
     var Y=function(a){ return mT+(1-a/altTop)*ph; };
-    var o=['<svg viewBox="0 0 '+W+' '+H+'" class="pv-svg">'];
+    var o=['<svg viewBox="0 0 '+W+' '+H+'" class="pv-svg" data-ml="'+mL+'" data-pw="'+pw+'" data-x0="'+x0+'" data-x1="'+x1+'" data-mt="'+mT+'" data-ph="'+ph+'" data-at="'+altTop+'" data-ref="'+escapeAttr(meta.ref||'MAPt')+'">'];
     for(var a=0;a<=altTop;a+=1000){
       o.push('<line x1="'+mL+'" y1="'+Y(a)+'" x2="'+(mL+pw)+'" y2="'+Y(a)+'" stroke="#141c26" stroke-width="1"/>');
       o.push('<text x="'+(mL-8)+'" y="'+(Y(a)+4)+'" text-anchor="end" fill="#5f7186" font-size="11" font-family="var(--mono)">'+(a?a.toLocaleString():'0')+'</text>');
@@ -11347,12 +11362,14 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var ann=[]; if(meta.gp!=null) ann.push(meta.gp.toFixed(2)+'\u00b0'); if(meta.crs!=null) ann.push(meta.crs+'\u00b0');
     if(meta.tch!=null) ann.push('TCH '+meta.tch+'\u2032');
     if(ann.length) o.push('<text x="'+(mL+pw-4)+'" y="'+(mT+13)+'" text-anchor="end" fill="#8a9bb0" font-size="11" font-family="var(--mono)">'+ann.join('  \u00b7  ')+'</text>');
+    o.push('<g class="pv-cur" style="display:none"><line class="pv-cur-l" y1="'+mT+'" y2="'+Y(0)+'" stroke="#2b8cff" stroke-width="1" stroke-dasharray="3 3"/><circle class="pv-cur-d" r="4" fill="#2b8cff" stroke="#0d1219" stroke-width="1.5"/></g>');
     o.push('</svg>');
     var extra='';
     if(meta.init) extra+='<div class="pv-line"><b>Initial</b> '+escapeHtml(meta.init)+'</div>';
     if(meta.missed) extra+='<div class="pv-line"><b>Missed</b> '+escapeHtml(meta.missed)+'</div>';
     if(meta.src) extra+='<div class="pv-src">'+escapeHtml(meta.src)+' \u00b7 advisory only \u2014 Garmin primary</div>';
-    return '<div class="pv-wrap">'+o.join('')+'</div>'+extra;
+    var _sc=pts.map(function(q){ return {x:q.x, a:q.alt, id:q.id}; });
+    return '<div class="pv-wrap" data-pts="'+escapeAttr(JSON.stringify(_sc))+'">'+o.join('')+'</div>'+'<div class="pv-read" style="display:none"><span class="pv-r-d"></span><span class="pv-r-a"></span><span class="pv-r-n"></span></div>'+extra;
   }
   function openProcProfile(key){
     var fs=(window.NMProcFix&&window.NMProcFix.data)?window.NMProcFix.data().filter(function(f){return pfKey(f)===key;}):[];
@@ -11364,6 +11381,50 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     ov.innerHTML='<div class="cr-modal pv-modal"><div class="cr-head"><h3>'+escapeHtml(parts[0]+' \u00b7 '+label)+'</h3><button type="button" class="cr-close pv-close">\u00d7</button></div>'
       +'<div class="cr-body">'+profSvg(key,label)+'</div></div>';
     document.body.appendChild(ov);
+    (function(){
+      var wrap=ov.querySelector('.pv-wrap'), svg=wrap&&wrap.querySelector('.pv-svg');
+      var read=ov.querySelector('.pv-read'); if(!wrap||!svg||!read) return;
+      var pts=[]; try{ pts=JSON.parse(wrap.getAttribute('data-pts'))||[]; }catch(_){ }
+      if(pts.length<1) return;
+      var mL=+svg.getAttribute('data-ml'), pw=+svg.getAttribute('data-pw'),
+          x0=+svg.getAttribute('data-x0'), x1=+svg.getAttribute('data-x1'),
+          mT=+svg.getAttribute('data-mt'), ph=+svg.getAttribute('data-ph'),
+          at=+svg.getAttribute('data-at'), ref=svg.getAttribute('data-ref')||'MAPt';
+      var g=svg.querySelector('.pv-cur'), ln=svg.querySelector('.pv-cur-l'), dt=svg.querySelector('.pv-cur-d');
+      var srt=pts.slice().sort(function(a,b){ return a.x-b.x; });
+      function altAt(x){
+        if(x<=srt[0].x) return srt[0].a;
+        if(x>=srt[srt.length-1].x) return srt[srt.length-1].a;
+        for(var i=0;i<srt.length-1;i++){
+          if(x>=srt[i].x && x<=srt[i+1].x){
+            var t=(srt[i+1].x===srt[i].x)?0:(x-srt[i].x)/(srt[i+1].x-srt[i].x);
+            return srt[i].a+t*(srt[i+1].a-srt[i].a);
+          }
+        }
+        return srt[srt.length-1].a;
+      }
+      function scrub(e){
+        var r=svg.getBoundingClientRect(); if(!r.width) return;
+        var vb=svg.viewBox.baseVal, sx=vb.width/r.width;
+        var px=(e.clientX-r.left)*sx;
+        if(px<mL) px=mL; if(px>mL+pw) px=mL+pw;
+        var xv=x0+((px-mL)/pw)*(x1-x0);
+        var a=altAt(xv), py=mT+(1-a/at)*ph;
+        ln.setAttribute('x1',px); ln.setAttribute('x2',px);
+        dt.setAttribute('cx',px); dt.setAttribute('cy',py);
+        g.style.display='';
+        var near=null,bd=1e9; pts.forEach(function(q){ var d=Math.abs(q.x-xv); if(d<bd){bd=d;near=q;} });
+        read.querySelector('.pv-r-d').textContent=Math.abs(xv).toFixed(1)+' NM '+(xv<0?'to ':'past ')+ref;
+        read.querySelector('.pv-r-a').textContent=Math.round(a/10)*10+' ft';
+        read.querySelector('.pv-r-n').textContent=(near&&bd<1.2)?('at '+near.id):'';
+        read.style.display='';
+      }
+      function leave(){ g.style.display='none'; read.style.display='none'; }
+      svg.addEventListener('pointermove',scrub);
+      svg.addEventListener('pointerdown',scrub);
+      svg.addEventListener('pointerleave',leave);
+      svg.addEventListener('pointerup',function(e){ if(e.pointerType==='touch') leave(); });
+    })();
     function close(){ ov.remove(); }
     ov.querySelector('.pv-close').addEventListener('click',close);
     ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
@@ -13928,7 +13989,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v255 &middot; 2026-07-18</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v256 &middot; 2026-07-18</div>
       </div>
     </div>
   </div>
