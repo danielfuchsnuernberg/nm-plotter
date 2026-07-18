@@ -10,6 +10,11 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-18  v258: BUGFIX -- the terrain profile was broken by a name collision. The procedure
+                briefing profile added in v255 declared a function named profSvg in the SAME scope as
+                the terrain profile's own profSvg, so the later declaration silently replaced the
+                earlier one: "Terrain profile" was calling the procedure renderer and drawing nothing.
+                The procedure one is renamed pfProfSvg. Affected v255-v257 only; terrain profile restored.
     2026-07-18  v257: Plate window and My-altitude window are now genuinely the same width. Both
                 share a 248px base, but My-altitude was being narrowed by two media rules the plate
                 window never had -- 196px on a desktop pointer and 210px on small screens -- so they
@@ -11319,7 +11324,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     pts.sort(function(a,b){ return (a.ord||9)-(b.ord||9); });
     return {meta:meta, pts:pts, kind:'rnav'};
   }
-  function profSvg(key,label){
+  function pfProfSvg(key,label){
     var P=profPoints(key);
     if(!P || !P.pts.length) return '<div class="pv-empty">No altitudes yet for this procedure.<br>Use <b>Edit</b> on the procedure to enter them from the plate.</div>';
     var meta=P.meta||{}, pts=P.pts;
@@ -11386,7 +11391,7 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var prev=document.querySelector('.pv-ov'); if(prev) prev.remove();
     var ov=document.createElement('div'); ov.className='cr-overlay pv-ov active';
     ov.innerHTML='<div class="cr-modal pv-modal"><div class="cr-head"><h3>'+escapeHtml(parts[0]+' \u00b7 '+label)+'</h3><button type="button" class="cr-close pv-close">\u00d7</button></div>'
-      +'<div class="cr-body">'+profSvg(key,label)+'</div></div>';
+      +'<div class="cr-body">'+pfProfSvg(key,label)+'</div></div>';
     document.body.appendChild(ov);
     (function(){
       var wrap=ov.querySelector('.pv-wrap'), svg=wrap&&wrap.querySelector('.pv-svg');
@@ -13996,7 +14001,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v257 &middot; 2026-07-18</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v258 &middot; 2026-07-18</div>
       </div>
     </div>
   </div>
