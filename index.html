@@ -10,6 +10,12 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-17  v249: Uniformity between the plate window and the My-altitude (terrain) window. (1) The
+                My-altitude window is now 248px wide to match the plate window (was 242). (2) The plate
+                control window is collapsible: header is a click bar with a chevron, and it auto-collapses
+                when you click away on the map -- just like the My-altitude window. Collapsed shows name +
+                fit badge + chevron; expanded shows switcher/opacity/Hide-Fullscreen/advisory. map 'click'
+                handler (plateMapClick) torn down in removeControls. Advisory; Garmin primary.
     2026-07-17  v248: Chart section keeps a constant height across the Airport/Departure/Arrival/Approach/
                 Other tabs, so the airfield card no longer grows/shrinks (jumps) as you switch tabs. The
                 height is sized once to the airport's fullest tab (approach counts its runway sub-headers),
@@ -3379,7 +3385,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wx-save{width:100%;padding:11px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#0a0e13;font-weight:700;font-size:14px;cursor:pointer}
 
   /* ===== Terrain altitude shading ===== */
-  .terr-panel{position:absolute;left:12px;bottom:12px;z-index:560;width:242px;max-width:calc(100% - 24px);
+  .terr-panel{position:absolute;left:12px;bottom:12px;z-index:560;width:248px;max-width:calc(100% - 24px);
     background:rgba(13,18,25,.94);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
     border:1px solid var(--border-strong);border-radius:11px;padding:11px 12px;
     box-shadow:0 10px 30px rgba(0,0,0,.5);display:none}
@@ -3593,7 +3599,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .af-chart-menu button:hover{background:var(--bg-2);color:#e6edf3}
   .nmpo-ctrl{position:absolute;left:12px;bottom:12px;z-index:1200;width:248px;max-width:calc(100% - 24px);background:rgba(17,24,32,.94);border:1px solid #2a3a49;border-radius:11px;padding:11px 12px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 8px 24px rgba(0,0,0,.45);font-family:var(--sans);color:#e6edf3}
   .nmpo-ctrl.hidden{display:none}
-  .nmpo-ch{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+  .nmpo-ch{display:flex;align-items:center;gap:8px;margin-bottom:9px;cursor:pointer;user-select:none;-webkit-user-select:none}
   .nmpo-ch .nm{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .nmpo-ch .fit{flex:none;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;padding:2px 7px;border-radius:20px;border:1px solid #34d399;color:#34d399}
   .nmpo-op{display:flex;align-items:center;gap:9px;margin-bottom:10px}
@@ -3606,6 +3612,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .nmpo-b{flex:1;text-align:center;border:1px solid #2a3a49;background:transparent;color:#e6edf3;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;font-family:var(--sans)}
   .nmpo-b:active{background:#18222c}
   .nmpo-adv{margin-top:9px;font-size:10px;color:#6b7b8c;line-height:1.35}
+  .nmpo-chev{margin-left:auto;flex:0 0 auto;font-size:11px;line-height:1;color:#8b98a5;transition:transform .15s ease}
+  .nmpo-ctrl.collapsed .nmpo-chev{transform:rotate(-90deg)}
+  .nmpo-ctrl.collapsed .nmpo-ch{margin-bottom:0}
+  .nmpo-ctrl.collapsed .nmpo-swwrap,.nmpo-ctrl.collapsed .nmpo-op,.nmpo-ctrl.collapsed .nmpo-row,.nmpo-ctrl.collapsed .nmpo-adv{display:none}
   .nmpo-fix{pointer-events:none}
   .nmpo-fix svg{display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.65))}
   .nmpo-fix .lbl{position:absolute;left:23px;top:50%;transform:translateY(-50%);white-space:nowrap;display:flex;flex-direction:column;line-height:1.05}
@@ -12638,7 +12648,7 @@ if (navigator.storage && navigator.storage.persist) {
      ============================================================ */
   window.NMPlateOverlay = (function(){
     var PANE = 'nmPlateOverlay';
-    var current = null, currentUrl = null, lastItem = null, plateTerrObs = null;
+    var current = null, currentUrl = null, lastItem = null, plateTerrObs = null, plateMapClick = null;
     var ctrlEl = null, chipEl = null;
     var opacity = 0.66;
     try { var _sv = localStorage.getItem('nmPlateOpacity'); if(_sv != null){ var _n = parseFloat(_sv); if(isFinite(_n) && _n >= 0.2 && _n <= 1) opacity = _n; } } catch(e){}
@@ -12844,6 +12854,7 @@ if (navigator.storage && navigator.storage.persist) {
       if(currentUrl){ try { URL.revokeObjectURL(currentUrl); } catch(e){} currentUrl = null; }
     }
     function removeControls(){
+      if(plateMapClick){ try { map.off('click', plateMapClick); } catch(e){} plateMapClick = null; }
       if(plateTerrObs){ try { plateTerrObs.disconnect(); } catch(e){} plateTerrObs = null; }
       if(ctrlEl && ctrlEl.parentNode) ctrlEl.parentNode.removeChild(ctrlEl); ctrlEl = null;
       if(chipEl && chipEl.parentNode) chipEl.parentNode.removeChild(chipEl); chipEl = null;
@@ -12854,7 +12865,7 @@ if (navigator.storage && navigator.storage.persist) {
       var band = fitBand(item.georef);
       ctrlEl = document.createElement('div'); ctrlEl.className = 'nmpo-ctrl';
       ctrlEl.innerHTML =
-        '<div class="nmpo-ch"><span class="nm"></span><span class="fit"></span></div>' +
+        '<div class="nmpo-ch"><span class="nm"></span><span class="fit"></span><span class="nmpo-chev">\u25be</span></div>' +
         '<div class="nmpo-op"><label>Opacity</label><input type="range" min="20" max="100"><span class="pc"></span></div>' +
         '<div class="nmpo-row"><button type="button" class="nmpo-b" data-a="hide">Hide</button><button type="button" class="nmpo-b" data-a="full">Fullscreen</button></div>' +
         '<div class="nmpo-adv">Advisory overlay \u2014 Garmin remains primary. One plate at a time.</div>';
@@ -12875,6 +12886,11 @@ if (navigator.storage && navigator.storage.persist) {
       L.DomEvent.disableClickPropagation(ctrlEl);
       L.DomEvent.disableScrollPropagation(ctrlEl);
       map.getContainer().appendChild(ctrlEl);
+      // Collapsible, and collapses when you click away on the map (just like the My-altitude window).
+      var chEl = ctrlEl.querySelector('.nmpo-ch');
+      if(chEl){ chEl.addEventListener('click', function(){ if(ctrlEl) ctrlEl.classList.toggle('collapsed'); }); }
+      plateMapClick = function(){ if(ctrlEl) ctrlEl.classList.add('collapsed'); };
+      map.on('click', plateMapClick);
       // Both the plate window and the terrain window live at bottom-left. Sit the plate
       // window above the terrain window when it's showing, and follow it as it
       // collapses/expands/opens/closes (ResizeObserver fires on any of those).
