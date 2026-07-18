@@ -10,6 +10,18 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-18  v255: Briefing profile view, the ILS model, and two loose ends. (1) PROFILE: every
+                procedure with profile data now has a Profile button on the airfield card that draws
+                the side view -- each fix at its crossing altitude, descending left-to-right with the
+                missed approach continuing right, plus MDA/DA lines, glidepath, course, TCH, threshold
+                elevation and the missed-approach text. It reads the same altitude data as the map
+                labels, so your edits flow straight through. RNAV along-track distances are computed
+                from the fixes and match the plate tables exactly. (2) ILS: DME/glidepath approaches
+                have no named intermediate waypoints, so they now carry their own plate-transcribed
+                profile points -- ILS 14L and ILS 32R PROC A and PROC B are listed and briefable even
+                though they have no map fixes. (3) The missed-approach leg now draws distinctly (blue,
+                finely dashed) from the approach track, and YPYSH is corrected MAHF -> MAF per plate.
+                Advisory; Garmin primary.
     2026-07-18  v254: Procedure altitudes, step 2 -- the on-device editor (hybrid half). Each
                 procedure in the airfield card now has an Edit button that opens an altitude editor:
                 one row per fix with a crossing-altitude field, an AT / A-A (at-or-above) toggle, and
@@ -3591,8 +3603,15 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .af-proc-sel{flex:1;display:flex;align-items:center;gap:8px;background:var(--inset);border:1px solid var(--border-strong);border-radius:7px;color:var(--text-2);font-family:var(--mono);font-size:12px;padding:8px 10px;cursor:pointer;text-align:left}
   .af-proc-sel:hover{border-color:var(--accent-2);color:var(--text)}
   .af-proc-item.on .af-proc-sel{border-color:#8de84a;color:#bff29a;background:rgba(141,232,74,.10)}
-  .af-proc-edit{background:var(--inset);border:1px solid var(--border-strong);border-radius:7px;color:var(--text-dim);font-family:var(--sans);font-size:11px;font-weight:600;padding:0 12px;cursor:pointer}
-  .af-proc-edit:hover{border-color:var(--accent-2);color:var(--text)}
+  .af-proc-edit,.af-proc-prof{background:var(--inset);border:1px solid var(--border-strong);border-radius:7px;color:var(--text-dim);font-family:var(--sans);font-size:11px;font-weight:600;padding:0 12px;cursor:pointer}
+  .af-proc-edit:hover,.af-proc-prof:hover{border-color:var(--accent-2);color:var(--text)}
+  .pv-modal{width:720px}
+  .pv-wrap{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:6px 4px;overflow-x:auto}
+  .pv-svg{display:block;width:100%;min-width:560px;height:auto}
+  .pv-line{margin-top:9px;font-size:12px;color:var(--text-dim);line-height:1.5}
+  .pv-line b{color:var(--accent-2);font-weight:600;margin-right:5px}
+  .pv-src{margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--text-fainter)}
+  .pv-empty{padding:34px 16px;text-align:center;color:var(--text-faint);font-size:12.5px;line-height:1.6}
   .pa-modal{width:440px}
   .pa-list{display:flex;flex-direction:column}
   .pa-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border)}
@@ -8799,7 +8818,10 @@ document.getElementById('plotBtn').addEventListener('click', () => {
         + _procs.map(function(p){
             var on=(p.key===_selpk)?' on':'';
             var badge=p.hasAlt?'<span class="af-proc-alt">alt</span>':'';
-            return '<div class="af-proc-item'+on+'" data-pk="'+escapeAttr(p.key)+'"><button type="button" class="af-proc-sel" data-pk="'+escapeAttr(p.key)+'">'+escapeHtml(p.label)+badge+'</button><button type="button" class="af-proc-edit" data-pk="'+escapeAttr(p.key)+'">Edit</button></div>';
+            var acts='';
+            if(p.hasProf) acts+='<button type="button" class="af-proc-prof" data-pk="'+escapeAttr(p.key)+'">Profile</button>';
+            if(p.fixes.length) acts+='<button type="button" class="af-proc-edit" data-pk="'+escapeAttr(p.key)+'">Edit</button>';
+            return '<div class="af-proc-item'+on+'" data-pk="'+escapeAttr(p.key)+'"><button type="button" class="af-proc-sel" data-pk="'+escapeAttr(p.key)+'">'+escapeHtml(p.label)+badge+'</button>'+acts+'</div>';
           }).join('')
         + '</div></div></div>';
     }
@@ -8826,6 +8848,9 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     });
     root.querySelectorAll('.af-proc-edit').forEach(function(btn){
       btn.addEventListener('click', function(e){ e.stopPropagation(); if(window.NMEditProcAlt) window.NMEditProcAlt(btn.getAttribute('data-pk')); });
+    });
+    root.querySelectorAll('.af-proc-prof').forEach(function(btn){
+      btn.addEventListener('click', function(e){ e.stopPropagation(); if(window.NMProcProfile) window.NMProcProfile(btn.getAttribute('data-pk')); });
     });
   }
   // Populate the METAR slot of an open airfield card (async). Only attempts a
@@ -11116,6 +11141,39 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   var procSelLayer = L.layerGroup().addTo(map);
   var pfSelKey = null;
   // ---- On-device altitude overrides (hybrid: baked verified + your edits) ----
+  // ---- Procedure-level profile data (for the briefing profile view) ----------
+  // RNAV profiles derive their along-track distances from the fixes themselves.
+  // ILS approaches are DME/glidepath-based with no named intermediate waypoints,
+  // so their profile points come straight from the plate's distance table.
+  // All values transcribed from the AIP plate and Danny-verified. Advisory.
+  var PROC_META={
+    'AYPY|RNAV|14L':{thr:103,tch:50,gp:3.0,crs:143,da:680,mda:830,ref:'MAPt',
+      missed:'Track direct YPYNT, turn right, direct YPYNH, track 323\u00b0, climb 2900.',
+      src:'AIP PNG \u00b7 12 SEP 2019'},
+    'AYPY|RNAV|32R':{thr:128,tch:50,gp:3.0,crs:323,da:810,mda:850,ref:'MAPt',
+      missed:'Track direct YPYST, turn left, direct YPYSH, track 143\u00b0, climb 2900.',
+      src:'AIP PNG \u00b7 12 SEP 2019'},
+    'AYPY|ILS|14L':{thr:103,tch:50,gp:3.0,crs:142,da:450,mda:660,ref:'THR',
+      init:'IAF 2500 \u00b7 hold D9 PY / D8 IWG',
+      pts:[{d:7.6,alt:2500,l:'IAF',aa:false},{d:3.9,alt:1400,l:'FAF \u00b7 GP check',aa:false},
+           {d:3.9,alt:1000,l:'LLZ min',aa:true},{d:0.6,alt:450,l:'DA',aa:true}],
+      missed:'Climb 142\u00b0 to 1500, turn right 322\u00b0, climb 2500; at/beyond 9 DME PY turn right, intercept 142\u00b0 LLZ, hold 9 DME PY.',
+      src:'AIP PNG \u00b7 10 SEP 2020'},
+    'AYPY|ILS|32R|PROC A':{thr:128,tch:50,gp:3.0,crs:322,da:450,mda:550,ref:'THR',
+      init:'TESEM 4000 \u00b7 outbound 160\u00b0 for 2.5 min, then intercept',
+      pts:[{d:5.8,alt:2000,l:'Platform',aa:true},{d:3.8,alt:1400,l:'GP check',aa:false},{d:0.6,alt:450,l:'DA',aa:true}],
+      missed:'Climb 322\u00b0 to 2500 before LEFT turn to TESEM; continue climb to cross TESEM at 4000 or as instructed.',
+      src:'AIP PNG \u00b7 21 APR 2022'},
+    'AYPY|ILS|32R|PROC B':{thr:128,tch:50,gp:3.0,crs:322,da:450,mda:550,ref:'THR',
+      init:'ISLOK 4000 (13 PY)',
+      pts:[{d:12.6,alt:4000,l:'ISLOK IAF',aa:false},{d:5.8,alt:2000,l:'Platform',aa:true},
+           {d:3.8,alt:1400,l:'GP check',aa:false},{d:0.6,alt:450,l:'DA',aa:true}],
+      missed:'Climb 322\u00b0 to 2500 before LEFT turn to TESEM; continue climb to cross TESEM at 4000 or as instructed.',
+      src:'AIP PNG \u00b7 21 APR 2022'}
+  };
+  function pfNm(la1,lo1,la2,lo2){ var R=3440.065,d=Math.PI/180,dLa=(la2-la1)*d,dLo=(lo2-lo1)*d,
+    a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1*d)*Math.cos(la2*d)*Math.sin(dLo/2)*Math.sin(dLo/2);
+    return 2*R*Math.asin(Math.min(1,Math.sqrt(a))); }
   var PA_KEY='nmplotter_procalt', PA_STORE={};
   try{ PA_STORE=JSON.parse(localStorage.getItem(PA_KEY))||{}; }catch(_){ PA_STORE={}; }
   function paSave(){ try{ localStorage.setItem(PA_KEY, JSON.stringify(PA_STORE)); }catch(_){ } }
@@ -11136,7 +11194,18 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
       if(!m[k]){ m[k]={key:k, ty:f.ty, rwy:f.rwy, variant:f.variant, fixes:[]}; order.push(k); }
       m[k].fixes.push(f);
     });
-    return order.map(function(k){ var p=m[k]; p.label=pfProcLabel(p); p.hasAlt=p.fixes.some(function(x){return pfEffAlt(x).alt!=null;}); return p; });
+    Object.keys(PROC_META).forEach(function(k){
+      if(k.split('|')[0]!==ap || m[k]) return;
+      var q=k.split('|');
+      m[k]={key:k, ty:q[1], rwy:q[2], variant:q[3], fixes:[]}; order.push(k);
+    });
+    return order.map(function(k){
+      var p=m[k]; p.label=pfProcLabel(p);
+      var meta=PROC_META[k];
+      p.hasAlt = p.fixes.some(function(x){return pfEffAlt(x).alt!=null;}) || !!(meta && meta.pts && meta.pts.length);
+      p.hasProf = !!(meta && (meta.pts || meta.gp!=null));
+      return p;
+    });
   }
   function selProcIcon(f){
     var _ea=pfEffAlt(f); var alt=(_ea.alt!=null)?('<i class="pf-alt">'+(_ea.aa?'\u2265':'')+_ea.alt+'</i>'):'';
@@ -11150,7 +11219,13 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     var fixes=window.NMProcFix.data().filter(function(f){ return pfKey(f)===pfSelKey; });
     if(!fixes.length) return;
     fixes=fixes.slice().sort(function(a,b){ return (PF_ROLE_ORD[a.role]||9)-(PF_ROLE_ORD[b.role]||9); });
-    L.polyline(fixes.map(function(f){return [f.lat,f.lon];}),{color:'#8de84a',weight:2,opacity:.55,dashArray:'5 4'}).addTo(procSelLayer);
+    // Split the track: approach segment (through the MAPt) vs the missed approach,
+    // so the eye separates "flying it" from "if I go around".
+    var iM=-1; fixes.forEach(function(f,i){ if((PF_ROLE_ORD[f.role]||9)<=5) iM=i; });
+    var apSeg=(iM>=0)?fixes.slice(0,iM+1):fixes.slice();
+    var msSeg=(iM>=0)?fixes.slice(iM):[];
+    if(apSeg.length>1) L.polyline(apSeg.map(function(f){return [f.lat,f.lon];}),{color:'#8de84a',weight:2.4,opacity:.75}).addTo(procSelLayer);
+    if(msSeg.length>1) L.polyline(msSeg.map(function(f){return [f.lat,f.lon];}),{color:'#7fb3d5',weight:1.8,opacity:.5,dashArray:'3 6'}).addTo(procSelLayer);
     fixes.forEach(function(f){ L.marker([f.lat,f.lon],{icon:selProcIcon(f),zIndexOffset:500}).addTo(procSelLayer); });
   }
   window.NMProcListFor=function(ap){ return pfProcs(ap); };
@@ -11201,6 +11276,100 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
   }
   window.NMEditProcAlt=function(key){ openProcAltEditor(key); };
+  // ---- Briefing profile view -------------------------------------------------
+  // Reads the same crossing-altitude data (baked + your edits) and draws the
+  // descent gate by gate: where you should be, altitude and position.
+  // Approach descends left-to-right; the missed approach continues to the right.
+  function profPoints(key){
+    var meta=PROC_META[key]||{};
+    if(meta.pts && meta.pts.length){                 // ILS: plate distance table
+      return {meta:meta, pts:meta.pts.map(function(q){ return {d:q.d, alt:q.alt, id:q.l, role:'', aa:!!q.aa, av:true, missed:false}; }), kind:'ils'};
+    }
+    if(!(window.NMProcFix && window.NMProcFix.data)) return null;
+    var fs=window.NMProcFix.data().filter(function(f){ return pfKey(f)===key; });
+    if(!fs.length) return null;
+    var mapt=null; fs.forEach(function(f){ if((PF_ROLE_ORD[f.role]||9)===5) mapt=f; });
+    if(!mapt) mapt=fs[0];
+    var pts=fs.map(function(f){
+      var e=pfEffAlt(f), ord=(PF_ROLE_ORD[f.role]||9), miss=(ord>5);
+      return {d:pfNm(f.lat,f.lon,mapt.lat,mapt.lon), alt:e.alt, id:f.id, role:f.role, aa:e.aa, av:e.av, missed:miss, ord:ord};
+    }).filter(function(q){ return q.alt!=null; });
+    pts.sort(function(a,b){ return (a.ord||9)-(b.ord||9); });
+    return {meta:meta, pts:pts, kind:'rnav'};
+  }
+  function profSvg(key,label){
+    var P=profPoints(key);
+    if(!P || !P.pts.length) return '<div class="pv-empty">No altitudes yet for this procedure.<br>Use <b>Edit</b> on the procedure to enter them from the plate.</div>';
+    var meta=P.meta||{}, pts=P.pts;
+    // x = signed NM: approach negative (left, further out), missed positive (right)
+    pts.forEach(function(q){ q.x = q.missed ? q.d : -q.d; });
+    var xs=pts.map(function(q){return q.x;}), alts=pts.map(function(q){return q.alt;});
+    var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs);
+    if(x1-x0<1){ x0-=1; x1+=1; }
+    var altTop=Math.ceil((Math.max.apply(null,alts)+400)/1000)*1000; if(altTop<1000) altTop=1000;
+    var W=680,H=330,mL=52,mR=104,mT=22,mB=44,pw=W-mL-mR,ph=H-mT-mB;
+    var X=function(x){ return mL+((x-x0)/(x1-x0))*pw; };
+    var Y=function(a){ return mT+(1-a/altTop)*ph; };
+    var o=['<svg viewBox="0 0 '+W+' '+H+'" class="pv-svg">'];
+    for(var a=0;a<=altTop;a+=1000){
+      o.push('<line x1="'+mL+'" y1="'+Y(a)+'" x2="'+(mL+pw)+'" y2="'+Y(a)+'" stroke="#141c26" stroke-width="1"/>');
+      o.push('<text x="'+(mL-8)+'" y="'+(Y(a)+4)+'" text-anchor="end" fill="#5f7186" font-size="11" font-family="var(--mono)">'+(a?a.toLocaleString():'0')+'</text>');
+    }
+    o.push('<line x1="'+mL+'" y1="'+Y(0)+'" x2="'+(mL+pw)+'" y2="'+Y(0)+'" stroke="#2a3744" stroke-width="2"/>');
+    var minA=(meta.mda!=null?meta.mda:meta.da);
+    if(minA!=null){
+      o.push('<line x1="'+mL+'" y1="'+Y(minA)+'" x2="'+(mL+pw)+'" y2="'+Y(minA)+'" stroke="#ff5a52" stroke-width="1.3" stroke-dasharray="5 4" opacity="0.85"/>');
+      o.push('<text x="'+(mL+pw+6)+'" y="'+(Y(minA)+4)+'" fill="#ff5a52" font-size="11" font-family="var(--mono)">'+(meta.mda!=null?'MDA ':'DA ')+minA+'\u2032</text>');
+    }
+    if(meta.da!=null && meta.mda!=null && meta.da!==meta.mda){
+      o.push('<line x1="'+mL+'" y1="'+Y(meta.da)+'" x2="'+(mL+pw)+'" y2="'+Y(meta.da)+'" stroke="#ffb020" stroke-width="1.1" stroke-dasharray="3 5" opacity="0.75"/>');
+      o.push('<text x="'+(mL+pw+6)+'" y="'+(Y(meta.da)+4)+'" fill="#ffb020" font-size="11" font-family="var(--mono)">DA '+meta.da+'\u2032</text>');
+    }
+    var ap=pts.filter(function(q){return !q.missed;}), ms=pts.filter(function(q){return q.missed;});
+    if(ap.length>1) o.push('<polyline points="'+ap.map(function(q){return X(q.x)+','+Y(q.alt);}).join(' ')+'" fill="none" stroke="#8de84a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>');
+    if(ms.length){
+      var lastAp=ap.length?ap[ap.length-1]:null, mseq=(lastAp?[lastAp]:[]).concat(ms);
+      if(mseq.length>1) o.push('<polyline points="'+mseq.map(function(q){return X(q.x)+','+Y(q.alt);}).join(' ')+'" fill="none" stroke="#7fb3d5" stroke-width="1.8" stroke-dasharray="3 6" opacity="0.7"/>');
+    }
+    // threshold marker at x=0
+    o.push('<rect x="'+(X(0)-2)+'" y="'+(Y(0)-3)+'" width="30" height="6" fill="#7fb3d5" opacity="0.9" rx="1"/>');
+    if(meta.thr!=null) o.push('<text x="'+(X(0)+33)+'" y="'+(Y(0)-8)+'" fill="#8a9bb0" font-size="10.5" font-family="var(--mono)">THR '+meta.thr+'\u2032</text>');
+    pts.forEach(function(q){
+      var x=X(q.x), y=Y(q.alt), col=q.missed?'#7fb3d5':'#e0479e';
+      o.push('<line x1="'+x+'" y1="'+Y(0)+'" x2="'+x+'" y2="'+y+'" stroke="#2a3744" stroke-width="1" stroke-dasharray="2 3"/>');
+      o.push('<circle cx="'+x+'" cy="'+y+'" r="4.5" fill="#0d1219" stroke="'+col+'" stroke-width="2"/>');
+      o.push('<text x="'+x+'" y="'+(y-11)+'" text-anchor="middle" fill="#dce6f0" font-size="11" font-weight="600" font-family="var(--mono)">'+escapeHtml(q.id)+'</text>');
+      o.push('<text x="'+x+'" y="'+(y+17)+'" text-anchor="middle" fill="#f0a500" font-size="11" font-family="var(--mono)">'+(q.aa?'\u2265':'')+q.alt+'\u2032</text>');
+      if(q.role) o.push('<text x="'+x+'" y="'+(Y(0)+16)+'" text-anchor="middle" fill="#8a9bb0" font-size="9.5" font-family="var(--mono)">'+escapeHtml(q.role)+'</text>');
+      o.push('<text x="'+x+'" y="'+(Y(0)+30)+'" text-anchor="middle" fill="#46566a" font-size="9" font-family="var(--mono)">'+q.d.toFixed(1)+'</text>');
+    });
+    o.push('<text x="'+(mL+pw/2)+'" y="'+(H-5)+'" text-anchor="middle" fill="#46566a" font-size="9" font-family="var(--mono)">NM from '+(meta.ref||'MAPt')+'</text>');
+    var ann=[]; if(meta.gp!=null) ann.push(meta.gp.toFixed(2)+'\u00b0'); if(meta.crs!=null) ann.push(meta.crs+'\u00b0');
+    if(meta.tch!=null) ann.push('TCH '+meta.tch+'\u2032');
+    if(ann.length) o.push('<text x="'+(mL+pw-4)+'" y="'+(mT+13)+'" text-anchor="end" fill="#8a9bb0" font-size="11" font-family="var(--mono)">'+ann.join('  \u00b7  ')+'</text>');
+    o.push('</svg>');
+    var extra='';
+    if(meta.init) extra+='<div class="pv-line"><b>Initial</b> '+escapeHtml(meta.init)+'</div>';
+    if(meta.missed) extra+='<div class="pv-line"><b>Missed</b> '+escapeHtml(meta.missed)+'</div>';
+    if(meta.src) extra+='<div class="pv-src">'+escapeHtml(meta.src)+' \u00b7 advisory only \u2014 Garmin primary</div>';
+    return '<div class="pv-wrap">'+o.join('')+'</div>'+extra;
+  }
+  function openProcProfile(key){
+    var fs=(window.NMProcFix&&window.NMProcFix.data)?window.NMProcFix.data().filter(function(f){return pfKey(f)===key;}):[];
+    var parts=key.split('|');
+    var label=fs.length?pfProcLabel({ty:fs[0].ty,rwy:fs[0].rwy,variant:fs[0].variant})
+                       :pfProcLabel({ty:parts[1],rwy:parts[2],variant:parts[3]});
+    var prev=document.querySelector('.pv-ov'); if(prev) prev.remove();
+    var ov=document.createElement('div'); ov.className='cr-overlay pv-ov active';
+    ov.innerHTML='<div class="cr-modal pv-modal"><div class="cr-head"><h3>'+escapeHtml(parts[0]+' \u00b7 '+label)+'</h3><button type="button" class="cr-close pv-close">\u00d7</button></div>'
+      +'<div class="cr-body">'+profSvg(key,label)+'</div></div>';
+    document.body.appendChild(ov);
+    function close(){ ov.remove(); }
+    ov.querySelector('.pv-close').addEventListener('click',close);
+    ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+  }
+  window.NMProcProfile=function(key){ openProcProfile(key); };
+  window.NMProcHasProfile=function(key){ var m=PROC_META[key]; return !!(m && (m.pts||m.gp!=null)); };
   function wptCardHtml(w){
     var isVil=(w.kind==='village');
     var chips='<span class="af-chip">'+(isVil?'Village':'Waypoint')+'</span>'+
@@ -12861,7 +13030,7 @@ if (navigator.storage && navigator.storage.persist) {
       {id:'YPYST', role:'MATF',  lat:-9.380683, lon:147.182919, ap:'AYPY', ty:'RNAV', rwy:'32R', alt:2900, aa:true, av:true},
       {id:'YPYSM', role:'MAPT',  lat:-9.476325, lon:147.241975, ap:'AYPY', ty:'RNAV', rwy:'32R', alt:850, aa:true, av:true},
       {id:'YPYSF', role:'FAF',   lat:-9.533744, lon:147.277425, ap:'AYPY', ty:'RNAV', rwy:'32R', alt:2000, aa:true, av:true},
-      {id:'YPYSH', role:'MAHF',  lat:-9.578206, lon:147.147314, ap:'AYPY', ty:'RNAV', rwy:'32R', alt:2900, aa:true, av:true},
+      {id:'YPYSH', role:'MAF',   lat:-9.578206, lon:147.147314, ap:'AYPY', ty:'RNAV', rwy:'32R', alt:2900, aa:true, av:true},
       {id:'ISLOK', role:'IF/IAF',lat:-9.632806, lon:147.338636, ap:'AYPY', ty:'RNAV', rwy:'32R', alt:2900, aa:false, av:true},
       // AYPY RNAV (GNSS) RWY 14L (ENR 4.3.2)
       {id:'YPYNF', role:'FAF',   lat:-9.361511, lon:147.171086, ap:'AYPY', ty:'RNAV', rwy:'14L', alt:1700, aa:true, av:true},
@@ -13759,7 +13928,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v254 &middot; 2026-07-18</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v255 &middot; 2026-07-18</div>
       </div>
     </div>
   </div>
