@@ -10,6 +10,35 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-07-19  v262: A plotted point that sits on an aerodrome or fix is now treated as ONE place.
+                Previously the route point and the aerodrome each drew their own marker and label, so
+                plotting to AYPY or AYMA stacked two labels on one spot, and tapping gave the thin
+                route-point card instead of the real aerodrome card. Now: the duplicate route label is
+                suppressed (the place keeps its own label; the amber route dot still drags and
+                deletes), and tapping a plotted point on a field opens the full airfield card --
+                charts, frequencies, procedures -- with the route actions kept alongside it (Forecast,
+                Copy, Delete point). Matching is by COORDINATE rather than label text, so a custom or
+                stale row name can no longer point at the wrong field.
+    2026-07-19  v261: Picking a new place from the coordinates search now renames the row. It only
+                set the name when the row was empty, so replacing (say) AYPY with the enroute fix
+                NIXUT moved the coordinate but left the label reading AYPY. That also mattered beyond
+                the label: a plotted point is matched to an aerodrome by its label text, so a stale
+                name made the app offer the wrong airfield card.
+    2026-07-19  v260: Modals now sit above the map furniture. Every .cr-overlay modal (Settings,
+                Saved Routes, the procedure altitude editor, the briefing profile) was z-index 1000
+                while the plate window is 1200, so the plate window painted on top of them -- and the
+                same applied to the quick-freq scrim (1400) and the debrief panel (1200). Modals are
+                now 4500: above all map furniture, still below the calibration overlay, full-screen
+                chart/GPS overlays and toasts.
+    2026-07-19  v259: Procedures made genuinely compact, and the window widths actually fixed.
+                (1) The procedure list stacked one fat row per approach, so six approaches made the
+                airport card enormous. It is now a single picker plus one row of three uniform
+                buttons -- Show/Hide, Profile, Edit -- so the section is the same small height no
+                matter how many approaches an airport has. ALT still shows in the picker. Profile and
+                Edit grey out when they do not apply. (2) The v257 width fix never took effect: the
+                .nmpo-ctrl base rule sits AFTER the media rules in the stylesheet, so at equal
+                specificity the base won and the plate window stayed 248px. The media rules are now
+                specificity-bumped (.nmpo-ctrl.nmpo-ctrl) so they win regardless of source order.
     2026-07-18  v258: BUGFIX -- the terrain profile was broken by a name collision. The procedure
                 briefing profile added in v255 declared a function named profSvg in the SAME scope as
                 the terrain profile's own profSvg, so the later declaration silently replaced the
@@ -3030,7 +3059,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
   /* ===== Copy Route modal ===== */
   .cr-overlay{
-    position:fixed;inset:0;z-index:1000;
+    position:fixed;inset:0;z-index:4500;
     background:rgba(0,0,0,.6);backdrop-filter:blur(3px);
     display:none;align-items:center;justify-content:center;
   }
@@ -3489,12 +3518,12 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .terr-adv{margin-top:8px;font-size:9px;line-height:1.5;color:var(--text-faint)}
   .terr-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:middle;margin-right:3px}
   .terr-leg i.r{background:rgba(240,60,60,.85)} .terr-leg i.a{background:rgba(255,176,32,.85)}
-  @media (max-width:760px){ .terr-panel{width:210px;left:8px;bottom:8px;padding:9px 10px} .nmpo-ctrl{width:210px;left:8px;padding:9px 10px} .terr-alt b{font-size:19px} }
+  @media (max-width:760px){ .terr-panel{width:210px;left:8px;bottom:8px;padding:9px 10px} .nmpo-ctrl.nmpo-ctrl{width:210px;left:8px;padding:9px 10px} .terr-alt b{font-size:19px} }
   /* Desktop (mouse/fine pointer): tighten controls — the default sizes are tuned for finger taps on the iPad */
   @media (hover:hover) and (pointer:fine){
     /* Altitude panel */
     .terr-panel{width:196px;padding:8px 9px}
-    .nmpo-ctrl{width:196px;padding:8px 9px}
+    .nmpo-ctrl.nmpo-ctrl{width:196px;padding:8px 9px}
     .terr-ttl{font-size:9.5px}
     .terr-alt{font-size:11px}
     .terr-alt b{font-size:16px}
@@ -3619,13 +3648,19 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .af-proc-h{display:flex;align-items:center;margin-bottom:6px}
   .af-proc-h span{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
   .af-proc-list{display:flex;flex-direction:column;gap:5px}
-  .af-proc-item{display:flex;align-items:stretch;gap:5px}
-  .af-proc-sel{flex:1;min-width:0;display:flex;align-items:center;gap:6px;background:var(--inset);border:1px solid var(--border-strong);border-radius:7px;color:var(--text-2);font-family:var(--mono);font-size:12px;padding:7px 9px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden}
-  .af-proc-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .af-proc-sel:hover{border-color:var(--accent-2);color:var(--text)}
-  .af-proc-item.on .af-proc-sel{border-color:#8de84a;color:#bff29a;background:rgba(141,232,74,.10)}
-  .af-proc-edit,.af-proc-prof{flex:0 0 auto;width:52px;background:var(--inset);border:1px solid var(--border-strong);border-radius:7px;color:var(--text-dim);font-family:var(--sans);font-size:10.5px;font-weight:600;padding:0;cursor:pointer;white-space:nowrap}
-  .af-proc-edit:hover,.af-proc-prof:hover{border-color:var(--accent-2);color:var(--text)}
+  .af-proc-pick{width:100%;background:var(--inset);border:1px solid var(--border-strong);border-radius:7px;
+    color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 9px;outline:none;
+    -webkit-appearance:none;appearance:none;cursor:pointer;
+    background-image:linear-gradient(45deg,transparent 50%,var(--text-faint) 50%),linear-gradient(135deg,var(--text-faint) 50%,transparent 50%);
+    background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+    padding-right:28px}
+  .af-proc-pick:focus{border-color:var(--accent-2)}
+  .af-proc-acts{display:flex;gap:5px;margin-top:5px}
+  .af-proc-btn{flex:1 1 0;min-width:0;background:var(--inset);border:1px solid var(--border-strong);border-radius:7px;
+    color:var(--text-2);font-family:var(--sans);font-size:11px;font-weight:600;padding:6px 4px;cursor:pointer;white-space:nowrap}
+  .af-proc-btn:hover:not(:disabled){border-color:var(--accent-2);color:var(--text)}
+  .af-proc-btn:disabled{opacity:.35;cursor:default}
+  .af-proc-btn.on{border-color:#8de84a;color:#bff29a;background:rgba(141,232,74,.10)}
   .pv-modal{width:720px}
   .pv-wrap{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:6px 4px;overflow-x:auto}
   .pv-svg{display:block;width:100%;min-width:560px;height:auto}
@@ -3655,7 +3690,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .pa-vf.on{background:#34d399;border-color:#34d399}
   .pa-vf.on::after{content:"";position:absolute;left:7px;top:3px;width:6px;height:11px;border:solid #06241a;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
   .pa-note{margin-top:12px;font-size:11.5px;color:var(--text-dim);line-height:1.5}
-  .af-proc-alt{flex:0 0 auto;margin-left:auto;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:#8de84a;border:1px solid rgba(141,232,74,.4);border-radius:4px;padding:1px 4px}
   .enr-alt{margin-top:5px;font-family:var(--mono);font-size:11px;color:#f0a500}
   .pf-sel{display:inline-block;margin-left:3px;white-space:nowrap;font-family:var(--mono);vertical-align:middle;line-height:1.05}
   .pf-sel b{color:#dce6f0;font-size:11px;font-weight:600;text-shadow:0 0 3px #0a0e13,0 0 3px #0a0e13}
@@ -4990,8 +5024,11 @@ function plotPoints(points, fit){
     });
     // A plotted point is a route waypoint, so its hover shows both coordinate
     // formats (DMS + decimal). Aerodromes still open the full card on tap (below).
-    const _code = (p.label || '').trim().toUpperCase();
-    const _fld = _code && NM_REGION.airfields.find(a => a.ident === _code || (a.iata && a.iata.toUpperCase() === _code));
+    // A plotted point that lands ON an aerodrome or a published fix is the same
+    // place, not two places. Match by COORDINATE (not by label text, which can be
+    // stale or custom), so we can drop the duplicate label and open the real card.
+    const _fld = rpAirfieldAt(p.lat, p.lon);
+    const _onFix = !_fld && rpFixAt(p.lat, p.lon);
     const tipHtml = `<b>${escapeHtml(p.label)}${p.fuel ? ' ' + fuelSvg(11, '#ffd870') : ''}</b><br>${toDms(p.lat,true)}<br>${toDms(p.lon,false)}<br><span style="color:#8a9bb0">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span>`;
     const dot = L.marker([p.lat, p.lon], { icon: dotIcon, draggable: FINE_POINTER, keyboard:false })
       .addTo(markerLayer)
@@ -5040,16 +5077,20 @@ function plotPoints(points, fit){
       if(e && e.originalEvent) L.DomEvent.stop(e.originalEvent);
       if(dot._dragging || (Date.now() - (dot._dragEndAt || 0) < 250)) return; // trailing click after a drag
       dot.closeTooltip();
-      openRoutePointCard(p);
+      if(_fld) openAirfieldCard(_fld, null, p); else openRoutePointCard(p);
     });
 
+    // The aerodrome / fix layer already labels this spot -- drawing the route
+    // label too would stack two labels on one point. Keep the amber route dot
+    // (it still drags and deletes); let the place's own label stand.
+    const _dupLabel = !!(_fld || _onFix);
     const labelIcon = L.divIcon({
       className:'marker-label',
       html: escapeHtml(p.label) + (p.fuel ? ' ' + fuelSvg(11, '#0a0e13') : ''),
       iconSize:null,
       iconAnchor:[-10, 8]
     });
-    L.marker([p.lat, p.lon], { icon: labelIcon, interactive: false }).addTo(markerLayer);
+    if(!_dupLabel) L.marker([p.lat, p.lon], { icon: labelIcon, interactive: false }).addTo(markerLayer);
   });
 
   // Auto-fit map view — only on an explicit Plot & Calculate (fit=true), so
@@ -5519,6 +5560,39 @@ function distributePastedCoords(startId, input){
 
 function escapeAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* --- Coordinate matching for plotted route points -------------------------
+   A route point dropped on an aerodrome/fix should render ONE label and open
+   that place's real card. Matching is by position, so a custom or stale row
+   name can't send you to the wrong field. */
+function rpNm(la1, lo1, la2, lo2){
+  const R = 3440.065, d = Math.PI/180;
+  const dLa = (la2-la1)*d, dLo = (lo2-lo1)*d;
+  const a = Math.sin(dLa/2)**2 + Math.cos(la1*d)*Math.cos(la2*d)*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.min(1, Math.sqrt(a)));
+}
+const RP_SNAP_NM = 0.25;
+function rpAirfieldAt(lat, lon){
+  if(typeof NM_REGION === 'undefined' || !NM_REGION.airfields) return null;
+  let best = null, bd = RP_SNAP_NM;
+  NM_REGION.airfields.forEach(a => {
+    const d = rpNm(lat, lon, a.lat, a.lon);
+    if(d <= bd){ bd = d; best = a; }
+  });
+  return best;
+}
+function rpFixAt(lat, lon){
+  const sets = [];
+  if(window.NMEnroute && window.NMEnroute.data) sets.push(window.NMEnroute.data());
+  if(window.NMProcFix && window.NMProcFix.data) sets.push(window.NMProcFix.data());
+  for(const arr of sets){
+    if(!Array.isArray(arr)) continue;
+    for(const f of arr){
+      if(f && isFinite(f.lat) && isFinite(f.lon) && rpNm(lat, lon, f.lat, f.lon) <= RP_SNAP_NM) return f;
+    }
+  }
+  return null;
+}
 
 /* ===== Styled confirm dialog (in-app replacement for window.confirm) =====
    Promise<boolean>. Looks up its elements at call time, so the markup can live
@@ -8817,7 +8891,7 @@ document.getElementById('plotBtn').addEventListener('click', () => {
   function afHasNote(ident){ return !!afNoteGet(ident).trim(); }
   window.NMAfNotes = { has: afHasNote, get: afNoteGet, set: afNoteSet };
 
-  function airfieldCardHtml(f, distNm){
+  function airfieldCardHtml(f, distNm, rp){
     const freqs = fieldFreqs(f.ident);
     const fl = freqs.length
       ? '<div class="af-freqs">' + freqs.map(fr => '<div class="af-fr"><span class="l">'+escapeHtml(fqTypeLabel(fr.t))+'</span><span class="v">'+escapeHtml(String(fr.f))+(fr.v?'<i class="ok">\u2713</i>':'')+'</span></div>').join('') + '</div>'
@@ -8840,15 +8914,17 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     var procHtml = '';
     if(_procs.length){
       var _selpk = window.NMProcSelected ? window.NMProcSelected() : null;
-      procHtml = '<div class="af-proc af-coll"><div class="af-proc-h af-coll-h"><span>Procedures ('+_procs.length+')</span><i class="af-coll-cv">\u25B6</i></div><div class="af-coll-b"><div class="af-proc-list">'
-        + _procs.map(function(p){
-            var on=(p.key===_selpk)?' on':'';
-            var badge=p.hasAlt?'<span class="af-proc-alt">alt</span>':'';
-            var acts='';
-            if(p.hasProf) acts+='<button type="button" class="af-proc-prof" data-pk="'+escapeAttr(p.key)+'">Profile</button>';
-            if(p.fixes.length) acts+='<button type="button" class="af-proc-edit" data-pk="'+escapeAttr(p.key)+'">Edit</button>';
-            return '<div class="af-proc-item'+on+'" data-pk="'+escapeAttr(p.key)+'"><button type="button" class="af-proc-sel" data-pk="'+escapeAttr(p.key)+'" title="'+escapeAttr(p.label)+'"><span class="af-proc-nm">'+escapeHtml(p.short)+'</span>'+badge+'</button>'+acts+'</div>';
-          }).join('')
+      var _pick=_procs.map(function(p){
+        var sel=(p.key===_selpk)?' selected':'';
+        return '<option value="'+escapeAttr(p.key)+'" data-prof="'+(p.hasProf?1:0)+'" data-edit="'+(p.fixes.length?1:0)+'"'+sel+'>'
+             + escapeHtml(p.short) + (p.hasAlt?'  \u00b7  ALT':'') + '</option>';
+      }).join('');
+      procHtml = '<div class="af-proc af-coll"><div class="af-proc-h af-coll-h"><span>Procedures ('+_procs.length+')</span><i class="af-coll-cv">\u25B6</i></div>'
+        + '<div class="af-coll-b"><select class="af-proc-pick">'+_pick+'</select>'
+        + '<div class="af-proc-acts">'
+        + '<button type="button" class="af-proc-btn af-proc-show">Show</button>'
+        + '<button type="button" class="af-proc-btn af-proc-prof">Profile</button>'
+        + '<button type="button" class="af-proc-btn af-proc-edit">Edit</button>'
         + '</div></div></div>';
     }
     return '<div class="af-card">'
@@ -8861,23 +8937,35 @@ document.getElementById('plotBtn').addEventListener('click', () => {
       + procHtml
       + '<div class="af-charts af-coll" data-icao="'+escapeHtml(f.ident)+'"><div class="af-charts-h af-coll-h"><span>Charts</span><i class="af-coll-cv">▶</i><button type="button" class="af-charts-add">+ Add</button></div><div class="af-coll-b"><div class="af-charts-list"></div><input type="file" class="af-charts-file" accept="image/*,application/pdf" multiple hidden></div></div>'
       + notes
-      + '<div class="af-acts"><button type="button" class="af-route">+ Add to route</button><button type="button" class="nm-dct" data-dct-name="'+escapeAttr(f.ident)+'" data-dct-coord="'+f.lat.toFixed(6)+', '+f.lon.toFixed(6)+'">Direct to</button><button type="button" class="af-edit">Edit freqs</button></div>'
+      + (rp
+          ? '<div class="af-acts af-acts-grid"><button type="button" class="af-route rp-fc">Forecast</button><button type="button" class="af-edit rp-copy">Copy</button><button type="button" class="af-edit rp-del">Delete point</button><button type="button" class="af-edit">Edit freqs</button></div>'
+          : '<div class="af-acts"><button type="button" class="af-route">+ Add to route</button><button type="button" class="nm-dct" data-dct-name="'+escapeAttr(f.ident)+'" data-dct-coord="'+f.lat.toFixed(6)+', '+f.lon.toFixed(6)+'">Direct to</button><button type="button" class="af-edit">Edit freqs</button></div>')
       + '</div>';
   }
   function wireProcedures(root, f, pop){
-    root.querySelectorAll('.af-proc-sel').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        var sel = window.NMSelectProc ? window.NMSelectProc(btn.getAttribute('data-pk')) : null;
-        root.querySelectorAll('.af-proc-item').forEach(function(it){ it.classList.toggle('on', it.getAttribute('data-pk')===sel); });
-        if(pop) map.closePopup(pop);
-      });
+    var pick=root.querySelector('.af-proc-pick'); if(!pick) return;
+    var bShow=root.querySelector('.af-proc-show'),
+        bProf=root.querySelector('.af-proc-prof'),
+        bEdit=root.querySelector('.af-proc-edit');
+    function key(){ return pick.value; }
+    function opt(){ return pick.options[pick.selectedIndex]; }
+    function sync(){
+      var o=opt(); if(!o) return;
+      var lit = (window.NMProcSelected && window.NMProcSelected()===key());
+      bShow.textContent = lit ? 'Hide' : 'Show';
+      bShow.classList.toggle('on', !!lit);
+      bProf.disabled = o.getAttribute('data-prof')!=='1';
+      bEdit.disabled = o.getAttribute('data-edit')!=='1';
+    }
+    pick.addEventListener('change', sync);
+    bShow.addEventListener('click', function(){
+      if(window.NMSelectProc) window.NMSelectProc(key());
+      sync();
+      if(pop) map.closePopup(pop);
     });
-    root.querySelectorAll('.af-proc-edit').forEach(function(btn){
-      btn.addEventListener('click', function(e){ e.stopPropagation(); if(window.NMEditProcAlt) window.NMEditProcAlt(btn.getAttribute('data-pk')); });
-    });
-    root.querySelectorAll('.af-proc-prof').forEach(function(btn){
-      btn.addEventListener('click', function(e){ e.stopPropagation(); if(window.NMProcProfile) window.NMProcProfile(btn.getAttribute('data-pk')); });
-    });
+    bProf.addEventListener('click', function(){ if(!bProf.disabled && window.NMProcProfile) window.NMProcProfile(key()); });
+    bEdit.addEventListener('click', function(){ if(!bEdit.disabled && window.NMEditProcAlt) window.NMEditProcAlt(key()); });
+    sync();
   }
   // Populate the METAR slot of an open airfield card (async). Only attempts a
   // fetch for actual airports; airstrips/helipads in PNG never report METAR.
@@ -9122,13 +9210,32 @@ document.getElementById('plotBtn').addEventListener('click', () => {
   }
   // Opens the full airfield info card popup at the field. distNm (optional) shows
   // a "x.x NM away" chip — used by the map menu's nearest-airfield action.
-  function openAirfieldCard(f, distNm){
+  function openAirfieldCard(f, distNm, rp){
     const el = document.createElement('div');
-    el.innerHTML = airfieldCardHtml(f, distNm);
+    el.innerHTML = airfieldCardHtml(f, distNm, rp);
     const pop = L.popup({className:'map-add-popup', closeButton:true, autoPan:true, offset:[0,-6]})
       .setLatLng([f.lat, f.lon]).setContent(el).openOn(map);
     const rb = el.querySelector('.af-route');
-    if(rb) rb.addEventListener('click', () => { if(window.addFieldToRoute) window.addFieldToRoute(f.ident, f.lat.toFixed(6)+', '+f.lon.toFixed(6)); map.closePopup(pop); });
+    if(rb && !rp) rb.addEventListener('click', () => { if(window.addFieldToRoute) window.addFieldToRoute(f.ident, f.lat.toFixed(6)+', '+f.lon.toFixed(6)); map.closePopup(pop); });
+    if(rp){
+      // This field IS a plotted route point -- keep the route actions with it.
+      const fcB = el.querySelector('.rp-fc');
+      if(fcB) fcB.addEventListener('click', () => { map.closePopup(pop); if(window.NMForecast) window.NMForecast(rp.lat, rp.lon, rp.label || f.ident); });
+      const cpB = el.querySelector('.rp-copy');
+      if(cpB) cpB.addEventListener('click', () => {
+        const txt = toDms(rp.lat,true) + ' ' + toDms(rp.lon,false) + '  \u00b7  ' + rp.lat.toFixed(5) + ', ' + rp.lon.toFixed(5);
+        const ok = () => { cpB.textContent = 'Copied'; setTimeout(() => { cpB.textContent = 'Copy'; }, 1400); };
+        if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(ok, () => { _fallbackCopy(txt); ok(); }); }
+        else { _fallbackCopy(txt); ok(); }
+      });
+      const dlB = el.querySelector('.rp-del');
+      if(dlB) dlB.addEventListener('click', () => {
+        snapshot();
+        state.rows = state.rows.filter(x => x.id !== rp._rowId);
+        if(state.rows.length === 0) addRow();
+        renderRows(); process(false); map.closePopup(pop);
+      });
+    }
     const eb = el.querySelector('.af-edit');
     if(eb) eb.addEventListener('click', () => { map.closePopup(pop); openEdit(f.ident); });
     const ta = el.querySelector('.af-notes-ta');
@@ -9730,7 +9837,10 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     const row = state.rows.find(x => x.id === apRowId);
     if(!row){ hide(); return; }
     row.coord = `${(+lat).toFixed(5)}, ${(+lon).toFixed(5)}`;
-    if(!row.name.trim()) row.name = (name || '').slice(0, 12);
+    // Picking a new place from search replaces the row name too -- otherwise the row
+    // keeps the old label while sitting on the new coordinate (and the airfield match,
+    // which keys off the label, then points at the wrong field).
+    row.name = (name || '').slice(0, 12);
     // Keep a trailing blank row, mirroring Home Base behaviour
     const last = state.rows[state.rows.length - 1];
     if(last.name.trim() || last.coord.trim()) addRow();
@@ -14001,7 +14111,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v258 &middot; 2026-07-18</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v262 &middot; 2026-07-19</div>
       </div>
     </div>
   </div>
