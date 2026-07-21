@@ -2148,7 +2148,92 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .exp-menu{position:absolute;bottom:calc(100% + 6px);right:0;min-width:150px;background:var(--panel);border:1px solid var(--border-strong);border-radius:8px;padding:5px;display:none;flex-direction:column;gap:4px;box-shadow:0 10px 28px rgba(0,0,0,.55);z-index:60}
   .exp-wrap.open .exp-menu{display:flex}
   .exp-menu button{width:100%}
-  @media (max-width:540px){ #copyRouteBtn, .exp-wrap{display:none} }
+  /* ============================================================
+   iPhone chrome (v263) - ADDITIVE. Hidden at every width except the
+   existing max-width:540px band, so desktop and iPad are untouched.
+   Declared BEFORE that band: a base rule of equal specificity placed
+   after it would silently defeat the override.
+   All selectors are namespaced nmp- / #nmp to guarantee no collision
+   with existing rules.
+   ============================================================ */
+#nmpPhone{display:none}
+@media (max-width:540px){ #copyRouteBtn, .exp-wrap{display:none}
+  /* --- iPhone chrome --- */
+  #mobileTabs, #mapSearch{display:none !important}
+  #nmpPhone{
+    display:block;
+    --nmp-bg:#0a0e13; --nmp-panel:#0d1219; --nmp-bg2:#111823; --nmp-inset:#0b1017;
+    --nmp-line:#1c2733; --nmp-line2:#2a3744;
+    --nmp-tx:#dce6f0; --nmp-tx2:#a9bccd; --nmp-dim:#8a9bb0; --nmp-mut:#6b7f94; --nmp-faint:#5f7186;
+    --nmp-acc:#ffb020; --nmp-acc2:#7fb3d5;
+    --nmp-sat:env(safe-area-inset-top); --nmp-sab:env(safe-area-inset-bottom);
+    --nmp-r:6px; --nmp-gut:6.5px;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+  }
+  #nmpPhone button{font:inherit;color:inherit;background:none;border:0;padding:0;
+    -webkit-tap-highlight-color:transparent;cursor:pointer;display:flex;
+    align-items:center;justify-content:center}
+  #nmpPhone svg{width:18px;height:18px;display:block}
+
+  #nmpChrome{
+    position:fixed;top:0;left:0;right:0;z-index:4000;
+    padding:calc(var(--nmp-sat) + 12px) 16px 8px;
+    background:var(--nmp-panel);border-bottom:1px solid var(--nmp-line2);
+  }
+  .nmp-tools{display:flex;align-items:center;gap:var(--nmp-gut);height:32px}
+  .nmp-tb{flex:1 1 0;height:32px;border-radius:var(--nmp-r);
+    background:var(--nmp-bg2);border:1px solid var(--nmp-line);color:var(--nmp-tx2)}
+  .nmp-tb.on{background:var(--nmp-acc);border-color:var(--nmp-acc);color:#0a0e13}
+  .nmp-tb .t{font-size:13px;font-weight:700;letter-spacing:.02em}
+  .nmp-tb.gps{flex:0 0 32px;margin-left:26px}
+  .nmp-srow{margin-top:8px}
+  .nmp-search{height:32px;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;
+    background:var(--nmp-inset);border:1px solid var(--nmp-line);border-radius:var(--nmp-r);
+    color:var(--nmp-faint)}
+  .nmp-search svg{width:15px;height:15px;flex:0 0 15px}
+  .nmp-search input{flex:1 1 auto;min-width:0;height:100%;background:none;border:0;outline:none;
+    color:var(--nmp-tx);font-family:inherit;font-size:16px;-webkit-appearance:none}
+  .nmp-search input::placeholder{color:var(--nmp-faint);font-size:13px}
+
+  .nmp-rail{position:fixed;left:6px;z-index:3990;display:flex;gap:4px;
+    top:calc(var(--nmp-sat) + 104px)}
+  .nmp-railcol{display:flex;flex-direction:column;gap:4px}
+  .nmp-rb{width:44px;height:44px;border-radius:var(--nmp-r);
+    background:rgba(13,18,25,.92);border:1px solid var(--nmp-line2);color:var(--nmp-tx2)}
+  .nmp-rb.on{background:var(--nmp-acc);border-color:var(--nmp-acc);color:#0a0e13}
+  .nmp-rb .lab{font-size:11px;font-weight:700;letter-spacing:.04em}
+  .nmp-rb.tall{height:58px;flex-direction:column;gap:2px}
+  .nmp-rb .tick{font-family:ui-monospace,Menlo,monospace;font-size:10px;font-weight:700}
+  .nmp-lyr{display:none}
+  .nmp-rail.open .nmp-lyr{display:flex}
+  .nmp-rail.open .nmp-vfr{display:none}
+
+  .nmp-acty{position:fixed;left:0;right:0;z-index:3990;
+    bottom:calc(var(--nmp-sab) + 62px);
+    padding:0 6px;display:none}
+  .nmp-acty.on{display:block}
+  .nmp-actw{display:flex;background:rgba(13,18,25,.94);border:1px solid var(--nmp-line2);
+    border-radius:var(--nmp-r);overflow:hidden}
+  .nmp-actc{flex:1 1 0;min-width:0;height:44px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:1px}
+  .nmp-actc + .nmp-actc{border-left:1px solid var(--nmp-line)}
+  .nmp-actc .k{font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--nmp-mut)}
+  .nmp-actc .v{font-family:ui-monospace,Menlo,monospace;font-size:15px;font-weight:700;
+    color:var(--nmp-tx)}
+  .nmp-actc .v.amb{color:var(--nmp-acc)}
+  .nmp-dots{display:flex;justify-content:center;gap:5px;padding-top:5px}
+  .nmp-dots i{width:5px;height:5px;border-radius:50%;background:var(--nmp-line2)}
+  .nmp-dots i.on{background:var(--nmp-acc)}
+
+  .nmp-tabs{position:fixed;left:0;right:0;bottom:0;z-index:4000;
+    display:flex;background:var(--nmp-panel);border-top:1px solid var(--nmp-line2);
+    padding-bottom:var(--nmp-sab)}
+  .nmp-tab{flex:1 1 0;height:54px;flex-direction:column;gap:3px;color:var(--nmp-mut)}
+  .nmp-tab.on{color:var(--nmp-acc)}
+  .nmp-tab .t{font-size:10px;font-weight:600}
+
+}
 
   /* Row-based input */
   .rows{display:flex;flex-direction:column;gap:6px}
@@ -14111,9 +14196,203 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v262 &middot; 2026-07-19</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v263 &middot; 2026-07-21</div>
       </div>
     </div>
   </div>
+
+<!-- ============================================================
+     iPhone chrome (v263) - thin integration proof.
+     Chrome only: no panels, no data, no map interaction. Sits
+     above the live UI at max-width:540px and is display:none at
+     every other width. Nothing here is referenced by existing
+     code; every id is prefixed nmp.
+     ============================================================ -->
+<div id="nmpPhone">
+  <div id="nmpChrome">
+    <div class="nmp-tools">
+      <button class="nmp-tb" id="nmpTbLayers" aria-label="Layers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l9 4.8-9 4.8-9-4.8z"/><path d="M3.4 12.4L12 17l8.6-4.6"/><path d="M3.4 16.6L12 21.2l8.6-4.6"/></svg></button>
+      <button class="nmp-tb" id="nmpTbFpl" aria-label="Flight plan"><span class="t">FPL</span></button>
+      <button class="nmp-tb" id="nmpTbSet" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 9.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/><path d="M19.1 12c0-.5-.05-1-.14-1.46l1.86-1.4-1.9-3.28-2.2.9a7.4 7.4 0 0 0-2.5-1.45L13.8 3h-3.6l-.42 2.31a7.4 7.4 0 0 0-2.5 1.45l-2.2-.9-1.9 3.28 1.86 1.4a7.6 7.6 0 0 0 0 2.92l-1.86 1.4 1.9 3.28 2.2-.9a7.4 7.4 0 0 0 2.5 1.45L10.2 21h3.6l.42-2.31a7.4 7.4 0 0 0 2.5-1.45l2.2.9 1.9-3.28-1.86-1.4c.09-.47.14-.95.14-1.46z"/></svg></button>
+      <button class="nmp-tb" id="nmpTbTerr" aria-label="Terrain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 19l6-9 4 5.5 2.5-3.5L21 19z"/></svg></button>
+      <button class="nmp-tb on" id="nmpTbActy" aria-label="Activity bar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4.6 17.4a8.4 8.4 0 1 1 14.8 0"/><path d="M12 17.4l4-4.6"/></svg></button>
+      <button class="nmp-tb" id="nmpTbRad" aria-label="Frequencies"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6"/><path d="M5.4 5.4a9.4 9.4 0 0 0 0 13.2M18.6 5.4a9.4 9.4 0 0 1 0 13.2"/></svg></button>
+      <button class="nmp-tb gps" id="nmpTbGps" aria-label="Track position"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3.2 10.9L20.8 3.2l-7.7 17.6-2.1-7.8z" fill="currentColor"/></svg></button>
+    </div>
+    <div class="nmp-srow"><div class="nmp-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.6"/><path d="M15.4 15.4L21 21"/></svg><input id="nmpSearchIn" type="text" placeholder="Search fields, fixes, places" autocapitalize="characters" autocorrect="off" spellcheck="false"></div></div>
+  </div>
+
+  <div class="nmp-rail" id="nmpRail">
+    <div class="nmp-railcol">
+      <button class="nmp-rb nmp-vfr on" id="nmpVfr"><span class="lab">VFR</span></button>
+      <button class="nmp-rb nmp-lyr on" id="nmpVfrOpen"><span class="lab">VFR</span></button>
+      <button class="nmp-rb" id="nmpMark" aria-label="Mark position"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 21.2s6.4-5.9 6.4-10.6a6.4 6.4 0 1 0-12.8 0C5.6 15.3 12 21.2 12 21.2z"/><circle cx="12" cy="10.4" r="2.2"/></svg></button>
+      <button class="nmp-rb tall" id="nmpRec"><span class="lab">REC</span><span class="tick">00:00</span></button>
+    </div>
+    <div class="nmp-railcol nmp-lyr">
+      <button class="nmp-rb on" data-nmplyr="fields" aria-label="Airports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l8 15H4z"/></svg></button>
+      <button class="nmp-rb" data-nmplyr="airspace" aria-label="Airspace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.4l7.4 4.3v8.6L12 20.6 4.6 16.3V7.7z"/></svg></button>
+      <button class="nmp-rb on" data-nmplyr="mine" aria-label="My waypoints"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 21.2s6.4-5.9 6.4-10.6a6.4 6.4 0 1 0-12.8 0C5.6 15.3 12 21.2 12 21.2z"/></svg></button>
+      <button class="nmp-rb on" data-nmplyr="route" aria-label="Route"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="6" r="2.4"/><path d="M6.9 16.3L17.1 7.7"/></svg></button>
+      <button class="nmp-rb" data-nmplyr="terrain" aria-label="Terrain"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 19l6-9 4 5.5 2.5-3.5L21 19z"/></svg></button>
+    </div>
+  </div>
+
+  <div class="nmp-acty on" id="nmpActy">
+    <div class="nmp-actw" id="nmpActw"></div>
+    <div class="nmp-dots" id="nmpDots"><i class="on"></i><i></i></div>
+  </div>
+
+  <div class="nmp-tabs" id="nmpTabs"></div>
+</div>
+
+<script>
+/* ============================================================
+   iPhone chrome (v263) - thin integration proof.
+   A SEPARATE inline block wrapped in an IIFE. Nothing is declared in
+   global scope, so a name collision with the main app script is
+   structurally impossible rather than something to remember.
+   Markup lives after the main script, so this defers until the DOM
+   is parsed. Reads nothing from the app and writes nothing to it.
+   ============================================================ */
+(function(){
+  'use strict';
+
+  function boot(){
+    var root = document.getElementById('nmpPhone');
+    if (!root) return;
+    var $  = function(id){ return document.getElementById(id); };
+    var $$ = function(sel){ return Array.prototype.slice.call(root.querySelectorAll(sel)); };
+
+    /* ---- toolbar: visual state only in this proof ---- */
+    var EXCLUSIVE = ['nmpTbLayers','nmpTbFpl','nmpTbSet','nmpTbTerr','nmpTbRad'];
+    EXCLUSIVE.forEach(function(id){
+      var b = $(id); if (!b) return;
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var was = b.classList.contains('on');
+        EXCLUSIVE.forEach(function(x){
+          var el = $(x); if (el) el.classList.remove('on');
+        });
+        if (!was) b.classList.add('on');
+      });
+    });
+
+    /* ---- activity bar: toggled by its toolbar button, two pages ---- */
+    var PAGES = [
+      [['GS','0'],['TRK','\u2014'],['ALT','\u2014'],['NEXT','\u2014'],['ETE','\u2014']],
+      [['DIST','\u2014'],['ETA','\u2014'],['FUEL','\u2014'],['OAT','\u2014'],['QNH','\u2014']]
+    ];
+    var page = 0;
+    function drawActy(){
+      var w = $('nmpActw'); if (!w) return;
+      w.innerHTML = PAGES[page].map(function(c, i){
+        return '<div class="nmp-actc"><span class="k">' + c[0] + '</span>'
+             + '<span class="v' + (i === 0 ? ' amb' : '') + '">' + c[1] + '</span></div>';
+      }).join('');
+      var d = $('nmpDots');
+      if (d) Array.prototype.forEach.call(d.children, function(el, i){
+        el.classList.toggle('on', i === page);
+      });
+    }
+    drawActy();
+
+    var acty = $('nmpActy'), tbActy = $('nmpTbActy');
+    if (tbActy) tbActy.addEventListener('click', function(e){
+      e.stopPropagation();
+      var on = acty.classList.toggle('on');
+      tbActy.classList.toggle('on', on);
+    });
+    if (acty){
+      var x0 = null;
+      acty.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, { passive:true });
+      acty.addEventListener('touchend', function(e){
+        if (x0 === null) return;
+        var dx = e.changedTouches[0].clientX - x0;
+        x0 = null;
+        if (Math.abs(dx) < 40) return;
+        page = (dx < 0) ? Math.min(1, page + 1) : Math.max(0, page - 1);
+        drawActy();
+      }, { passive:true });
+    }
+
+    /* ---- left rail: expand and collapse ---- */
+    var rail = $('nmpRail');
+    function toggleRail(e){ if (e) e.stopPropagation(); rail.classList.toggle('open'); }
+    ['nmpVfr','nmpVfrOpen'].forEach(function(id){
+      var b = $(id); if (b) b.addEventListener('click', toggleRail);
+    });
+    $$('[data-nmplyr]').forEach(function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();          /* never let a re-render detach the tapped node */
+        b.classList.toggle('on');
+      });
+    });
+    var mk = $('nmpMark');
+    if (mk) mk.addEventListener('click', function(e){ e.stopPropagation(); });
+
+    /* ---- REC: real timer, tap to run, hold to reset ---- */
+    var rec = $('nmpRec');
+    if (rec){
+      var run = false, sec = 0, t = null, hold = null, didHold = false;
+      function paint(){
+        var el = rec.querySelector('.tick');
+        if (el) el.textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':'
+                               + String(sec % 60).padStart(2, '0');
+        rec.classList.toggle('on', run);
+      }
+      rec.addEventListener('touchstart', function(){
+        didHold = false;
+        hold = setTimeout(function(){
+          didHold = true; run = false;
+          clearInterval(t); t = null; sec = 0; paint();
+          if (navigator.vibrate) navigator.vibrate(10);
+        }, 650);
+      }, { passive:true });
+      ['touchend','touchcancel','touchmove'].forEach(function(ev){
+        rec.addEventListener(ev, function(){ clearTimeout(hold); });
+      });
+      rec.addEventListener('click', function(e){
+        e.stopPropagation();
+        if (didHold){ didHold = false; return; }
+        run = !run;
+        if (run) t = setInterval(function(){ sec = (sec + 1) % 6000; paint(); }, 1000);
+        else { clearInterval(t); t = null; }
+        paint();
+      });
+      paint();
+    }
+
+    /* ---- bottom tab bar ---- */
+    var TABS = [
+      ['airports','Airports','<path d="M3.4 9.4h17.2v5.2H3.4z"/><path d="M6.6 9.4v5.2M17.4 9.4v5.2"/>'],
+      ['map','Map','<path d="M3.6 6.4l5.6-2.2 5.6 2.2 5.6-2.2v13.4l-5.6 2.2-5.6-2.2-5.6 2.2z"/><path d="M9.2 4.2v15.4M14.8 6.4v15.4"/>'],
+      ['fuel','Fuel','<path d="M12 3.8c0 0-6.5 7.4-6.5 11.6a6.5 6.5 0 0 0 13 0C18.5 11.2 12 3.8 12 3.8z"/>'],
+      ['more','More','<circle cx="5.6" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.4" cy="12" r="1.7"/>']
+    ];
+    var active = 'map';
+    function drawTabs(){
+      var host = $('nmpTabs'); if (!host) return;
+      host.innerHTML = TABS.map(function(t){
+        return '<button class="nmp-tab' + (t[0] === active ? ' on' : '') + '" data-nmptab="' + t[0] + '">'
+             + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+             + 'stroke-linejoin="round">' + t[2] + '</svg>'
+             + '<span class="t">' + t[1] + '</span></button>';
+      }).join('');
+      $$('[data-nmptab]').forEach(function(b){
+        b.addEventListener('click', function(e){
+          e.stopPropagation();
+          active = b.getAttribute('data-nmptab');
+          drawTabs();
+        });
+      });
+    }
+    drawTabs();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
 </body>
 </html>
