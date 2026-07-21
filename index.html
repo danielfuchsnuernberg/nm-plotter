@@ -2158,8 +2158,42 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
    ============================================================ */
 #nmpPhone{display:none}
 @media (max-width:540px){ #copyRouteBtn, .exp-wrap{display:none}
-  /* --- iPhone chrome --- */
-  #mobileTabs, #mapSearch{display:none !important}
+  /* --- iPhone chrome ---
+     Phone mode is a clean switch, not an overlay. Every direct child
+     of <body> is hidden except the phone chrome and the one branch
+     that contains the live Leaflet map, which is tagged .nmp-keep by
+     script (so no assumption is made about the DOM's shape). The map
+     branch is then flattened to fill the viewport. Nothing is moved
+     or deleted - purely display rules inside this one band. */
+  html, body{overflow:hidden !important; height:100% !important; margin:0 !important}
+  body > *{display:none !important}
+  body > #nmpPhone{display:block !important}
+  body > .nmp-keep{
+    display:block !important;
+    position:fixed !important; inset:0 !important;
+    width:auto !important; height:auto !important;
+    max-width:none !important; min-width:0 !important;
+    max-height:none !important; min-height:0 !important;
+    margin:0 !important; padding:0 !important; border:0 !important;
+    overflow:hidden !important; transform:none !important;
+    background:#0a0e13 !important;
+  }
+  .nmp-keep .nmp-keep{
+    position:relative !important; inset:auto !important;
+    display:block !important;
+    width:100% !important; height:100% !important;
+    margin:0 !important; padding:0 !important; border:0 !important;
+    flex:none !important; transform:none !important; overflow:hidden !important;
+  }
+  .nmp-keep > *:not(.nmp-keep){display:none !important}
+  #map{width:100% !important; height:100% !important; inset:auto !important}
+  /* Chrome is fixed over the map, so inset the map branch to match:
+     top bar (safe area + 12 + 32 + 8 + 32 + 8) and tab bar (54). */
+  body > .nmp-keep{
+    top:calc(env(safe-area-inset-top) + 92px) !important;
+    bottom:calc(env(safe-area-inset-bottom) + 54px) !important;
+  }
+  .leaflet-control-container{display:none !important}
   #nmpPhone{
     display:block;
     --nmp-bg:#0a0e13; --nmp-panel:#0d1219; --nmp-bg2:#111823; --nmp-inset:#0b1017;
@@ -14196,7 +14230,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v263 &middot; 2026-07-21</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v264 &middot; 2026-07-21</div>
       </div>
     </div>
   </div>
@@ -14261,6 +14295,35 @@ if (navigator.storage && navigator.storage.persist) {
   function boot(){
     var root = document.getElementById('nmpPhone');
     if (!root) return;
+
+    /* Tag the branch of the DOM that holds the live map, from the map
+       element up to <body>. The phone band keeps exactly this branch
+       visible and hides every sibling, so the switch works whatever
+       shape the live layout happens to be. Harmless above 540px: the
+       classes are only referenced inside the band. */
+    (function tagMapBranch(){
+      var el = document.getElementById('map');
+      while (el && el !== document.body){
+        el.classList.add('nmp-keep');
+        el = el.parentElement;
+      }
+    })();
+
+    /* Leaflet sizes itself from its container, so it must be told the
+       viewport changed when the layout switches. A resize event is the
+       supported way to do that without reaching into the app's scope. */
+    (function watchBreakpoint(){
+      if (!window.matchMedia) return;
+      var mq = window.matchMedia('(max-width:540px)');
+      function nudge(){
+        setTimeout(function(){
+          window.dispatchEvent(new Event('resize'));
+        }, 60);
+      }
+      if (mq.addEventListener) mq.addEventListener('change', nudge);
+      else if (mq.addListener) mq.addListener(nudge);
+      nudge();
+    })();
     var $  = function(id){ return document.getElementById(id); };
     var $$ = function(sel){ return Array.prototype.slice.call(root.querySelectorAll(sel)); };
 
