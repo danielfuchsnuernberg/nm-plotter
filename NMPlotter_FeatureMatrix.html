@@ -225,7 +225,7 @@
     <span class="lg"><span class="st soon" style="width:8px;height:8px;border-radius:50%"></span>Soon</span>
       <span class="lg"><span class="tag setup">Setup</span>you set it up</span>
   </div>
-  <span class="stamp" id="stamp">Matrix v1 · 2026-07-18</span>
+  <span class="stamp" id="stamp">Matrix v2 · 2026-07-18 · app v256</span>
 </footer>
 
 <div class="ov" id="ov">
@@ -251,7 +251,7 @@
      whatever was saved. Feature IDs are STABLE — never renumber them.
    ============================================================ */
 const STORE_KEY = 'nm_feature_matrix_state_v1';
-const MATRIX_VER = 'Matrix v1 · 2026-07-18';
+const MATRIX_VER = 'Matrix v2 · 2026-07-18 · app v256';
 
 /* seed defaults: done features start ticked on both; planned start off.
    User toggles override these and are saved. */
@@ -377,6 +377,10 @@ const CATS = [
       desc:'Published frequencies (initial 15-aerodrome seed from OurAirports).' },
     { id:'freq_edit', name:'Edit frequencies', status:'done',
       desc:'Hand-edit or add frequencies on a field.' },
+    { id:'af_collapse', name:'Collapsible card sections', status:'done',
+      desc:'Coordinates, runways, frequencies and METAR stay visible; Charts, My-notes and Procedures collapse to a tappable header with their count, so the card never outgrows the screen.' },
+    { id:'af_notes', name:'My Notes (per-airfield)', status:'done',
+      desc:'Free-text notes per field (hazards, contacts, approach tips). Fields that have notes show a dot in search results.' },
     { id:'freq_tab', name:'Frequencies tab (proximity match)', status:'soon', setup:true,
       desc:'A dedicated Frequencies tab matching aerodrome/HF frequencies near your plotted route. Data-blocked.',
       howto:['This needs your bush-strip CTAF and en-route HF frequency list.',
@@ -421,6 +425,34 @@ const CATS = [
       desc:'Running version shown at the foot of Settings so you always know what is loaded.' },
     { id:'app_changelog', name:'Changelog', status:'done',
       desc:'In-file change history.' },
+  ]},
+
+  { name:'IFR Procedures', items:[
+    { id:'proc_select', name:'Procedure selection', status:'done',
+      desc:'The airfield card lists an airport\u2019s published approaches. Tapping one lights up only that procedure on the map; tapping it again clears it.' },
+    { id:'proc_altlabels', name:'Crossing altitudes on the map', status:'done',
+      desc:'When a procedure is selected, each of its fixes is labelled with its crossing altitude. \u2265 means at-or-above; no symbol means a mandatory altitude. Hidden otherwise, so nothing clutters.' },
+    { id:'proc_altedit', name:'Altitude editor (on device)', status:'done', setup:true,
+      desc:'Enter or correct crossing altitudes yourself against the plate \u2014 the hybrid half. Verified data is baked in for AYPY RNAV; you can populate any other field.',
+      howto:['Open an airfield card and expand Procedures.',
+             'Tap Edit beside a procedure.',
+             'Set each fix\u2019s altitude, choose AT or A/A (at or above), and tick it once verified against the plate.',
+             'Edits save on that device and override the baked data; clearing a value reverts to baked.'] },
+    { id:'proc_profile', name:'Briefing profile view', status:'done',
+      desc:'The side profile for briefing an approach: each fix at its crossing altitude, descending left-to-right, with MDA/DA lines, glidepath, course, TCH and threshold elevation.' },
+    { id:'proc_profscrub', name:'Profile crosshair (drag to read)', status:'done',
+      desc:'Drag across the profile for a live readout of distance from the reference point and the altitude you should be at there, naming the nearest fix.' },
+    { id:'proc_missed', name:'Missed approach', status:'done',
+      desc:'Missed-approach fixes are carried through to the map and the profile, drawn distinctly (blue, finely dashed) from the approach track.' },
+    { id:'proc_ils', name:'ILS / DME-based approaches', status:'done',
+      desc:'ILS approaches have no named intermediate waypoints, so they carry plate-transcribed profile points instead \u2014 briefable via Profile even without map fixes. Includes PROC A/B variants.' },
+    { id:'proc_data_other', name:'Procedure data \u2014 other airports', status:'soon', setup:true,
+      desc:'Verified altitudes are loaded for AYPY RNAV only. Nadzab, Goroka, Mt Hagen, Madang and Tokua still need theirs.',
+      howto:['Either enter them yourself in the altitude editor against your plate,',
+             'or send the approach plates to have them drafted for you to verify.',
+             'Tokua also needs its procedure fixes transcribed \u2014 it is not in the fix set yet.'] },
+    { id:'proc_holds', name:'Arcs & holding patterns', status:'soon',
+      desc:'Published holds are straightforward data, but a radio-assigned hold needs an input you can punch in mid-flight and have drawn correctly. Parked until that is designed.' },
   ]},
 
   { name:'On the Horizon', items:[
