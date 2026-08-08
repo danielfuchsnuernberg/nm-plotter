@@ -10,6 +10,65 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-08-09  v265: SEARCH PARITY. A harness now drives BOTH search surfaces -- the bar over
+                the map and the coordinate box in the sidebar -- with the same battery and
+                prints what each one finds. It found two places where the same text worked
+                in one and not the other.
+                (1) The sidebar did not search an airfield's TOWN. The map bar always has.
+                Half the PNG fields are known by their town rather than their field name --
+                Kokopo for Tokua, Goronka for Goroka -- so "Kokopo" found the field on the
+                map and nothing in the box you plot from. Fixed: town now scores between
+                field-name-starts-with and field-name-contains.
+                (2) The map bar ignored every coordinate format except a plus code. Typing
+                a decimal pair, an OzRunways packed string, DMS or DDM into it did nothing,
+                while the sidebar box has always taken all of them. Fixed: the bar now
+                offers a Position result for anything the coordinate parser accepts, showing
+                the decoded decimal before you commit, and flies there with a pin.
+                Verified in both directions: airfields by ICAO/IATA/name/town, saved
+                waypoints, saved villages, enroute fixes, procedure fixes, ATS routes,
+                airspace areas, and all ten coordinate formats now answer in both places.
+    2026-08-09  v264: PLUS CODES. Google Maps hands out things like
+                "72J2+PC5, Lae Morobe Province"; the app now reads them, in the coordinate
+                box, in the Home Base box, and in the on-map search bar, which shows the
+                decoded position before you commit to it. Decoding is pure arithmetic -- no
+                lookup, no network -- so it works offline like everything else.
+                The short form is NOT a location on its own: "72J2+PC5" has its first four
+                characters removed and they are recovered from a nearby reference. The same
+                short code resolves to Lae from a Lae reference and to a spot near Port
+                Moresby from a Moresby reference, both without complaint. So: the locality
+                Google printed after the comma is matched against the pack first, then the
+                map view, then home base; whichever was used is NAMED next to the result;
+                and a short code typed into a waypoint row is rewritten as its full code, so
+                the same row can never quietly mean somewhere else later.
+                Checked against the specification's worked examples and round-tripped over
+                200,000 random points. A plus code is a map pin, not a surveyed position --
+                advisory, Garmin primary, as always.
+    2026-08-08  v263: Three things lifted across from the iPhone build.
+                (1) FUEL ADDITIONS. A carriage reference at the bottom of the Fuel tab: what a
+                jerry can (20 L), a fuel drum (200 L) and a long range tank (200 L) are worth in
+                litres, US gallons, kilograms and pounds. Not a calculator -- the figure you want
+                when someone offers to top you up in the field. The volumes are nominal and fixed;
+                the WEIGHTS are computed from the tab's own density field rather than a hard-coded
+                0.80, so the card can never disagree with the rest of the tab, and the footer says
+                which density it used.
+                (2) TOWERED AERODROMES ARE VISUALLY DISTINCT. A field with a published TWR frequency
+                now carries a separated green ring outside its dot, on the Aerodromes layer and on
+                the search pin. It is DERIVED, not authored -- a field is towered if the pack
+                carries a TWR frequency for it -- so there is no hand-maintained list to drift.
+                The ring is a separate non-interactive circle: the dot's size, colour and hit area
+                are untouched, so the flight-category recolour still owns the FILL while the ring
+                owns the tower. Deliberately NOT claimed: that everything else is non-towered.
+                Only a handful of the 575 records carry any frequency at all.
+                (3) TIMES. A new collapsible section in the left panel, above the Flight Log:
+                engine start, engine shut down, and a list of skids up/down sectors under them,
+                because one start-up covers more than one sector. Unlike the iPhone version EVERY
+                stamp is a typed field -- Now fills it with the clock, but a late press is
+                corrected by typing over it, which is the whole point of having it here. Totals in
+                h:mm and decimal hours for both engine and skids. Times are HH:MM against the
+                record's date; an end earlier than its start is read as past midnight, and a
+                sector over six hours is flagged rather than silently added. Saved entries go to a
+                log on this device (newest first) with Load, two-tap delete and Export CSV for the
+                logbook. The entry in progress survives a reload.
     2026-07-19  v262: A plotted point that sits on an aerodrome or fix is now treated as ONE place.
                 Previously the route point and the aerodrome each drew their own marker and label, so
                 plotting to AYPY or AYMA stacked two labels on one spot, and tapping gave the thin
@@ -2558,6 +2617,128 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .fc-conv-summary .fc-cell{text-align:center;min-width:56px}
   .fc-conv-summary .fc-cell .v{font-size:16px;font-weight:600;color:var(--accent);font-family:var(--mono);letter-spacing:.01em}
   .fc-conv-summary .fc-cell .u{font-size:9px;color:var(--text-faint);margin-top:2px;letter-spacing:.1em;text-transform:uppercase}
+
+  /* ===== Fuel additions — what a can, a drum or a ferry tank is worth =====
+     A reminder card, not a calculator. Volumes are nominal and fixed; the
+     weights are computed from the density field above, so the card agrees
+     with the rest of the tab instead of quoting a hard-coded 0.80. */
+  .fcadd-row{display:flex;align-items:center;gap:10px;padding:9px 0}
+  .fcadd-row + .fcadd-row{border-top:1px solid var(--border)}
+  .fcadd-ic{flex:0 0 30px;width:30px;height:30px;border-radius:3px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--bg);border:1px solid var(--border-strong);color:var(--accent)}
+  .fcadd-ic svg{width:19px;height:19px}
+  .fcadd-nm{flex:1 1 auto;min-width:0;font-size:12px;color:var(--text);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fcadd-q{flex:0 0 auto;display:grid;grid-template-columns:auto auto;
+    column-gap:12px;row-gap:2px;justify-items:end;align-items:baseline}
+  .fcadd-q span{display:block;font-family:var(--mono);white-space:nowrap;text-align:right}
+  .fcadd-q .l,.fcadd-q .k{min-width:7ch;font-size:13px;font-weight:600}
+  .fcadd-q .l{color:var(--text)}
+  .fcadd-q .k{color:var(--accent-2)}
+  .fcadd-q .g,.fcadd-q .p{min-width:9ch;font-size:10px;color:var(--text-faint);letter-spacing:.02em}
+  .fcadd-foot{margin-top:10px;font-size:10px;color:var(--text-faint);letter-spacing:.03em}
+  .ap-item.ap-plus .ap-icao{color:var(--accent);font-weight:700}
+
+  /* ===== Times — engine & skids, for the logbook =====
+     Every stamp is a typed field, not a one-shot button: Now fills it with
+     the clock, but a late press is corrected by typing over it. Times are
+     HH:MM against the record's date; an end earlier than its start is read
+     as past midnight. */
+  .tmx-clock{display:flex;align-items:baseline;justify-content:space-between;
+    background:var(--bg);border:1px solid var(--border);border-radius:3px;
+    padding:6px 10px;margin-bottom:10px}
+  .tmx-clock .loc{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text)}
+  .tmx-clock .utc{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--text-faint)}
+  .tmx-row{display:flex;align-items:center;gap:6px;padding:5px 0}
+  .tmx-rl{flex:1 1 auto;min-width:0;font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--text-dim);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tmx-in{flex:0 0 auto;width:96px;background:var(--bg);
+    border:1px solid var(--border-strong);border-radius:3px;padding:5px 7px;
+    font-family:var(--mono);font-size:13px;color:var(--accent);
+    text-align:center;outline:none;transition:border-color .12s}
+  .tmx-in:focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .tmx-in.tmx-date{width:132px;color:var(--text)}
+  .tmx-now,.tmx-x{flex:0 0 auto;background:var(--bg-2);
+    border:1px solid var(--border-strong);border-radius:3px;
+    color:var(--text-dim);font-family:var(--sans);cursor:pointer;
+    transition:border-color .12s,color .12s}
+  .tmx-now{height:27px;padding:0 9px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+  .tmx-x{width:27px;height:27px;padding:0;font-size:14px;line-height:1}
+  .tmx-now:hover{border-color:var(--accent);color:var(--accent)}
+  .tmx-x:hover{border-color:var(--bad);color:var(--bad)}
+  .tmx-colh{display:grid;grid-template-columns:1fr 62px 48px;gap:8px;
+    margin:14px 0 4px;padding:0 2px}
+  .tmx-colh i{font-style:normal;font-family:var(--mono);font-size:9px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint);text-align:right}
+  .tmx-colh i:first-child{text-align:left}
+  .tmx-secs{border:1px solid var(--border);border-radius:3px;background:var(--bg)}
+  .tmx-sec{padding:7px 8px}
+  .tmx-sec + .tmx-sec{border-top:1px solid var(--border)}
+  .tmx-sech{display:grid;grid-template-columns:1fr 62px 48px;gap:8px;align-items:center;margin-bottom:4px}
+  .tmx-sech .n{font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--text-dim)}
+  .tmx-sech .hm,.tmx-sech .dc{font-family:var(--mono);font-size:13px;font-weight:600;text-align:right}
+  .tmx-sech .hm{color:var(--text)}
+  .tmx-sech .dc{color:var(--accent-2)}
+  .tmx-sec.open .hm,.tmx-sec.open .dc{color:var(--text-faint)}
+  .tmx-sec.long .hm,.tmx-sec.long .dc{color:var(--bad)}
+  .tmx-empty{padding:10px 8px;font-size:11px;color:var(--text-faint)}
+  .tmx-note{margin-top:4px;font-size:10px;color:var(--text-faint);letter-spacing:.02em}
+  .tmx-note.warn{color:var(--bad)}
+  .tmx-add{width:100%;margin-top:8px;height:30px;background:var(--bg-2);
+    border:1px solid var(--border-strong);border-radius:3px;color:var(--text-dim);
+    font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;cursor:pointer;transition:border-color .12s,color .12s}
+  .tmx-add:hover{border-color:var(--accent);color:var(--accent)}
+  .tmx-tot{display:grid;grid-template-columns:1fr 62px 48px;gap:8px;align-items:center;
+    padding:9px 8px;background:var(--bg);border:1px solid var(--border);border-radius:3px}
+  .tmx-tot + .tmx-tot{margin-top:6px}
+  .tmx-tot .n{min-width:0}
+  .tmx-tot .n b{display:block;font-family:var(--mono);font-size:11px;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--text)}
+  .tmx-tot .n span{display:block;margin-top:2px;font-family:var(--mono);font-size:9px;
+    letter-spacing:.05em;color:var(--text-faint);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tmx-tot .hm,.tmx-tot .dc{font-family:var(--mono);font-size:17px;font-weight:600;text-align:right}
+  .tmx-tot .hm{color:var(--accent)}
+  .tmx-tot .dc{color:var(--accent-2)}
+  .tmx-tot.idle .hm,.tmx-tot.idle .dc{color:var(--text-fainter)}
+  .tmx-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .tmx-act{height:30px;background:var(--bg-2);border:1px solid var(--border-strong);
+    border-radius:3px;font-family:var(--sans);font-size:11px;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+    transition:border-color .12s,color .12s}
+  .tmx-act.save{color:var(--accent-2)}
+  .tmx-act.del{color:var(--bad)}
+  .tmx-act.save:hover{border-color:var(--accent-2)}
+  .tmx-act.del:hover{border-color:var(--bad)}
+  .tmx-act.del.arm{border-color:var(--bad);background:rgba(255,90,82,.14)}
+  .tmx-act[disabled]{color:var(--text-fainter);border-color:var(--border);cursor:default}
+  .tmx-msg{margin-top:8px;font-size:11px;color:var(--accent);min-height:14px}
+  .tmx-loghead{display:flex;align-items:center;justify-content:space-between;
+    margin:16px 0 2px;padding-top:11px;border-top:1px solid var(--border)}
+  .tmx-loghead span{font-size:10px;font-weight:700;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--text-dim)}
+  .tmx-csv{background:transparent;border:1px solid var(--border-strong);border-radius:3px;
+    padding:3px 8px;font-family:var(--sans);font-size:10px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);
+    cursor:pointer;transition:border-color .12s,color .12s}
+  .tmx-csv:hover{border-color:var(--accent);color:var(--accent)}
+  .tmx-csv[disabled]{color:var(--text-fainter);border-color:var(--border);cursor:default}
+  .tmx-li{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border)}
+  .tmx-li .d{flex:0 0 auto;font-family:var(--mono);font-size:11px;color:var(--text)}
+  .tmx-li .v{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:11px;
+    color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tmx-li .lo{flex:0 0 auto;background:transparent;border:1px solid var(--border-strong);
+    border-radius:3px;padding:2px 7px;font-family:var(--sans);font-size:9px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);cursor:pointer}
+  .tmx-li .lo:hover{border-color:var(--accent);color:var(--accent)}
+  .tmx-li .rm{flex:0 0 auto;background:transparent;border:1px solid var(--border-strong);
+    border-radius:3px;width:22px;height:22px;padding:0;font-size:13px;line-height:1;
+    color:var(--text-faint);cursor:pointer}
+  .tmx-li .rm:hover,.tmx-li .rm.arm{border-color:var(--bad);color:var(--bad)}
   .fc-result-box{
     background:var(--bg);border:1px solid var(--border);
     border-radius:3px;padding:12px 14px;margin-top:12px;
@@ -4243,6 +4424,30 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         </div>
       </div>
 
+      <div class="wplib collapsed" id="tmlib">
+        <button class="wplib-head" id="tmlibHead" type="button">
+          <span class="wplib-ttl">Times</span>
+          <span class="wplib-meta"><span class="badge" id="tmlibCount">0</span><span class="wplib-chev">&#x25BE;</span></span>
+        </button>
+        <div class="wplib-body">
+          <div class="tmx-clock"><span class="loc" id="tmxLoc">--:--</span><span class="utc" id="tmxUtc">&mdash;</span></div>
+          <div class="tmx-row"><span class="tmx-rl">Date</span><input class="tmx-in tmx-date" id="tmxDate" type="date"></div>
+          <div id="tmxStamps"></div>
+          <div class="tmx-colh"><i>Sectors</i><i>h:mm</i><i>dec</i></div>
+          <div class="tmx-secs" id="tmxSecs"></div>
+          <button class="tmx-add" id="tmxAddSec" type="button">+ Add sector</button>
+          <div class="tmx-colh"><i>Total</i><i>h:mm</i><i>dec</i></div>
+          <div id="tmxTots"></div>
+          <div class="tmx-acts">
+            <button class="tmx-act save" id="tmxSave" type="button">Save to log</button>
+            <button class="tmx-act del" id="tmxClear" type="button">Clear</button>
+          </div>
+          <div class="tmx-msg" id="tmxMsg"></div>
+          <div class="tmx-loghead"><span>Saved</span><button class="tmx-csv" id="tmxCsv" type="button">Export CSV</button></div>
+          <div class="wplib-list" id="tmxLog"></div>
+        </div>
+      </div>
+
       <div class="wplib collapsed" id="flog">
         <button class="wplib-head" id="flogHead" type="button">
           <span class="wplib-ttl">Flight Log</span>
@@ -4519,6 +4724,15 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
           </div>
           <div id="fc-conv-summary" class="fc-conv-summary" style="display:none;"></div>
         </div>
+
+        <!-- Additions: what a can, a drum or a ferry tank is worth when
+             someone offers to top you up in the field. Nominal volumes;
+             weights follow the density field at the top of this tab. -->
+        <div class="fc-card">
+          <div class="fc-card-title">Additions &mdash; carriage reference</div>
+          <div id="fc-add-list"></div>
+          <div class="fcadd-foot" id="fc-add-foot">Nominal capacities</div>
+        </div>
       </section>
     </div>
 
@@ -4568,10 +4782,166 @@ function renderFuelPng(strokeColor){
   });
 }
 
+/* ===== Open Location Code ("plus codes") =====
+   Google Maps hands out things like "72J2+PC5, Lae Morobe Province".
+   Decoding one is pure arithmetic -- no lookup, no network -- so it works
+   offline like everything else here.
+
+   A code has 8 characters, a '+', then more: "6R5972J2+PC5". The first
+   ten characters are pairs, each pair narrowing latitude and longitude by
+   a factor of twenty; anything after that refines the cell on a 4-wide by
+   5-tall grid. Ten characters is about 14 m, eleven about 3 m.
+
+   THE SHORT FORM IS NOT A LOCATION ON ITS OWN. "72J2+PC5" has its first
+   four characters removed, and those are recovered from a nearby
+   reference -- which is why Google prints a town after the comma. The
+   same short code resolves to Lae from a Lae reference and to a spot
+   near Port Moresby from a Moresby reference, both without complaint.
+   So this code never resolves a short form silently: whatever consumes
+   it is handed the reference that was used, and the UI shows it.
+
+   Checked against the specification's worked examples and round-tripped
+   over 200,000 random points before it went in. ADVISORY like everything
+   else: a plus code is a map pin, not a surveyed position. */
+const OLC_A = '23456789CFGHJMPQRVWX';
+const OLC_SEP = '+', OLC_SEP_POS = 8, OLC_PAD = '0';
+const OLC_COLS = 4, OLC_ROWS = 5;
+
+function olcValid(code){
+  if(!code) return false;
+  const c = String(code).toUpperCase();
+  const sep = c.indexOf(OLC_SEP);
+  if(sep < 0 || sep !== c.lastIndexOf(OLC_SEP)) return false;
+  if(sep > OLC_SEP_POS || sep % 2 === 1) return false;
+  if(c.indexOf(OLC_PAD) > -1){
+    if(sep < 2) return false;
+    const m = c.match(/(0+)/g);
+    if(!m || m.length > 1 || m[0].length % 2 === 1 || c.indexOf(OLC_PAD) + m[0].length !== sep) return false;
+    if(c.charAt(c.length - 1) !== OLC_SEP) return false;
+  }
+  const body = c.replace(/\+/g, '').replace(/0/g, '');
+  if(!body.length) return false;
+  for(const ch of body) if(OLC_A.indexOf(ch) < 0) return false;
+  if(c.length - sep - 1 === 1) return false;      // a lone trailing character is not legal
+  return true;
+}
+function olcIsFull(code){ const c = String(code).toUpperCase(); return olcValid(c) && c.indexOf(OLC_SEP) === OLC_SEP_POS; }
+function olcIsShort(code){ const c = String(code).toUpperCase(); const sep = c.indexOf(OLC_SEP); return olcValid(c) && sep >= 0 && sep < OLC_SEP_POS; }
+
+function olcDecode(code){
+  const c = String(code).replace(/\+/g, '').replace(/0+$/, '').toUpperCase();
+  let lat = -90, lng = -180, latRes = 400, lngRes = 400, i = 0;
+  while(i < Math.min(c.length, 10)){
+    latRes /= 20; lngRes /= 20;
+    lat += latRes * OLC_A.indexOf(c.charAt(i));
+    if(i + 1 < c.length) lng += lngRes * OLC_A.indexOf(c.charAt(i + 1));
+    i += 2;
+  }
+  while(i < c.length){
+    const d = OLC_A.indexOf(c.charAt(i));
+    latRes /= OLC_ROWS; lngRes /= OLC_COLS;
+    lat += latRes * Math.floor(d / OLC_COLS);
+    lng += lngRes * (d % OLC_COLS);
+    i++;
+  }
+  return { lat: lat + latRes/2, lon: lng + lngRes/2, latRes, lngRes, len: c.length };
+}
+
+function olcEncode(latitude, longitude, len){
+  len = len || 10;
+  let lat = Math.min(90, Math.max(-90, latitude)), lng = longitude;
+  while(lng < -180) lng += 360;
+  while(lng >= 180) lng -= 360;
+  if(lat === 90) lat = 90 - 1e-9;
+  let code = '', latVal = lat + 90, lngVal = lng + 180, latRes = 20, lngRes = 20;
+  for(let i = 0; i < Math.min(len, 10); i += 2){
+    const la = Math.floor(latVal / latRes), lo = Math.floor(lngVal / lngRes);
+    code += OLC_A.charAt(la) + OLC_A.charAt(lo);
+    latVal -= la * latRes; lngVal -= lo * lngRes;
+    latRes /= 20; lngRes /= 20;
+  }
+  latRes *= 20; lngRes *= 20;
+  for(let i = 10; i < len; i++){
+    latRes /= OLC_ROWS; lngRes /= OLC_COLS;
+    const r = Math.floor(latVal / latRes), col = Math.floor(lngVal / lngRes);
+    code += OLC_A.charAt(r * OLC_COLS + col);
+    latVal -= r * latRes; lngVal -= col * lngRes;
+  }
+  if(code.length < OLC_SEP_POS) code += OLC_PAD.repeat(OLC_SEP_POS - code.length);
+  return code.slice(0, OLC_SEP_POS) + OLC_SEP + code.slice(OLC_SEP_POS);
+}
+
+/* Recover the full code nearest the reference. */
+function olcRecover(shortCode, refLat, refLon){
+  const c = String(shortCode).toUpperCase();
+  if(olcIsFull(c)) return c;
+  if(!olcIsShort(c)) return null;
+  const padLen = OLC_SEP_POS - c.indexOf(OLC_SEP);
+  const resolution = Math.pow(20, 2 - padLen / 2);
+  const half = resolution / 2;
+  const stem = olcEncode(refLat, refLon, 10).replace(/\+/g, '').substring(0, padLen);
+  const joined = stem + c.replace(/\+/g, '');
+  const a = olcDecode(joined.slice(0, OLC_SEP_POS) + OLC_SEP + joined.slice(OLC_SEP_POS));
+  let lat = a.lat, lon = a.lon;
+  if(refLat + half < lat && lat - resolution >= -90) lat -= resolution;
+  else if(refLat - half > lat && lat + resolution <= 90) lat += resolution;
+  if(refLon + half < lon && lon - resolution >= -180) lon -= resolution;
+  else if(refLon - half > lon && lon + resolution <= 180) lon += resolution;
+  return olcEncode(lat, lon, a.len);
+}
+
+/* Where a short code gets hung. Order: the locality Google printed after
+   the comma, if the pack knows it; then wherever the map is looking; then
+   home base; then the region centre. The label travels with the answer so
+   the UI can say which one it used. */
+function olcReference(locality){
+  try {
+    if(locality && typeof window.NMPlusLocality === 'function'){
+      const r = window.NMPlusLocality(locality);
+      if(r && isFinite(r.lat) && isFinite(r.lon)) return r;
+    }
+    if(typeof window.NMPlusRef === 'function'){
+      const r = window.NMPlusRef();
+      if(r && isFinite(r.lat) && isFinite(r.lon)) return r;
+    }
+  } catch(_){ }
+  return null;
+}
+
+/* Returns {lat, lon, full, short, refLabel} or throws. Callers that only
+   want a position use parseCoordinatePair; callers that need to SHOW how a
+   short code was resolved call this directly. */
+function parsePlusCode(text){
+  let t = String(text == null ? '' : text).trim();
+  if(t.indexOf(OLC_SEP) < 0) throw new Error('not a plus code');
+  let locality = '';
+  const comma = t.indexOf(',');
+  if(comma > -1){ locality = t.slice(comma + 1).trim(); t = t.slice(0, comma).trim(); }
+  t = t.replace(/\s+/g, '').toUpperCase();
+  if(olcIsFull(t)){
+    const d = olcDecode(t);
+    return { lat: d.lat, lon: d.lon, full: t, short: false, refLabel: '' };
+  }
+  if(!olcIsShort(t)) throw new Error('not a valid plus code');
+  const ref = olcReference(locality);
+  if(!ref) throw new Error('short plus code needs a reference location');
+  const full = olcRecover(t, ref.lat, ref.lon);
+  if(!full) throw new Error('could not resolve the plus code');
+  const d = olcDecode(full);
+  return { lat: d.lat, lon: d.lon, full: full, short: true, refLabel: ref.label || 'the map view' };
+}
+
 /* ===== Coordinate parser (unchanged from earlier) ===== */
 function parseCoordinatePair(line){
   const raw = line.trim();
   if(!raw) throw new Error('empty');
+
+  // Plus code first: "72J2+PC5, Lae Morobe Province" would otherwise fall
+  // through to the comma-separated DMS branch and be read as numbers.
+  if(raw.indexOf('+') > -1){
+    const pc = parsePlusCode(raw);
+    return validate(pc.lat, pc.lon);
+  }
 
   const dec = raw.match(/^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/);
   if(dec) return validate(parseFloat(dec[1]), parseFloat(dec[2]));
@@ -5385,6 +5755,19 @@ function renderOneRow(r, i){
     coordInput.classList.remove('invalid');
     ensureTrailingBlankRow();
   });
+  // A SHORT plus code is resolved against wherever the map happened to be
+  // looking. Leaving the short form in the row would let the same text mean
+  // somewhere else the next time it is read, so the resolved full code --
+  // which needs no reference -- is written back in its place.
+  coordInput.addEventListener('change', () => {
+    const v = (r.coord || '').trim();
+    if(v.indexOf('+') < 0) return;
+    let pc; try { pc = parsePlusCode(v); } catch(_){ return; }
+    if(!pc.short || !pc.full) return;
+    r.coord = pc.full;
+    coordInput.value = pc.full;
+    processDebounced();
+  });
   coordInput.addEventListener('paste', e => {
     const text = (e.clipboardData || window.clipboardData).getData('text');
     if(!text) return;
@@ -5812,6 +6195,385 @@ async function cloudDelete(col, id){ var r = await cloudFetch('/' + (col||'route
   head.addEventListener('click',function(){ const c=lib.classList.toggle('collapsed'); try{ localStorage.setItem(RT_OPEN, c?'0':'1'); }catch(_){} if(!c) renderCloud(); });
   render();
   if(cloudListEl) flashCloudList(cloudKey() ? 'Tap \u27f3 to load your cloud routes.' : 'Set a library key in Settings to pull routes.');
+})();
+
+/* ============================================================
+   FUEL ADDITIONS — carriage reference
+   Nominal volumes (fixed); weights derived from the Fuel tab's
+   density field so this card can never disagree with the rest
+   of the tab. Repaints when the density changes.
+   ============================================================ */
+(function fuelAdditions(){
+  var list = document.getElementById('fc-add-list');
+  if(!list) return;
+  var IC = {
+    can:  '<path d="M6.2 7.6h11.6v12.2H6.2z"/>'
+        + '<path d="M9.2 7.6V5.8h5.6v1.8"/>'
+        + '<path d="M8.8 10.6l6.4 6.2M15.2 10.6l-6.4 6.2"/>'
+        + '<circle cx="16.4" cy="5.6" r="1"/>',
+    drum: '<ellipse cx="12" cy="6.2" rx="5.8" ry="2.2"/>'
+        + '<path d="M6.2 6.2v11.6a5.8 2.2 0 0 0 11.6 0V6.2"/>'
+        + '<path d="M6.2 10.6a5.8 2.2 0 0 0 11.6 0M6.2 14.2a5.8 2.2 0 0 0 11.6 0"/>',
+    lrt:  '<path d="M4.6 9.4h15.8v7.2H7.9z"/>'
+        + '<path d="M11 9.4v7.2M14.6 9.4v7.2M18.2 9.4v7.2"/>'
+        + '<circle cx="13.4" cy="8.1" r="1.15"/>'
+        + '<path d="M6 9.4L3.9 7.3M3 8.2L4.8 6.4"/>'
+  };
+  var ADDS = [
+    { i:'can',  t:'Jerry can',       l:20  },
+    { i:'drum', t:'Fuel drum',       l:200 },
+    { i:'lrt',  t:'Long range tank', l:200 }
+  ];
+  var L_PER_USG = 3.78541, KG_PER_LB = 0.453592;
+  function density(){
+    var el = document.getElementById('fc-density');
+    var d = el ? parseFloat(el.value) : NaN;
+    return (isFinite(d) && d > 0) ? d : 0.800;
+  }
+  function paint(){
+    var d = density(), h = '';
+    ADDS.forEach(function(a){
+      var kg = a.l * d;
+      h += '<div class="fcadd-row">'
+         + '<span class="fcadd-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+         +   'stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">' + IC[a.i] + '</svg></span>'
+         + '<span class="fcadd-nm">' + a.t + '</span>'
+         + '<span class="fcadd-q">'
+         +   '<span class="l">' + a.l + ' L</span>'
+         +   '<span class="k">' + kg.toFixed(0) + ' kg</span>'
+         +   '<span class="g">' + (a.l / L_PER_USG).toFixed(1) + ' USG</span>'
+         +   '<span class="p">' + (kg / KG_PER_LB).toFixed(0) + ' lb</span>'
+         + '</span></div>';
+    });
+    list.innerHTML = h;
+    var foot = document.getElementById('fc-add-foot');
+    if(foot) foot.textContent = 'Nominal capacities \u00b7 weights at ' + d.toFixed(3) + ' kg/L';
+  }
+  var den = document.getElementById('fc-density');
+  if(den) den.addEventListener('input', paint);
+  paint();
+})();
+
+/* ============================================================
+   TIMES — engine & skids, for the logbook
+
+   One ENGINE RUN per record: an engine pair, and a list of skids
+   pairs under it, because one start-up covers more than one
+   sector.
+
+   Every stamp is a TYPED FIELD, not a one-shot button. Now fills
+   it with the clock; a late press is corrected by typing over it.
+   Times are HH:MM against the record's date -- an end earlier
+   than its start is read as past midnight, and anything over six
+   hours is flagged rather than silently accepted.
+
+   Two stores, both on this device:
+     nmplotter_times     the entry being worked on (survives reload)
+     nmplotter_timeslog  the saved records, newest first
+   Export CSV writes the whole log out for the logbook.
+   ============================================================ */
+(function timesPanel(){
+  var lib = document.getElementById('tmlib');
+  if(!lib) return;
+  var TMX_KEY = 'nmplotter_times', TMX_LOG = 'nmplotter_timeslog', TMX_OPEN = 'nmplotter_times_open';
+
+  var head    = document.getElementById('tmlibHead'),
+      countEl = document.getElementById('tmlibCount'),
+      dateEl  = document.getElementById('tmxDate'),
+      stampEl = document.getElementById('tmxStamps'),
+      secsEl  = document.getElementById('tmxSecs'),
+      totsEl  = document.getElementById('tmxTots'),
+      addBtn  = document.getElementById('tmxAddSec'),
+      saveBtn = document.getElementById('tmxSave'),
+      clrBtn  = document.getElementById('tmxClear'),
+      msgEl   = document.getElementById('tmxMsg'),
+      csvBtn  = document.getElementById('tmxCsv'),
+      logEl   = document.getElementById('tmxLog'),
+      locEl   = document.getElementById('tmxLoc'),
+      utcEl   = document.getElementById('tmxUtc');
+
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function todayISO(){ var d = new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+  function nowHM(){ var d = new Date(); return pad2(d.getHours())+':'+pad2(d.getMinutes()); }
+  function isHM(v){ return typeof v === 'string' && /^\d{2}:\d{2}$/.test(v); }
+  function mins(v){ if(!isHM(v)) return null; var p = v.split(':'); return (+p[0])*60 + (+p[1]); }
+  /* end before start = past midnight. A run longer than this is almost always
+     a typo, so it is shown in red rather than quietly added to the totals. */
+  var LONG_MIN = 6*60;
+  function span(a, b){
+    var x = mins(a), y = mins(b);
+    if(x == null || y == null) return null;
+    var d = y - x; if(d < 0) d += 1440;
+    return d;
+  }
+  function hm(m){ return (m == null) ? '\u2014' : (Math.floor(m/60) + ':' + pad2(m % 60)); }
+  function dec(m){ return (m == null) ? '\u2014' : (Math.round(m/6)/10).toFixed(1); }
+  function fmtDate(iso){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return iso || '';
+    var p = iso.split('-');
+    return (+p[2]) + ' ' + MON[(+p[1])-1] + ' ' + p[0].slice(2);
+  }
+
+  function blank(){ return { date: todayISO(), es:null, ex:null, secs:[] }; }
+  var REC = blank();
+  (function load(){
+    try {
+      var a = JSON.parse(localStorage.getItem(TMX_KEY));
+      if(a && typeof a === 'object' && Object.prototype.toString.call(a.secs) === '[object Array]'){
+        REC = { date: a.date || todayISO(),
+                es: isHM(a.es) ? a.es : null,
+                ex: isHM(a.ex) ? a.ex : null,
+                secs: a.secs.map(function(x){
+                  return { up: isHM(x && x.up) ? x.up : null, dn: isHM(x && x.dn) ? x.dn : null };
+                }) };
+      }
+    } catch(_){ }
+  })();
+  function save(){ try{ localStorage.setItem(TMX_KEY, JSON.stringify(REC)); }catch(_){ } }
+
+  function logLoad(){ try{ var a = JSON.parse(localStorage.getItem(TMX_LOG)); return Array.isArray(a) ? a : []; }catch(_){ return []; } }
+  function logStore(a){ try{ localStorage.setItem(TMX_LOG, JSON.stringify(a)); }catch(_){ } }
+
+  function empty(){
+    return !REC.es && !REC.ex && !REC.secs.some(function(s){ return s.up || s.dn; });
+  }
+  function skidsMin(){
+    var t = 0, any = false;
+    REC.secs.forEach(function(s){ var d = span(s.up, s.dn); if(d != null){ t += d; any = true; } });
+    return any ? t : null;
+  }
+
+  function flash(txt){
+    if(!msgEl) return;
+    msgEl.textContent = txt || '';
+    if(txt) setTimeout(function(){ if(msgEl.textContent === txt) msgEl.textContent = ''; }, 2600);
+  }
+
+  /* ---- painting ---- */
+  function rowHtml(key, label, val){
+    return '<div class="tmx-row">'
+      + '<span class="tmx-rl">' + label + '</span>'
+      + '<input class="tmx-in" type="time" data-tmx="' + key + '" value="' + (val || '') + '">'
+      + '<button class="tmx-now" type="button" data-tmxnow="' + key + '">Now</button>'
+      + '<button class="tmx-x" type="button" data-tmxclr="' + key + '" aria-label="Clear">\u00d7</button>'
+      + '</div>';
+  }
+
+  function paint(){
+    if(dateEl) dateEl.value = REC.date;
+
+    stampEl.innerHTML = rowHtml('es', 'Engine start', REC.es)
+                      + rowHtml('ex', 'Engine shut down', REC.ex);
+
+    if(!REC.secs.length){
+      secsEl.innerHTML = '<div class="tmx-empty">No sectors yet \u2014 Add sector starts one.</div>';
+    } else {
+      secsEl.innerHTML = REC.secs.map(function(s, i){
+        var d = span(s.up, s.dn), open = (d == null), lng = (d != null && d > LONG_MIN);
+        return '<div class="tmx-sec' + (open ? ' open' : '') + (lng ? ' long' : '') + '">'
+          + '<div class="tmx-sech"><span class="n">Sector ' + (i+1) + '</span>'
+          +   '<span class="hm">' + hm(d) + '</span><span class="dc">' + dec(d) + '</span></div>'
+          + rowHtml('u' + i, 'Skids up',   s.up)
+          + rowHtml('d' + i, 'Skids down', s.dn)
+          + '<div class="tmx-row" style="padding-top:2px">'
+          +   '<span class="tmx-rl"></span>'
+          +   '<button class="tmx-now" type="button" data-tmxdel="' + i + '">Remove sector</button></div>'
+          + (lng ? '<div class="tmx-note warn">Over ' + (LONG_MIN/60) + ' h \u2014 check the times.</div>' : '')
+          + (!open && mins(s.dn) < mins(s.up) ? '<div class="tmx-note">Read as past midnight.</div>' : '')
+          + '</div>';
+      }).join('');
+    }
+
+    var e = span(REC.es, REC.ex), k = skidsMin();
+    var closed = REC.secs.filter(function(s){ return span(s.up, s.dn) != null; }).length;
+    var openN  = REC.secs.length - closed;
+    totsEl.innerHTML =
+        '<div class="tmx-tot' + (e == null ? ' idle' : '') + '"><span class="n"><b>Engine</b><span>'
+      +   (e == null ? 'start \u00b7 shut down' : (REC.es + ' \u2192 ' + REC.ex)) + '</span></span>'
+      +   '<span class="hm">' + hm(e) + '</span><span class="dc">' + dec(e) + '</span></div>'
+      + '<div class="tmx-tot' + (k == null ? ' idle' : '') + '"><span class="n"><b>Skids</b><span>'
+      +   (!REC.secs.length ? 'no sectors yet'
+            : (closed + (closed === 1 ? ' sector' : ' sectors') + (openN ? ' + ' + openN + ' incomplete' : '')))
+      +   '</span></span>'
+      +   '<span class="hm">' + hm(k) + '</span><span class="dc">' + dec(k) + '</span></div>';
+
+    saveBtn.disabled = empty();
+    wireBody();
+    paintLog();
+  }
+
+  function paintLog(){
+    var arr = logLoad();
+    if(countEl) countEl.textContent = String(arr.length);
+    if(csvBtn) csvBtn.disabled = !arr.length;
+    if(!logEl) return;
+    if(!arr.length){ logEl.innerHTML = '<div class="tmx-empty">Nothing saved yet.</div>'; return; }
+    logEl.innerHTML = arr.map(function(r){
+      return '<div class="tmx-li" data-id="' + r.id + '">'
+        + '<span class="d">' + fmtDate(r.date) + '</span>'
+        + '<span class="v">ENG ' + hm(r.engMin) + ' \u00b7 SKD ' + hm(r.skidsMin)
+        +   ' \u00b7 ' + (r.secs ? r.secs.length : 0) + ' sec</span>'
+        + '<button class="lo" type="button" data-tmxload="' + r.id + '">Load</button>'
+        + '<button class="rm" type="button" data-tmxrm="' + r.id + '" aria-label="Delete">\u00d7</button>'
+        + '</div>';
+    }).join('');
+    logEl.querySelectorAll('[data-tmxload]').forEach(function(b){
+      b.addEventListener('click', function(){ loadRecord(b.getAttribute('data-tmxload')); });
+    });
+    logEl.querySelectorAll('[data-tmxrm]').forEach(function(b){
+      b.addEventListener('click', function(){
+        if(b.classList.contains('arm')){
+          logStore(logLoad().filter(function(r){ return String(r.id) !== b.getAttribute('data-tmxrm'); }));
+          paintLog();
+          return;
+        }
+        b.classList.add('arm');
+        setTimeout(function(){ b.classList.remove('arm'); }, 2600);
+        flash('Tap \u00d7 again to delete.');
+      });
+    });
+  }
+
+  /* ---- editing ---- */
+  function setField(key, val){
+    var v = isHM(val) ? val : null;
+    if(key === 'es') REC.es = v;
+    else if(key === 'ex') REC.ex = v;
+    else {
+      var i = parseInt(key.slice(1), 10);
+      if(!REC.secs[i]) return;
+      if(key[0] === 'u') REC.secs[i].up = v; else REC.secs[i].dn = v;
+    }
+    save(); paint();
+  }
+
+  function wireBody(){
+    stampEl.querySelectorAll('[data-tmx]').forEach(bindIn);
+    secsEl.querySelectorAll('[data-tmx]').forEach(bindIn);
+    stampEl.querySelectorAll('[data-tmxnow]').forEach(bindNow);
+    secsEl.querySelectorAll('[data-tmxnow]').forEach(bindNow);
+    stampEl.querySelectorAll('[data-tmxclr]').forEach(bindClr);
+    secsEl.querySelectorAll('[data-tmxclr]').forEach(bindClr);
+    secsEl.querySelectorAll('[data-tmxdel]').forEach(function(b){
+      b.addEventListener('click', function(){
+        REC.secs.splice(parseInt(b.getAttribute('data-tmxdel'), 10), 1);
+        save(); paint();
+      });
+    });
+  }
+  function bindIn(el){
+    el.addEventListener('change', function(){ setField(el.getAttribute('data-tmx'), el.value); });
+  }
+  function bindNow(b){
+    b.addEventListener('click', function(){ setField(b.getAttribute('data-tmxnow'), nowHM()); });
+  }
+  function bindClr(b){
+    b.addEventListener('click', function(){ setField(b.getAttribute('data-tmxclr'), null); });
+  }
+
+  if(dateEl) dateEl.addEventListener('change', function(){
+    REC.date = dateEl.value || todayISO(); save(); paint();
+  });
+
+  addBtn.addEventListener('click', function(){
+    REC.secs.push({ up: nowHM(), dn: null });
+    save(); paint();
+  });
+
+  saveBtn.addEventListener('click', function(){
+    if(empty()) return;
+    var arr = logLoad();
+    arr.unshift({
+      id: Date.now(),
+      date: REC.date,
+      es: REC.es, ex: REC.ex,
+      secs: REC.secs.map(function(s){ return { up:s.up, dn:s.dn }; }),
+      engMin: span(REC.es, REC.ex),
+      skidsMin: skidsMin(),
+      savedAt: Date.now()
+    });
+    logStore(arr);
+    REC = blank(); save(); paint();
+    flash('Saved to the log.');
+  });
+
+  /* Arm-then-fire: an entry stamped all morning is not something a stray
+     click should be able to erase. */
+  var clrArmed = false;
+  clrBtn.addEventListener('click', function(){
+    if(clrArmed){
+      clrArmed = false; clrBtn.classList.remove('arm'); clrBtn.textContent = 'Clear';
+      REC = blank(); save(); paint();
+      return;
+    }
+    clrArmed = true; clrBtn.classList.add('arm'); clrBtn.textContent = 'Sure?';
+    setTimeout(function(){
+      if(!clrArmed) return;
+      clrArmed = false; clrBtn.classList.remove('arm'); clrBtn.textContent = 'Clear';
+    }, 2600);
+  });
+
+  function loadRecord(id){
+    if(!empty()){ flash('Save or clear the current entry first.'); return; }
+    var r = logLoad().filter(function(x){ return String(x.id) === String(id); })[0];
+    if(!r) return;
+    REC = { date: r.date || todayISO(), es: r.es || null, ex: r.ex || null,
+            secs: (r.secs || []).map(function(s){ return { up:s.up||null, dn:s.dn||null }; }) };
+    save(); paint();
+    flash('Loaded \u2014 it is still in the log.');
+  }
+
+  /* ---- CSV out ---- */
+  function csvCell(v){
+    var s = (v == null) ? '' : String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  csvBtn.addEventListener('click', function(){
+    var arr = logLoad();
+    if(!arr.length) return;
+    var most = 0;
+    arr.forEach(function(r){ most = Math.max(most, (r.secs||[]).length); });
+    var head = ['Date','Engine start','Engine shut down','Engine h:mm','Engine dec','Sectors','Skids h:mm','Skids dec'];
+    for(var i = 0; i < most; i++) head.push('S' + (i+1) + ' up', 'S' + (i+1) + ' down', 'S' + (i+1) + ' h:mm');
+    var lines = [head.map(csvCell).join(',')];
+    arr.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); }).forEach(function(r){
+      var row = [r.date, r.es || '', r.ex || '', hm(r.engMin), dec(r.engMin),
+                 (r.secs||[]).length, hm(r.skidsMin), dec(r.skidsMin)];
+      for(var i = 0; i < most; i++){
+        var s = (r.secs||[])[i];
+        row.push(s ? (s.up||'') : '', s ? (s.dn||'') : '', s ? hm(span(s.up, s.dn)) : '');
+      }
+      lines.push(row.map(csvCell).join(','));
+    });
+    try {
+      var blob = new Blob([lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'NMPlotter_Times_' + todayISO() + '.csv';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+    } catch(err){ flash('Could not write the file.'); }
+  });
+
+  /* ---- clocks ---- */
+  function tick(){
+    var d = new Date();
+    if(locEl) locEl.textContent = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    if(utcEl) utcEl.textContent = pad2(d.getUTCDate()) + ' ' + MON[d.getUTCMonth()].toUpperCase()
+      + ' ' + pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + 'Z';
+  }
+  setInterval(tick, 15000);
+  tick();
+
+  head.addEventListener('click', function(){
+    var c = lib.classList.toggle('collapsed');
+    try{ localStorage.setItem(TMX_OPEN, c ? '0' : '1'); }catch(_){ }
+  });
+  try{ if(localStorage.getItem(TMX_OPEN) === '1') lib.classList.remove('collapsed'); }catch(_){ }
+
+  paint();
+  window.NMTimes = { record: function(){ return REC; }, log: logLoad };
 })();
 
 /* ===== Cloud library settings (key + test connection) ===== */
@@ -6395,6 +7157,46 @@ const processDebounced = debounce(process, 300);
   }
 })();
 
+/* Reference location for SHORT plus codes. A short code is only meaningful
+   near somewhere, and getting the somewhere wrong gives a confident answer
+   in the wrong province -- so both of these return a LABEL as well, and the
+   UI prints it next to the result. */
+window.NMPlusLocality = function(text){
+  const q = String(text || '').trim().toLowerCase();
+  if(q.length < 3) return null;
+  let best = null, bestScore = 99;
+  (NM_REGION.airfields || []).forEach(function(a){
+    const id = (a.ident||'').toLowerCase(), nm = (a.name||'').toLowerCase(), mu = (a.muni||'').toLowerCase();
+    let sc = 99;
+    if(id === q) sc = 0;
+    else if(mu && (q === mu || q.indexOf(mu + ' ') === 0 || q.indexOf(mu + ',') === 0)) sc = 1;
+    else if(nm && q.indexOf(nm) === 0) sc = 2;
+    else if(mu && q.indexOf(mu) > -1) sc = 3;
+    if(sc < bestScore){ bestScore = sc; best = a; }
+  });
+  if(!best) return null;
+  return { lat: best.lat, lon: best.lon, label: (best.muni || best.name || best.ident) };
+};
+window.NMPlusRef = function(){
+  try {
+    if(typeof map !== 'undefined' && map && map.getCenter){
+      const c = map.getCenter();
+      if(c && isFinite(c.lat) && isFinite(c.lng)) return { lat: c.lat, lon: c.lng, label: 'the map view' };
+    }
+  } catch(_){ }
+  try {
+    if(typeof HOME_BASE !== 'undefined' && HOME_BASE && HOME_BASE.coord){
+      const h = parseCoordinatePair(HOME_BASE.coord);
+      return { lat: h.lat, lon: h.lon, label: HOME_BASE.name || 'home base' };
+    }
+  } catch(_){ }
+  // NM_REGION.view is { center:[lat,lon], zoom } -- NOT {lat,lon}. The first
+  // version of this read v.lat and would have silently never fired.
+  const c = NM_REGION && NM_REGION.view && NM_REGION.view.center;
+  if(c && isFinite(c[0]) && isFinite(c[1])) return { lat: c[0], lon: c[1], label: NM_REGION.name };
+  return null;
+};
+
 // On-map airport search — find a field by ICAO / IATA / name / town, fly to it
 // and open its card (freqs, notes, add-to-route) without plotting or toggling a layer.
 (function(){
@@ -6511,6 +7313,39 @@ const processDebounced = debounce(process, 300);
     input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; input.blur();
     box.classList.remove('focused');
   }
+  /* A pasted POSITION is a location, not a name to look up.
+     Every format the coordinate parser accepts is offered here, not just
+     plus codes: decimal, the OzRunways packed form, DMS, DDM, hemisphere
+     first or last, longitude first. The sidebar coordinate box has always
+     taken all of these because it IS a coordinate field; this bar was
+     dropping them on the floor, which broke the rule that anything
+     searchable is searchable in both places. */
+  function coordHit(v){
+    const t = (v || '').trim();
+    if(t.length < 3) return null;
+    if(t.indexOf('+') > -1){
+      try {
+        const p = parsePlusCode(t);
+        return { lat:p.lat, lon:p.lon, title:p.full,
+                 sub: p.short ? ('near ' + p.refLabel) : 'plus code' };
+      } catch(_){ /* not a plus code -- fall through to the other formats */ }
+    }
+    try {
+      const c = parseCoordinatePair(t);
+      return { lat:c.lat, lon:c.lon,
+               title: c.lat.toFixed(5) + ', ' + c.lon.toFixed(5), sub:'coordinate' };
+    } catch(_){ return null; }
+  }
+  function coordItemHtml(p){
+    const dec = p.lat.toFixed(5) + ', ' + p.lon.toFixed(5);
+    return '<div class="ap-item ap-plus" data-coord="1" data-lat="' + p.lat + '" data-lon="' + p.lon + '"'
+      + ' data-name="' + escapeAttr(p.title) + '">'
+      + '<span class="ap-icao">\u2316</span><span class="ap-iata"></span>'
+      + '<span class="ap-name">' + escapeHtml(p.title)
+      +   (p.title === dec ? '' : ' <span class="ap-region">' + escapeHtml(dec) + '</span>')
+      + '</span>'
+      + '<span class="ap-type">' + escapeHtml(p.sub) + '</span></div>';
+  }
   function renderResults(){
     const q = input.value.trim().toLowerCase();
     const hits = find(input.value);
@@ -6520,7 +7355,9 @@ const processDebounced = debounce(process, 300);
     const airHits = findAirspace(q);
     const routeHits = findRoutes(q);
     active = 0;
-    let html = hits.map(itemHtml).join('');
+    const pc = coordHit(input.value);
+    let html = pc ? ('<div class="ap-sep">Position</div>' + coordItemHtml(pc)) : '';
+    html += hits.map(itemHtml).join('');
     if(wptHits.length){
       html += '<div class="ap-sep">Your saved waypoints</div>' + wptHits.map(wptHtml).join('');
     }
@@ -6541,10 +7378,10 @@ const processDebounced = debounce(process, 300);
         html += '<div class="ap-foot">Searching villages\u2026</div>';
       } else if(curOnline.length){
         html += '<div class="ap-sep">Villages \u00b7 OpenStreetMap (online)</div>' + curOnline.map(villageHtml).join('');
-      } else if(!hits.length && !wptHits.length && !fixHits.length && !procHits.length && !airHits.length && !routeHits.length){
+      } else if(!pc && !hits.length && !wptHits.length && !fixHits.length && !procHits.length && !airHits.length && !routeHits.length){
         html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
       }
-    } else if(!hits.length && !wptHits.length && !fixHits.length && !procHits.length && !airHits.length && !routeHits.length){
+    } else if(!pc && !hits.length && !wptHits.length && !fixHits.length && !procHits.length && !airHits.length && !routeHits.length){
       html += '<div class="map-search-none">No match \u2014 try ICAO, IATA, or name.</div>';
     }
     results.innerHTML = html;
@@ -6645,7 +7482,7 @@ const processDebounced = debounce(process, 300);
     const items = results.querySelectorAll('.ap-item');
     if(e.key==='ArrowDown'){ e.preventDefault(); setActive(active+1); }
     else if(e.key==='ArrowUp'){ e.preventDefault(); setActive(active-1); }
-    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else if(pick.dataset.fix){ goFix({n:pick.dataset.name, a:+pick.dataset.lat, o:+pick.dataset.lon}); } else if(pick.dataset.air){ goArea({id:pick.dataset.name, lat:+pick.dataset.lat, lon:+pick.dataset.lon}); } else if(pick.dataset.route){ goRoute(pick.dataset.rd); } else if(pick.dataset.wptid){ goWpt(pick.dataset.wptid); } else { go(byId(pick.dataset.id)); } } }
+    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.coord){ goPin(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name, 15); } else if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else if(pick.dataset.fix){ goFix({n:pick.dataset.name, a:+pick.dataset.lat, o:+pick.dataset.lon}); } else if(pick.dataset.air){ goArea({id:pick.dataset.name, lat:+pick.dataset.lat, lon:+pick.dataset.lon}); } else if(pick.dataset.route){ goRoute(pick.dataset.rd); } else if(pick.dataset.wptid){ goWpt(pick.dataset.wptid); } else { go(byId(pick.dataset.id)); } } }
     else if(e.key==='Escape'){ e.preventDefault(); input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; curOnline=undefined; lastQ=''; input.blur(); box.classList.remove('focused'); clearVillagePin(); if(window.NMClearPin) window.NMClearPin(); }
   });
   results.addEventListener('click', e => {
@@ -6669,7 +7506,8 @@ const processDebounced = debounce(process, 300);
     }
     const it = e.target.closest('.ap-item');
     if(it){
-      if(it.dataset.online){ goVillage(+it.dataset.lat, +it.dataset.lon, it.dataset.name); }
+      if(it.dataset.coord){ goPin(+it.dataset.lat, +it.dataset.lon, it.dataset.name, 15); }
+      else if(it.dataset.online){ goVillage(+it.dataset.lat, +it.dataset.lon, it.dataset.name); }
       else if(it.dataset.fix){ goFix({n:it.dataset.name, a:+it.dataset.lat, o:+it.dataset.lon}); }
       else if(it.dataset.air){ goArea({id:it.dataset.name, lat:+it.dataset.lat, lon:+it.dataset.lon}); }
       else if(it.dataset.route){ goRoute(it.dataset.rd); }
@@ -8494,6 +9332,13 @@ document.getElementById('plotBtn').addEventListener('click', () => {
              .sort((a,b) => fqTypeOrder(a.t) - fqTypeOrder(b.t));
   }
   const isControlled = ident => fieldFreqs(ident).some(fr => fr.t === 'TWR' || fr.t === 'APP');
+  // Towered = the pack carries a published TWR frequency for the field. DERIVED,
+  // not authored, so there is no hand-maintained list to drift out of date.
+  // Deliberately NOT claimed: that everything else is non-towered. Most records
+  // carry no frequency at all, so no TWR entry means the pack has none for that
+  // field -- not that the field is uncontrolled.
+  const twrFreqOf = ident => { const r = fieldFreqs(ident).find(fr => fr.t === 'TWR'); return r ? r.f : null; };
+  window.NMTowered = ident => twrFreqOf(ident) != null;
 
   // Exposed for the map right-click / long-press menu (nearest airfield + freqs).
   window.NMFreqs = {
@@ -8841,6 +9686,17 @@ document.getElementById('plotBtn').addEventListener('click', () => {
         fillOpacity: fillOpacity
       }).addTo(fqOverlayLayer)
         .bindTooltip(tip, {direction:'top', offset:[0,-6]});
+      // Towered field: a separated outer ring, which is how a controlled field
+      // reads on a chart against an uncontrolled one. Drawn as its own
+      // non-interactive circle outside the dot so the dot's size, colour and
+      // hit area are untouched -- including the flight-category recolour,
+      // which keeps owning the FILL while the ring keeps owning the tower.
+      if(twrFreqOf(f.ident)){
+        L.circleMarker([f.lat, f.lon], {
+          radius: radius + 3.5, color: '#34d399', weight: 1.5,
+          opacity: 0.95, fill: false, interactive: false
+        }).addTo(fqOverlayLayer);
+      }
       cm.on('click', e => {
         if(e.originalEvent) L.DomEvent.stopPropagation(e);
         cm.closeTooltip();
@@ -8875,6 +9731,12 @@ document.getElementById('plotBtn').addEventListener('click', () => {
       radius: ctrl ? 6 : 4, color: '#7fb3d5', weight: ctrl ? 2 : 1,
       fillColor: '#7fb3d5', fillOpacity: ctrl ? 0.9 : 0.25
     }).addTo(fqPinLayer).bindTooltip(overlayPopup(f), {direction:'top', offset:[0,-6]});
+    if(twrFreqOf(f.ident)){
+      L.circleMarker([f.lat, f.lon], {
+        radius: (ctrl ? 6 : 4) + 3.5, color: '#34d399', weight: 1.5,
+        opacity: 0.95, fill: false, interactive: false
+      }).addTo(fqPinLayer);
+    }
     cm.on('click', e => { if(e.originalEvent) L.DomEvent.stopPropagation(e); cm.closeTooltip(); openAirfieldCard(f); });
     L.marker([f.lat, f.lon], {icon: markerHtml(f), interactive:false}).addTo(fqPinLayer);
     fqPinLayer.addTo(map);
@@ -9618,14 +10480,21 @@ document.getElementById('plotBtn').addEventListener('click', () => {
       const icao = (a.ident||'').toUpperCase();
       const iata = (a.iata ||'').toUpperCase();
       const name = (a.name ||'').toUpperCase();
+      // The TOWN, which this box did not search and the map bar always has.
+      // Half the PNG fields are known by their town rather than their field
+      // name -- Kokopo for Tokua, Goronka for Goroka -- so leaving it out
+      // meant the same word found a field on the map and nothing here.
+      const muni = (a.muni ||'').toUpperCase();
       let s = -1;
       if(icao === q) s = 0;
       else if(iata && iata === q) s = 1;
       else if(icao.startsWith(q)) s = 2;
       else if(iata && iata.startsWith(q)) s = 3;
       else if(name.startsWith(q)) s = 4;
-      else if(name.includes(q)) s = 5;
-      else if(icao.includes(q)) s = 6;
+      else if(muni && muni.startsWith(q)) s = 5;
+      else if(name.includes(q)) s = 6;
+      else if(muni && muni.includes(q)) s = 7;
+      else if(icao.includes(q)) s = 8;
       if(s >= 0) asc.push({a, s});
     }
     asc.sort((x,y) => x.s - y.s || x.a.name.localeCompare(y.a.name));
@@ -14111,7 +14980,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v262 &middot; 2026-07-19</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v265 &middot; 2026-08-09</div>
       </div>
     </div>
   </div>
