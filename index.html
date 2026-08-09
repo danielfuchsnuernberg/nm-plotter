@@ -10,6 +10,18 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-08-09  v284: The library could sit on "Loading..." forever. Every cloud call went
+                through fetch with NO TIMEOUT, so a request that never settles left that
+                message on screen with no error, no retry and no clue -- which is what Danny
+                hit with a route he had just pushed successfully. Cloud calls now abort after
+                15 s and say "no answer after 15s -- try Refresh". Failures also name the
+                path they came from, since three collections share one client and "HTTP 500"
+                alone is not diagnosable. An empty collection now says which one was empty
+                instead of leaving a blank pane.
+                NOT fixed, because it cannot be seen from here: whether the Worker actually
+                answers /routes?full=1. The library asks for full records; the Saved Routes
+                panel asks for the same collection WITHOUT full=1. If the panel lists the
+                route and the library does not, the difference is that parameter.
     2026-08-09  v283: Tile labels: Points is now Waypoints, Log is now Flights. Labels only --
                 the saved tile order is keyed on ids, so a custom order survives the rename.
     2026-08-09  v282: REVERTED the second library. v280 built a new local-storage library
@@ -6452,14 +6464,38 @@ var CLOUD_BASE = 'https://nmplotter-routes.daniel-fuchs-nuernberg.workers.dev';
 var CLOUD_KEY_LS = 'nmplotter_cloud_key';
 function cloudKey(){ try{ return (localStorage.getItem(CLOUD_KEY_LS)||'').trim(); }catch(_){ return ''; } }
 function cloudSlug(name){ return String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60) || ('route-'+Date.now()); }
-function cloudErr(e){ var m=(e&&e.message)||String(e); if(m==='no-key') return 'no library key set'; if(/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'no connection'; return m; }
+function cloudErr(e){ var m=(e&&e.message)||String(e); if(m==='no-key') return 'no library key set'; if(m==='timeout'||/abort/i.test(m)) return 'no answer after ' + Math.round(CLOUD_TIMEOUT_MS/1000) + 's \u2014 try Refresh'; if(/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'no connection'; return m; }
+/* Every cloud call has a DEADLINE. Without one, a request that never settles
+   leaves the caller's "Loading..." on screen forever with nothing to act on --
+   which is exactly what the library did: no error, no retry, no clue. fetch has
+   no built-in timeout, so it needs an AbortController. 15 s is generous for a
+   list call on a PNG connection and still short enough to tell you something. */
+var CLOUD_TIMEOUT_MS = 15000;
 async function cloudFetch(path, opts){
   opts = opts || {};
   var key = cloudKey();
   if(!key) throw new Error('no-key');
   opts.headers = Object.assign({ 'X-Library-Key': key }, opts.headers || {});
-  var r = await fetch(CLOUD_BASE + path, opts);
-  if(!r.ok){ var msg; try{ msg = (await r.json()).error; }catch(_){} throw new Error(msg || ('HTTP ' + r.status)); }
+  var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var timer = null, timedOut = false;
+  if(ctl){
+    opts.signal = ctl.signal;
+    timer = setTimeout(function(){ timedOut = true; try{ ctl.abort(); }catch(_){ } }, CLOUD_TIMEOUT_MS);
+  }
+  var r;
+  try { r = await fetch(CLOUD_BASE + path, opts); }
+  catch(e){
+    if(timer) clearTimeout(timer);
+    if(timedOut) throw new Error('timeout');
+    throw e;
+  }
+  if(timer) clearTimeout(timer);
+  // Say WHICH call failed and with what -- "HTTP 500" alone is not diagnosable
+  // when three collections share one client.
+  if(!r.ok){
+    var msg; try{ msg = (await r.json()).error; }catch(_){}
+    throw new Error((msg || ('HTTP ' + r.status)) + ' on ' + path);
+  }
   return r;
 }
 async function cloudList(col, full){ var r = await cloudFetch('/' + (col||'routes') + (full?'?full=1':'')); var j = await r.json(); return j.items || j.routes || []; }
@@ -13949,6 +13985,9 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
     try{ wlibItems = await cloudList(col, full); }
     catch(e){ wlibItems=[]; wlibMsg('Couldn\u2019t reach cloud \u2014 ' + cloudErr(e)); return; }
     if(wlibType==='waypoints') wlibItems.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); });
+    // An empty answer is a RESULT, not a failure, and it should say which
+    // collection was empty rather than leaving a blank pane.
+    if(!wlibItems.length){ wlibMsg('Nothing in the cloud ' + col + ' yet.'); return; }
     wlibRender();
   }
   function wlibReloadIfOpen(){ if(wlibOpen()) wlibLoad(); }
@@ -16208,7 +16247,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v283 &middot; 2026-08-09</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v284 &middot; 2026-08-09</div>
       </div>
     </div>
   </div>
