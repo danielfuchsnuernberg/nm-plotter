@@ -194,9 +194,18 @@ async function run(){
   var savedKey=KEY, wrong='definitely-not-the-key-'+Date.now();
   KEY=wrong;
   var badR=await call('GET','/routes');
-  var readOpen = (!badR.err && badR.ok);
-  ok(!readOpen, 'a wrong key cannot READ', badR.err||{status:badR.status});
-  if(readOpen) w('bad','        Anyone with the URL can read the whole library.');
+  /* A 200 here is NOT a hole. The Worker does not compare the key against a
+     secret -- it hashes the key into a STORAGE NAMESPACE, so a wrong key gets
+     a perfectly good answer about a library that does not exist: an empty
+     list. What matters is whether YOUR records come back, not the status code.
+     The first version of this test looked only at the status and reported a
+     security hole that was not there. */
+  var badItems = (badR.json && (badR.json.items || badR.json.routes)) || null;
+  var leaked = Array.isArray(badItems) ? badItems.length : (badR.ok ? -1 : 0);
+  ok(leaked === 0, 'a wrong key sees NOTHING of your library',
+     {status:badR.status, records_returned: leaked});
+  if(leaked > 0) w('bad','        A wrong key returned ' + leaked + ' of your records.');
+  else if(leaked === 0 && badR.ok) info('a wrong key gets 200 with an empty list \u2014 that is the design');
 
   /* If reading is open, is WRITING? That is the difference between a leak and
      someone being able to overwrite or erase your routes. Test id only, and
@@ -301,6 +310,44 @@ async function run(){
         ok(nameFromList(mine)===nm, col2+' ['+label+']: LIST shows the name you gave it',
            {sent:nm, list_shows:nameFromList(mine)});
       }
+    }
+  }
+
+  /* ================= 3b. WHERE DOES THE LIST NAME COME FROM? ================
+     The plain list takes each name from KV list METADATA, written when the
+     record was PUT. ?full=1 reads the stored BODY instead. If those two
+     disagree for the same record, the metadata is the fault -- and the plain
+     list is what the Saved Routes panel and the upload check both use. */
+  head('3b. Plain list vs ?full=1 vs the record itself');
+  for(var q=0;q<COLS.length;q++){
+    var colq=COLS[q];
+    var qid=stamp(), qname='NMTEST name source ' + colq + ' ' + Date.now();
+    var QP=await call('PUT','/'+colq+'/'+encodeURIComponent(qid), {id:qid,name:qname,lat:-6.4,lon:146.4,pts:[],points:[]});
+    if(!QP.ok){ ok(false, colq+': could write the probe', {status:QP.status}); continue; }
+    LEFTOVER.push([colq,qid]);
+    // give the list time to catch up, since we already know it lags
+    var qmine=null, qfull=null;
+    for(var qw=0; qw<=6; qw++){
+      if(qw) await new Promise(function(r){ setTimeout(r,10000); });
+      var QL=await call('GET','/'+colq);
+      var qitems=(QL.json&&(QL.json.items||QL.json.routes||[]))||[];
+      qmine=qitems.filter(function(x){ return String(x.id)===String(qid); })[0];
+      if(qmine) break;
+    }
+    if(!qmine){ warn(colq+': the probe never appeared in the plain list'); continue; }
+    var QF=await call('GET','/'+colq+'?full=1');
+    var fitems=(QF.json&&(QF.json.items||QF.json.routes||[]))||[];
+    qfull=fitems.filter(function(x){ return String(x.id)===String(qid); })[0];
+    var QG=await call('GET','/'+colq+'/'+encodeURIComponent(qid));
+    var realName = QG.json && QG.json.name;
+    ok(realName===qname, colq+': the stored record has the right name', {got:realName});
+    ok(qfull && qfull.name===qname, colq+': ?full=1 (reads the BODY) has the right name',
+       {got:qfull&&qfull.name});
+    ok(nameFromList(qmine)===qname, colq+': the plain list (reads METADATA) has the right name',
+       {got:nameFromList(qmine)});
+    if(nameFromList(qmine)!==qname){
+      w('bad','        The metadata name is wrong while the body is right.');
+      w('bad','        Everything that uses the plain list shows the wrong name.');
     }
   }
 

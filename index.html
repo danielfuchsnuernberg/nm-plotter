@@ -10,6 +10,36 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-08-09  v287: The library says how long the cloud takes to catch up. Measured against
+                the live Worker: a record that has just been pushed reads back correctly by
+                id straight away, but takes 20-60 SECONDS to appear in the LIST -- one flight
+                had not appeared after a minute. That is what "I uploaded it and it is not
+                there" looks like, and the list gave no hint of it. It now says so, with the
+                measured number rather than a vague reassurance.
+                Nothing else changed. The two faults still outstanding are the Worker's, not
+                this app's: reads are not authenticated (a wrong key still returns 200), and
+                LIST sometimes reports a record under a DIFFERENT record's name.
+    2026-08-09  v286: The phone and tablet layers are out. This build is opened on a Mac; the
+                phone has its own app and the iPad is no longer used with this one.
+                Gone: seven small-screen CSS bands -- the 180-line iPad-portrait layout, four
+                blocks of max-width:900px tablet/phone rules, and the max-width:760px and
+                max-width:540px odds and ends. 272 lines.
+                UNWRAPPED, not deleted: the two min-width:901px blocks. They hold the column
+                resizers and the panel collapse buttons, so deleting them would have removed
+                desktop features. They are now simply the rules.
+                Gone from the script: ipadPortrait(), the iPad open-panel state, and the
+                width branches in show() and applyInitial(), which collapse to "both panels
+                visible".
+                What STAYS, deliberately: @media print, and the capability queries --
+                pointer:fine, hover:hover, hover:none/pointer:coarse, prefers-reduced-motion.
+                None of those are about screen size; they are about the input device, and a
+                Mac answers them correctly.
+                The validator now asserts there are no width-based media queries left at all,
+                so one cannot creep back in.
+                NOT removed: the phone's three-cell GPS strip, about a dozen lines, now
+                unreachable behind a constant false. Two attempts at cutting that block out
+                by brace-matching produced a broken file; a dead branch is cheaper than a
+                broken one, and it can come out cleanly another time.
     2026-08-09  v285: TWO CLOUD NAME FAULTS, both found and both fixed.
                 (1) ROUTE NAMES IN THE CLOUD WERE INVENTED. Save cleared the route-name box
                 after saving locally. The cloud button then read that empty box, fell through
@@ -2226,35 +2256,35 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   /* Desktop side-panel resizers + collapse / reopen affordances.
      Hidden by default; shown only >900px (mobile/iPad keep a single column). */
   .col-resizer, .col-reopen{ display:none }
-  @media (min-width:901px){
-    /* Layers menu: clear gap below the icon + a margin off the bottom edge, so it
-       floats as a panel instead of spanning the viewport top-to-bottom. */
-    .ov-menu{ top:60px; max-height:calc(100vh - 140px) }
-    .col-resizer{ position:absolute; top:0; bottom:0; width:9px; z-index:480;
-      display:flex; align-items:center; justify-content:center; cursor:col-resize;
-      background:transparent; transition:background .12s; }
-    .col-resizer.left{ left:0; margin-left:-4px }
-    .col-resizer.right{ right:0; margin-right:-4px }
-    .col-resizer:hover, .app.resizing .col-resizer{ background:rgba(127,179,213,.18) }
-    .col-collapse-btn{ cursor:pointer; width:18px; height:36px; padding:0; border-radius:5px;
-      border:1px solid var(--border-strong); background:var(--panel); color:var(--muted);
-      font-size:13px; line-height:1; display:flex; align-items:center; justify-content:center;
-      opacity:0; transition:opacity .12s, color .12s, border-color .12s; }
-    .col-resizer:hover .col-collapse-btn{ opacity:1 }
-    .col-collapse-btn:hover{ color:var(--accent); border-color:var(--accent) }
-    .app.left-collapsed  .col-resizer.left { display:none }
-    .app.right-collapsed .col-resizer.right{ display:none }
-    .col-reopen{ position:absolute; top:50%; transform:translateY(-50%); z-index:481;
-      width:22px; height:46px; padding:0; cursor:pointer; font-size:15px;
-      border:1px solid var(--border-strong); background:var(--panel); color:var(--muted);
-      display:none; align-items:center; justify-content:center;
-      transition:color .12s, border-color .12s; }
-    .col-reopen.left { left:0;  border-radius:0 8px 8px 0; border-left:none }
-    .col-reopen.right{ right:0; border-radius:8px 0 0 8px; border-right:none }
-    .col-reopen:hover{ color:var(--accent); border-color:var(--accent) }
-    .app.left-collapsed  .col-reopen.left { display:flex }
-    .app.right-collapsed .col-reopen.right{ display:flex }
-  }
+  /* Was wrapped in @media (min-width:901px). This build is opened on a Mac,
+     so these are simply the rules -- unwrapped rather than deleted, because
+     they carry the column resizers and collapse buttons. */
+  /* Layers menu: clear gap below the icon + a margin off the bottom edge, so it
+     floats as a panel instead of spanning the viewport top-to-bottom. */
+  .col-resizer{ position:absolute; top:0; bottom:0; width:9px; z-index:480;
+    display:flex; align-items:center; justify-content:center; cursor:col-resize;
+    background:transparent; transition:background .12s; }
+  .col-resizer.left{ left:0; margin-left:-4px }
+  .col-resizer.right{ right:0; margin-right:-4px }
+  .col-resizer:hover, .app.resizing .col-resizer{ background:rgba(127,179,213,.18) }
+  .col-collapse-btn{ cursor:pointer; width:18px; height:36px; padding:0; border-radius:5px;
+    border:1px solid var(--border-strong); background:var(--panel); color:var(--muted);
+    font-size:13px; line-height:1; display:flex; align-items:center; justify-content:center;
+    opacity:0; transition:opacity .12s, color .12s, border-color .12s; }
+  .col-resizer:hover .col-collapse-btn{ opacity:1 }
+  .col-collapse-btn:hover{ color:var(--accent); border-color:var(--accent) }
+  .app.left-collapsed  .col-resizer.left { display:none }
+  .app.right-collapsed .col-resizer.right{ display:none }
+  .col-reopen{ position:absolute; top:50%; transform:translateY(-50%); z-index:481;
+    width:22px; height:46px; padding:0; cursor:pointer; font-size:15px;
+    border:1px solid var(--border-strong); background:var(--panel); color:var(--muted);
+    display:none; align-items:center; justify-content:center;
+    transition:color .12s, border-color .12s; }
+  .col-reopen.left { left:0;  border-radius:0 8px 8px 0; border-left:none }
+  .col-reopen.right{ right:0; border-radius:8px 0 0 8px; border-right:none }
+  .col-reopen:hover{ color:var(--accent); border-color:var(--accent) }
+  .app.left-collapsed  .col-reopen.left { display:flex }
+  .app.right-collapsed .col-reopen.right{ display:flex }
 
   /* ===== Mobile / iPad portrait layout =====
      Below 900px: stack into a vertical layout with mobile tabs.
@@ -2290,68 +2320,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     color:#0a0e13;
   }
 
-  @media (max-width: 900px){
-    html, body{
-      height:auto;
-      min-height:100vh;
-      overflow:hidden;
-      /* iOS Safari: avoid the "100vh is bigger than the visible area" trap */
-      height:100dvh;
-    }
-    .app{
-      grid-template-columns:1fr;
-      /* rows: header + map + mobile-tabs + active-panel */
-      grid-template-rows:auto var(--map-h) auto minmax(0, 1fr);
-      height:100dvh;
-    }
-
-    /* Header strip: tighten and hide the verbose subtitle bits */
-    .header-strip{padding:6px 12px;font-size:10px;gap:8px}
-    .header-strip > span:nth-child(3),
-    .header-strip > span:nth-child(4),
-    .header-strip > span:nth-child(5){display:none}
-
-    /* Map area takes its row */
-    .map-wrap{order:2;min-height:0}
-    .mobile-tabs{display:flex;order:3}
-
-    /* Both side panels live in row 4, but only the active one is visible */
-    .panel.left, .panel.right{
-      order:4;
-      grid-column:1;
-      grid-row:4;
-      border:none;
-      border-top:1px solid var(--border);
-    }
-    .panel.m-hidden{display:none}
-
-    /* Tighten paddings for small screens */
-    .panel-head{padding:10px 12px}
-    .panel-body{padding:10px 12px}
-    .panel-foot{padding:8px 10px;gap:6px;flex-wrap:wrap}
-    .panel-foot #plotBtn{flex:1;min-width:140px;font-size:11px;padding:8px 10px}
-    .panel-foot .ghost,.panel-foot .act-icon{font-size:11px;padding:8px 10px}
-    .panel-foot .act-icon{width:42px;padding-left:0;padding-right:0}
-
-    /* Waypoint rows: slightly tighter on mobile */
-    .row{grid-template-columns:14px 80px 1fr auto 28px 20px;gap:5px;padding:6px 8px}
-
-    /* Right-panel tab strip stays as-is but tighten */
-    .tabstrip button{padding:10px 6px;font-size:9px}
-
-    /* Stat cards — make the summary grid more compact */
-    .summary{gap:6px;margin-bottom:10px}
-    .stat{padding:8px 10px}
-    .stat .v{font-size:16px}
-
-    /* Fuel calc — tighter on mobile */
-    #fuel-calc{padding:10px 12px}
-    .fc-card{padding:10px 12px;margin-bottom:10px}
-
-    /* Copy Route modal — full width on mobile */
-    .cr-modal{width:96vw;max-height:88dvh}
-    .cr-body{padding:12px 14px}
-  }
 
   .panel{
     background:var(--panel);
@@ -2451,7 +2419,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .exp-menu{position:absolute;bottom:calc(100% + 6px);right:0;min-width:150px;background:var(--panel);border:1px solid var(--border-strong);border-radius:8px;padding:5px;display:none;flex-direction:column;gap:4px;box-shadow:0 10px 28px rgba(0,0,0,.55);z-index:60}
   .exp-wrap.open .exp-menu{display:flex}
   .exp-menu button{width:100%}
-  @media (max-width:540px){ #copyRouteBtn, .exp-wrap{display:none} }
 
   /* Row-based input */
   .rows{display:flex;flex-direction:column;gap:6px}
@@ -3323,6 +3290,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .rec-pill{position:absolute;left:14px;bottom:14px;z-index:600;display:inline-flex;align-items:center;gap:7px;
     background:rgba(17,22,29,.92);backdrop-filter:blur(6px);border:1px solid var(--border-strong);
     border-radius:20px;padding:6px 13px 6px 11px;color:var(--text-dim);font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.02em;transition:border-color .15s,color .15s,background .15s}
+  /* Restored. This lived in a ONE-LINE @media (min-width:901px) block, and the
+     unwrap step kept 'the lines between the braces' -- of which a one-liner
+     has none, so the rule was dropped instead of unwrapped. The pill sat
+     bottom-LEFT, over the panel, instead of bottom-right. */
+  .rec-pill{ left:auto; right:14px }
   .rec-pill:hover{border-color:var(--accent-2);color:var(--text)}
   .rec-dot{width:11px;height:11px;border-radius:50%;background:var(--text-faint);flex:none;transition:background .15s}
   .rec-pill.armed{border-color:var(--accent);color:var(--accent)}
@@ -3334,7 +3306,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   @keyframes recpulse{0%,100%{opacity:1}50%{opacity:.5}}
   @media (prefers-reduced-motion: reduce){ .rec-pill.recording .rec-dot{animation:none} }
   /* Desktop: flip RECORD to bottom-right so the terrain window keeps bottom-left (v126) */
-  @media (min-width:901px){ .rec-pill{ left:auto; right:14px; } }
+  /* Was wrapped in @media (min-width:901px). This build is opened on a Mac,
+     so these are simply the rules -- unwrapped rather than deleted, because
+     they carry the column resizers and collapse buttons. */
   .seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:7px;overflow:hidden}
   .seg button{background:var(--panel);color:var(--text-dim);border:none;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans)}
   .seg button+button{border-left:1px solid var(--border-strong)}
@@ -3393,19 +3367,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .gps-then .gps-next-freqs .nf .v{font-size:12px;font-weight:600;color:var(--text-2)}
   .gps-freqcard{display:none}
   .gps-freqcard .gps-next:first-child{margin-top:0}
-  @media (max-width:900px){
-    .gps-readout{top:10px;left:56px;right:auto;width:auto;max-width:232px;padding:6px 9px}
-    .gps-readout .gps-strip-row{display:flex;gap:13px}
-    .gps-readout .gps-sc{display:flex;flex-direction:column;line-height:1.05}
-    .gps-readout .gps-sc .sl{font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);font-weight:700}
-    .gps-readout .gps-sc .sv{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text)}
-    .gps-freqcard{display:none;position:absolute;left:10px;right:10px;bottom:30px;z-index:500;
-      background:rgba(13,18,25,.95);backdrop-filter:blur(6px);
-      border:1px solid var(--border-strong);border-radius:8px;padding:9px 11px;
-      box-shadow:0 6px 20px rgba(0,0,0,.5);font-family:var(--sans);color:var(--text);
-      max-height:56%;overflow-y:auto}
-    .gps-freqcard .gps-next-freqs .nf .v{font-size:15px}
-  }
   .fq-approach-label{background:rgba(52,211,153,.92);color:#06231a;font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:5px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.5)}
   /* ---- Quick Fuel floating button + overlay ---- */
   .qf-fab{position:fixed;left:14px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:600;
@@ -3447,7 +3408,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .qf-total .big small{font-size:13px;font-weight:500}
   .qf-total .alt{font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:3px}
   .qf-empty{font-size:11px;color:var(--text-faint);text-align:center;padding:8px}
-  @media(max-width:900px){ .qf-fab{display:flex} }
   /* Collapsible Freqs settings (corridor + range ring + advisory) */
   .fq-settings-bar{display:flex;justify-content:flex-end;margin-bottom:8px}
   .fq-settings-toggle{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;
@@ -3459,16 +3419,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .fq-settings[hidden]{display:none}
   /* Map/panel resize handle — mobile only */
   .map-resize-handle{display:none}
-  @media (max-width:900px){
-    .map-resize-handle{
-      display:flex;align-items:center;justify-content:center;
-      position:absolute;left:0;right:0;bottom:0;height:24px;
-      cursor:ns-resize;touch-action:none;z-index:600;
-      background:linear-gradient(to top, rgba(10,14,19,.9), rgba(10,14,19,0));
-    }
-    .map-resize-handle i{width:48px;height:4px;border-radius:2px;background:var(--border-strong);display:block;transition:background .12s}
-    .map-resize-handle:active i{background:var(--accent)}
-  }
   .fq-map-label{
     background:var(--accent-2);color:#0a0e13;font-family:var(--mono);font-size:10px;font-weight:700;
     padding:1px 5px;border-radius:2px;border:none;box-shadow:0 1px 4px rgba(0,0,0,.5);white-space:nowrap;
@@ -3705,6 +3655,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .map-search-none{padding:10px 12px;font-size:12px;color:var(--text-faint)}
   .ov-menu{position:absolute;top:50px;right:14px;z-index:601;width:216px;background:var(--panel);
     border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.55);padding:6px;max-height:calc(100vh - 90px);overflow-y:auto;display:none}
+  /* Was inside @media (min-width:901px), which is why it beat the rule above
+     despite coming first. Unwrapped it lost -- media queries add no
+     specificity, so source order decides. It sits after now. */
+  .ov-menu{ top:60px; max-height:calc(100vh - 140px) }
   .ov-menu.open{display:block}
   .ov-row{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:7px;cursor:pointer}
   .ov-row:hover{background:var(--bg-2)}
@@ -4055,7 +4009,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .terr-adv{margin-top:8px;font-size:9px;line-height:1.5;color:var(--text-faint)}
   .terr-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:middle;margin-right:3px}
   .terr-leg i.r{background:rgba(240,60,60,.85)} .terr-leg i.a{background:rgba(255,176,32,.85)}
-  @media (max-width:760px){ .terr-panel{width:210px;left:8px;bottom:8px;padding:9px 10px} .nmpo-ctrl.nmpo-ctrl{width:210px;left:8px;padding:9px 10px} .terr-alt b{font-size:19px} }
   /* Desktop (mouse/fine pointer): tighten controls — the default sizes are tuned for finger taps on the iPad */
   @media (hover:hover) and (pointer:fine){
     /* Altitude panel */
@@ -4489,6 +4442,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .nm-wlib-filter button{padding:6px 9px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;border-radius:5px;background:transparent;border:1px solid var(--border-strong);color:var(--text-dim);cursor:pointer}
   .nm-wlib-filter button:hover{color:var(--text)}
   .nm-wlib-filter button.on{background:var(--bg-2);border-color:var(--accent);color:var(--accent)}
+  .nm-wlib-lag{padding:8px 0 2px;font-size:10px;line-height:1.55;color:var(--text-faint)}
+  .nm-wlib-lag b{color:var(--warn,#e0a33e)}
   .nm-wlib-count{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:4px}
   .nm-wlib-sort{padding:6px 9px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;border-radius:5px;background:transparent;border:1px solid var(--border-strong);color:var(--text-dim);cursor:pointer;flex:0 0 auto;display:inline-flex;align-items:center;gap:4px}
   .nm-wlib-sort:hover{color:var(--text)}
@@ -4557,186 +4512,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
      Target = edge-to-edge map + floating chrome (combined demo).
      Full iPad reshape: top zone, full-bleed, tap-to-open panels, Tools group (incl. search), bottom clusters.
      ============================================================ */
-  @media (min-width:541px) and (max-width:900px){
-    /* ===== Zone 1 (v102) — full-bleed map + safe-area top + top zone =====
-       GS/TRK/ALT cluster boxed top-left; the freq box (CTAF + next freq +
-       RECENTER + ACC note) top-right. ACC stays in the freq-box footer (as
-       the live app builds it) rather than a 4th cell — CSS-only, iPhone-safe. */
-
-    /* Flatten the mobile stack: map fills the viewport, chrome floats over it.
-       The bottom chrome (tabs + active panel) is pinned as an interim floating
-       sheet here; Zone 2 reshapes the tab cluster, Zone 3 makes panels
-       tap-to-open. */
-    .app{ display:block; position:relative; height:100dvh; }
-    /* Header is hidden as a bar (Decision 1a), but kept as a pointer-events
-       passthrough so its Settings gear can be repositioned into the Tools
-       stack below — no DOM move, handler stays intact. */
-    .header-strip{ position:absolute; inset:0; height:auto; padding:0; margin:0;
-      border:0; background:none; pointer-events:none; z-index:640; display:block; }
-    .header-strip > span{ display:none; }          /* brand / sep / status text */
-    .map-wrap{ position:absolute; inset:0; min-height:0; }
-    #map{ height:100%; width:100%; }
-    .map-resize-handle{ display:none; }            /* nothing to drag when full-bleed */
-
-    /* Leaflet zoom -> bottom-left (its final demo home), freeing the top-left
-       corner for the instrument cluster. Z2 restyles it to the glass look. */
-    .leaflet-top.leaflet-left{ top:auto; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); left:0; }
-
-    /* Top-left: GS / TRK / ALT — boxed glass instrument cluster */
-    .gps-readout{
-      top:calc(12px + env(safe-area-inset-top, 0px)); left:12px; right:auto;
-      width:auto; max-width:none; padding:0; overflow:hidden;
-      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-      border:1px solid rgba(127,179,213,.18); border-radius:12px;
-      box-shadow:0 8px 26px rgba(0,0,0,.45);
-    }
-    .gps-readout .gps-strip-row{ gap:0; }
-    .gps-readout .gps-sc{ padding:9px 17px 10px; min-width:66px; border-right:1px solid rgba(127,179,213,.10); }
-    .gps-readout .gps-strip-row .gps-sc:last-child{ border-right:0; }
-    .gps-readout .gps-sc .sl{ font-size:9.5px; letter-spacing:.12em; }
-    .gps-readout .gps-sc .sv{ font-size:20px; }
-    .gps-readout .gps-status, .gps-readout .gps-err{ display:block; padding:9px 14px }
-
-    /* Top-right: freq box — CTAF + next freq + RECENTER + ACC note (glass card) */
-    .gps-freqcard{
-      top:calc(12px + env(safe-area-inset-top, 0px)); right:12px; left:auto; bottom:auto;
-      width:322px; max-height:calc(100dvh - env(safe-area-inset-top, 0px) - 96px); overflow-y:auto;
-      background:rgba(13,18,25,.86); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-      border:1px solid rgba(255,176,32,.30); border-radius:12px;
-      padding:17px 19px 18px; box-shadow:0 8px 26px rgba(0,0,0,.45);
-    }
-    .gps-freqcard .gps-ctaf-row .cf{ font-size:23px }
-    .gps-freqcard .gps-ctaf{ padding:10px 13px }
-    /* #4 — Terrain "My altitude" panel sits top-right, ABOVE the freq box.
-       The freq box drops below it, shifting with the panel's open/collapsed
-       height (terrPanel precedes .gps-freqcard in the DOM, so ~ works). */
-    .terr-panel{ top:calc(12px + env(safe-area-inset-top, 0px)); right:12px; left:auto; bottom:auto;
-                 width:322px; max-width:none; z-index:560 }
-    .terr-panel.show.collapsed ~ .gps-freqcard{ top:calc(70px + env(safe-area-inset-top, 0px)) }
-    .terr-panel.show:not(.collapsed) ~ .gps-freqcard{ top:calc(300px + env(safe-area-inset-top, 0px)) }
-    /* RECENTER -> full-width cool-outline button (demo look) */
-    .gps-freqcard .gps-recenter{
-      margin-top:10px; padding:9px; border-radius:9px;
-      border:1px solid var(--accent-2); color:var(--accent-2);
-      font-size:12px; letter-spacing:.12em;
-    }
-
-    /* Interim bottom (Z2/Z3 finalise this): tab strip as a centred glass pill
-       so it clears the bottom-left zoom, with the active panel as a sheet above. */
-    .mobile-tabs{
-      display:flex; position:absolute; left:50%; transform:translateX(-50%);
-      bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:620;
-      width:auto; margin:0; padding:5px; gap:4px;
-      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-      border:1px solid rgba(127,179,213,.18); border-radius:12px;
-    }
-    .mobile-tabs button{ flex:0 0 auto; background:transparent; border:none; border-radius:10px; padding:11px 16px }
-    .mobile-tabs button.active{ background:var(--accent); border:none; color:#0a0e13 }
-    .panel.left, .panel.right{
-      position:absolute; left:0; right:0; z-index:610;
-      bottom:calc(70px + env(safe-area-inset-bottom, 0px));
-      max-height:56dvh; border-top:1px solid var(--border);
-      box-shadow:0 -10px 30px rgba(0,0,0,.5);
-    }
-
-    /* ===== Zone 2 (v104) — bottom-right Tools group =====
-       A toggle (bottom-right) reveals the map controls as an upward icon
-       stack: layers, locate, measure, settings. Empties the top-right so the
-       freq box owns that corner, and restores Settings access (Decision 1a).
-       Controls are repositioned, not moved in the DOM, so their handlers and
-       the iPhone/desktop layouts are untouched. (Search stays top-centre this
-       round; it folds into the group next. Record + Fuel relocate next round.) */
-
-    /* The toggle itself — always visible bottom-right on iPad */
-    .ipad-tools-toggle{
-      display:flex; align-items:center; justify-content:center;
-      position:absolute; right:14px; bottom:calc(16px + env(safe-area-inset-bottom, 0px));
-      z-index:631; width:46px; height:46px; border-radius:12px; cursor:pointer;
-      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-      border:1px solid rgba(127,179,213,.18); color:var(--text-2); padding:0;
-    }
-    .ipad-tools-toggle svg{ width:22px; height:22px; stroke:currentColor; stroke-width:1.8; fill:none }
-    .ipad-tools-toggle.open{ color:var(--accent); border-color:rgba(255,176,32,.5) }
-
-    /* Stack members: hidden until the group is open, then stacked above the
-       toggle. Square 44px glass icons, bottom-right, stepped by 54px. */
-    #overlaysBtn, #gpsToggle, #measureToggle, #ipadSearchBtn, .header-strip #settingsBtn{
-      display:none; position:absolute; right:14px; left:auto; top:auto;
-      width:46px; height:46px; padding:0; border-radius:12px;
-      align-items:center; justify-content:center; z-index:630;
-      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-      border:1px solid rgba(127,179,213,.18); color:var(--text-2); pointer-events:auto;
-    }
-    .ipad-tools-open #overlaysBtn{   display:inline-flex; bottom:calc(232px + env(safe-area-inset-bottom, 0px)) }
-    .ipad-tools-open #gpsToggle{     display:inline-flex; bottom:calc(178px + env(safe-area-inset-bottom, 0px)) }
-    /* keep the blue "tracking on" state (the ID-level glass bg would otherwise win) */
-    .ipad-tools-open #gpsToggle.active{ background:#2b8cff; border-color:#2b8cff; color:#fff }
-    .ipad-tools-open #measureToggle{ display:inline-flex; bottom:calc(124px + env(safe-area-inset-bottom, 0px)) }
-    .ipad-tools-open .header-strip #settingsBtn{ display:inline-flex; bottom:calc(70px + env(safe-area-inset-bottom, 0px)) }
-    .ipad-tools-open #ipadSearchBtn{ display:inline-flex; bottom:calc(286px + env(safe-area-inset-bottom, 0px)) }
-    #overlaysBtn svg, #measureToggle svg, #ipadSearchBtn svg, .header-strip #settingsBtn svg{ width:20px; height:20px }
-    /* Layers menu opens upward from the stack instead of top-right */
-    .ov-menu{ top:auto; right:72px; bottom:calc(70px + env(safe-area-inset-bottom, 0px));
-      max-height:calc(100dvh - env(safe-area-inset-top,0px) - 180px); overflow-y:auto }
-    /* #2 — measuring active: surround the ruler button in amber (it flags via
-       the .measuring class on the map, a sibling that precedes this button) */
-    #map.measuring ~ #measureToggle{ background:rgba(255,176,32,.16); border-color:var(--accent-2); color:var(--accent-2) }
-
-    /* Search folds into the Tools group: the top-centre bar is hidden until the
-       search icon reveals it; its clear (X) is forced visible as the dismiss. */
-    .map-search{ display:none }
-    /* Search opens upper-middle, horizontally centred, above the blurred map */
-    .ipad-search-open .map-search{ display:block; top:18dvh; z-index:1391 }
-    .ipad-search-open .map-search-x{ display:inline-flex }
-    /* Darken + blur the map behind it (the chrome stays sharp on top) and make
-       the map inert while searching. */
-    .ipad-search-open #map{ filter:blur(4px) brightness(.5); pointer-events:none }
-    /* Transparent full-screen catcher: tap anywhere (outside the bar) to dismiss.
-       Sits just under the search bar, over everything else — chrome stays visible. */
-    .ipad-search-scrim{ position:fixed; inset:0; z-index:1390; pointer-events:none }
-    .ipad-search-open .ipad-search-scrim{ pointer-events:auto }
-
-    /* #2 — drop the leading glyph on the Plan tabs (iPad only) */
-    .mobile-tabs .mtab-ico{ display:none }
-
-    /* ----- Bottom clusters (v105): Record bottom-centre, Fuel bottom-right,
-       zoom restyled to glass bottom-left. CSS-only reposition of existing
-       controls — handlers + iPhone/desktop layouts untouched. ----- */
-
-    /* Record -> bottom-centre, just left of the Plan-tabs pill; glass pill
-       sized to match the rest of the bottom row (no longer skinny). */
-    .rec-pill{
-      left:auto; right:calc(50% + 160px);
-      bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:620;
-      height:46px; padding:0 16px; gap:9px; border-radius:12px;
-      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-      border:1px solid rgba(127,179,213,.18);
-    }
-
-    /* Fuel Calc -> bottom-right icon; same glass material as Tools/settings,
-       with amber kept only as the icon + a subtle border (its identity). */
-    .qf-fab{
-      left:auto; right:70px; bottom:calc(16px + env(safe-area-inset-bottom, 0px));
-      width:46px; height:46px; border-radius:12px; z-index:631;
-      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-      border:1px solid rgba(255,176,32,.38); color:var(--accent); box-shadow:none;
-    }
-    .qf-fab .lbl{ display:none }
-
-    /* Zoom -> glass, larger touch targets, bottom-left (position set in Zone 1) */
-    .leaflet-bar{ border:1px solid rgba(127,179,213,.18); border-radius:12px; overflow:hidden }
-    .leaflet-bar a, .leaflet-touch .leaflet-bar a{
-      width:46px; height:46px; line-height:46px; font-size:22px;
-      background:rgba(13,18,25,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-      color:var(--text); border-bottom:1px solid rgba(127,179,213,.12);
-    }
-    .leaflet-bar a:hover, .leaflet-bar a:focus{ background:rgba(20,28,38,.82); color:var(--accent-2) }
-    .leaflet-bar a:last-child{ border-bottom:none }
-    .leaflet-bar a.leaflet-disabled{ background:rgba(13,18,25,.5); color:var(--text-fainter) }
-
-    /* Zone 3 — Waypoints / Readout-Fuel panels become
-       tap-to-open overlays driven by the plan-tab icons. */
-  }
 </style>
 </head>
 <body>
@@ -9932,25 +9707,17 @@ window.NMPlotter = {
   // iPad portrait (541-900) gets tap-to-open panels (closed by default, so the
   // map is clear); iPhone (<=540) and desktop keep the original behaviour where
   // one panel is always shown.
-  const ipadPortrait = () => window.matchMedia('(min-width:541px) and (max-width:900px)').matches;
-  let ipadOpen = null; // which panel is open on iPad: 'waypoints' | 'readout' | null
+  /* The iPad-portrait and phone paths are gone: this build is opened on a Mac,
+     and the phone has its own app. What is left is the desktop behaviour that
+     used to be the else-branch. */
 
   function show(which){
-    if(ipadPortrait()){
-      ipadOpen = (ipadOpen === which) ? null : which;   // tapping the open tab closes it
-      leftPanel.classList.toggle('m-hidden',  ipadOpen !== 'waypoints');
-      rightPanel.classList.toggle('m-hidden', ipadOpen !== 'readout');
-      tabs.querySelectorAll('button').forEach(b => {
-        b.classList.toggle('active', ipadOpen !== null && b.dataset.mtab === ipadOpen);
-      });
-    } else {
-      const showLeft = which === 'waypoints';
-      leftPanel.classList.toggle('m-hidden', !showLeft);
-      rightPanel.classList.toggle('m-hidden', showLeft);
-      tabs.querySelectorAll('button').forEach(b => {
-        b.classList.toggle('active', b.dataset.mtab === which);
-      });
-    }
+    const showLeft = which === 'waypoints';
+    leftPanel.classList.toggle('m-hidden', !showLeft);
+    rightPanel.classList.toggle('m-hidden', showLeft);
+    tabs.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('active', b.dataset.mtab === which);
+    });
     // Tell Leaflet the container size may have changed
     setTimeout(() => {
       try { map.invalidateSize({ animate: false }); } catch(_){}
@@ -9961,27 +9728,12 @@ window.NMPlotter = {
     btn.addEventListener('click', () => show(btn.dataset.mtab));
   });
 
-  // Initial state on mobile: waypoints panel visible
-  // (We use a media-query check so this doesn't affect desktop layout)
+  /* Both panels visible. The hiding class is only ever set by show(), which
+     nothing on a Mac calls, but clearing it here stops a stale state from an
+     older version surviving a reload. */
   function applyInitial(){
-    if(ipadPortrait()){
-      // iPad: start with the map clear — panels open on tap
-      ipadOpen = null;
-      leftPanel.classList.add('m-hidden');
-      rightPanel.classList.add('m-hidden');
-      tabs.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-    } else if(window.matchMedia('(max-width: 900px)').matches){
-      // iPhone: waypoints panel visible (original always-on behaviour)
-      rightPanel.classList.add('m-hidden');
-      leftPanel.classList.remove('m-hidden');
-      tabs.querySelectorAll('button').forEach(b => {
-        b.classList.toggle('active', b.dataset.mtab === 'waypoints');
-      });
-    } else {
-      // Desktop: ensure neither panel is hidden by mobile class
-      leftPanel.classList.remove('m-hidden');
-      rightPanel.classList.remove('m-hidden');
-    }
+    leftPanel.classList.remove('m-hidden');
+    rightPanel.classList.remove('m-hidden');
   }
   applyInitial();
 
@@ -11978,7 +11730,11 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     const trk = (c.heading != null && !isNaN(c.heading)) ? c.heading.toFixed(0).padStart(3,'0') + '\u00b0' : '\u2014';
     const alt = (c.altitude!= null && !isNaN(c.altitude))? (c.altitude * FT).toFixed(0) + ' ft' : '\u2014';
     const acc = (c.accuracy!= null) ? '\u00b1' + c.accuracy.toFixed(0) + ' m' : '\u2014';
-    const phone = !!(window.matchMedia && window.matchMedia('(max-width:900px)').matches);
+    /* Was a screen-width check. This build is opened on a Mac, so the phone
+       strip below is unreachable -- left in place rather than cut out, because
+       two attempts at brace-matching that particular block produced a broken
+       file, and a dead branch is cheaper than a broken one. */
+    const phone = false;
     const nx = nextHtml(c);
     const recenter = follow ? '' : '<button class="gps-recenter" id="gpsRecenter" type="button">Recenter</button>';
     if(phone){
@@ -16191,6 +15947,7 @@ if (navigator.storage && navigator.storage.persist) {
         </div>
         <div class="nm-wlib-count" id="nmWlibCount"></div>
         <div class="nm-wlib-list" id="nmWlibList"></div>
+        <div class="nm-wlib-lag">Measured: a record just pushed takes <b>20&ndash;60 seconds</b> to appear in this list. If something you have just uploaded is missing, wait and press Refresh before assuming it failed.</div>
         <div class="cr-actions">
           <button class="ghost" id="nmWlibRefresh" type="button">Refresh</button>
           <button class="ghost" id="nmWlibClose2" type="button">Close</button>
@@ -16285,7 +16042,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v285 &middot; 2026-08-09</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v287 &middot; 2026-08-09</div>
       </div>
     </div>
   </div>
