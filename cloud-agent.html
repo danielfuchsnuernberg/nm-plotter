@@ -191,11 +191,35 @@ async function run(){
   info('answered in '+r.ms+' ms');
   ok(r.json!==null, 'and the answer is JSON', r.text.slice(0,120));
 
-  var savedKey=KEY; KEY='definitely-not-the-key-'+Date.now();
-  var bad=await call('GET','/routes');
-  ok(!bad.err && !bad.ok, 'a wrong key is REFUSED', bad.err||{status:bad.status});
-  if(!bad.err && bad.ok) w('bad','        anyone with the URL can read your library.');
+  var savedKey=KEY, wrong='definitely-not-the-key-'+Date.now();
+  KEY=wrong;
+  var badR=await call('GET','/routes');
+  var readOpen = (!badR.err && badR.ok);
+  ok(!readOpen, 'a wrong key cannot READ', badR.err||{status:badR.status});
+  if(readOpen) w('bad','        Anyone with the URL can read the whole library.');
+
+  /* If reading is open, is WRITING? That is the difference between a leak and
+     someone being able to overwrite or erase your routes. Test id only, and
+     cleaned up either way. */
+  var probeId='zz-nmtest-authprobe-'+Date.now();
+  var badW=await call('PUT','/waypoints/'+encodeURIComponent(probeId),
+                      {id:probeId,name:'NMTEST auth probe',lat:-6.1,lon:146.1});
   KEY=savedKey;
+  var landed=await call('GET','/waypoints/'+encodeURIComponent(probeId));
+  var reallyWrote = (!landed.err && landed.ok && landed.json && landed.json.name==='NMTEST auth probe');
+  ok(!reallyWrote, 'a wrong key cannot WRITE',
+     {accepted:(!badW.err && badW.ok), actually_stored:reallyWrote});
+  if(reallyWrote){
+    w('bad','        Anyone with the URL can ADD or OVERWRITE records.');
+    KEY=wrong;
+    await call('DELETE','/waypoints/'+encodeURIComponent(probeId));
+    KEY=savedKey;
+    var still=await call('GET','/waypoints/'+encodeURIComponent(probeId));
+    var deleted = !(still.json && still.json.name==='NMTEST auth probe');
+    ok(!deleted, 'a wrong key cannot DELETE', {deleted_by_wrong_key:deleted});
+    if(deleted) w('bad','        And can DELETE them. The library is wide open.');
+  }
+  await call('DELETE','/waypoints/'+encodeURIComponent(probeId));
 
   /* ================= 2. list shape, per collection ================= */
   head('2. What LIST returns for each collection');
@@ -244,6 +268,8 @@ async function run(){
     ['accented',     'Café Ridge Läe'],
     ['long',         'X'.repeat(80)]
   ];
+  w('dim','        A new record can take a while to show up in LIST. Each case waits');
+  w('dim','        up to 60 s for it, so this section is slow on purpose.');
   for(var c=0;c<COLS.length;c++){
     var col2=COLS[c];
     for(var n=0;n<NAMES.length;n++){
@@ -257,10 +283,21 @@ async function run(){
       if(G.err || !G.ok){ ok(false, col2+' ['+label+']: read back', G.err||{status:G.status}); continue; }
       ok(G.json && G.json.name===nm, col2+' ['+label+']: the NAME survives the round trip',
          {sent:nm, got:G.json&&G.json.name});
-      var L2=await call('GET','/'+col2);
-      var items2=(L2.json && (L2.json.items||L2.json.routes||(Array.isArray(L2.json)?L2.json:[])))||[];
-      var mine=items2.filter(function(x){ return String(x.id)===String(id); })[0];
-      if(ok(!!mine, col2+' ['+label+']: appears in LIST', {looked_for:id, listed:items2.length})){
+      /* A new record does not always show up in LIST straight away. Rather than
+         call that a failure at t=0, WAIT for it and report how long it took --
+         that number is what matters when you upload a route and go looking. */
+      var appeared=null, mine=null;
+      var waits=[0,2,2,3,3,10,10,10,20];
+      for(var wi=0; wi<waits.length; wi++){
+        if(waits[wi]) await new Promise(function(r){ setTimeout(r, waits[wi]*1000); });
+        var L2=await call('GET','/'+col2);
+        var items2=(L2.json && (L2.json.items||L2.json.routes||(Array.isArray(L2.json)?L2.json:[])))||[];
+        mine=items2.filter(function(x){ return String(x.id)===String(id); })[0];
+        if(mine){ appeared=waits.slice(0,wi+1).reduce(function(a,b){return a+b;},0); break; }
+      }
+      if(ok(appeared!==null, col2+' ['+label+']: appears in LIST within 60 s', {looked_for:id})){
+        if(appeared===0) info(col2+' ['+label+']: listed immediately');
+        else warn(col2+' ['+label+']: took up to '+appeared+' s to appear in LIST');
         ok(nameFromList(mine)===nm, col2+' ['+label+']: LIST shows the name you gave it',
            {sent:nm, list_shows:nameFromList(mine)});
       }
@@ -280,11 +317,18 @@ async function run(){
     var C=await call('GET','/waypoints/'+encodeURIComponent(rid));
     ok(C.json && C.json.name==='AFTER RENAME', 'and the new name is what comes back',
        {got:C.json&&C.json.name});
-    var D=await call('GET','/waypoints');
-    var dl=(D.json&&(D.json.items||[]))||[];
-    var dm=dl.filter(function(x){ return String(x.id)===String(rid); })[0];
-    ok(dm && nameFromList(dm)==='AFTER RENAME', 'and LIST shows the new name too',
+    var dm=null, dsec=null, dwaits=[0,2,3,5,10,20,20];
+    for(var wj=0; wj<dwaits.length; wj++){
+      if(dwaits[wj]) await new Promise(function(r){ setTimeout(r,dwaits[wj]*1000); });
+      var D=await call('GET','/waypoints');
+      var dl=(D.json&&(D.json.items||[]))||[];
+      dm=dl.filter(function(x){ return String(x.id)===String(rid); })[0];
+      if(dm && nameFromList(dm)==='AFTER RENAME'){
+        dsec=dwaits.slice(0,wj+1).reduce(function(a,b){return a+b;},0); break; }
+    }
+    ok(dsec!==null, 'and LIST shows the new name within 60 s',
        {list_shows:dm?nameFromList(dm):'(not listed)'});
+    if(dsec>0) warn('the rename took up to '+dsec+' s to show in LIST');
     w('dim','        NOTE: the APP never sends this second write for a waypoint.');
     w('dim','        pushWaypointsToCloud skips any id already in the cloud, so a');
     w('dim','        rename on the device never reaches it. That is a client fault');
