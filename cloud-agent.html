@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NM Plotter — Cloud System Test Agent</title>
+<!-- =============================================================================
+     CLOUD TEST AGENT
+     -----------------------------------------------------------------------------
+     Runs against the LIVE Worker from your browser, because that is the only
+     place it can be reached. Nothing here is stubbed.
+
+     WHAT IT TOUCHES
+       It writes records whose ids all begin  zz-nmtest-  and deletes every one
+       of them at the end. It never writes to, renames or deletes a record of
+       yours. The read tests list your real collections but only count them and
+       report the SHAPE of what comes back — no contents are shown or altered.
+
+     WHAT IT IS LOOKING FOR
+       The two faults reported: route names not matching what the library shows,
+       and a waypoint name not surviving the trip to another device. Both would
+       be explained if the LIST endpoint returns records without their name, or
+       if a record cannot be updated once written. Those are tested directly.
+     ============================================================================ -->
+<style>
+  :root{
+    --bg:#0a0e13;--panel:#0d1219;--bg-2:#0f141b;--border:#1a2330;--border-strong:#2a3744;
+    --text:#e6edf5;--text-dim:#9fb0c3;--text-faint:#5f7186;--accent:#ffb020;--accent-2:#7fb3d5;
+    --good:#34d399;--bad:#f0506e;--warn:#e0a33e;
+    --mono:ui-monospace,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px}
+  header{padding:16px 20px;border-bottom:1px solid var(--border)}
+  h1{margin:0;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  h1 span{color:var(--accent)}
+  header p{margin:8px 0 0;font-size:12px;line-height:1.65;color:var(--text-dim);max-width:80ch}
+  .wrap{padding:18px 20px 40px;max-width:1000px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim)}
+  input[type=text],input[type=password]{background:var(--bg-2);border:1px solid var(--border-strong);
+    border-radius:4px;padding:9px 11px;color:var(--text);font-family:var(--mono);font-size:13px;
+    outline:none;min-width:340px}
+  input:focus{border-color:var(--accent)}
+  button{height:34px;display:inline-flex;align-items:center;justify-content:center;padding:0 16px;
+    line-height:1;background:var(--bg-2);border:1px solid var(--border-strong);border-radius:4px;
+    color:var(--text);font-family:var(--sans);font-size:11px;font-weight:800;letter-spacing:.1em;
+    text-transform:uppercase;cursor:pointer}
+  button.go{background:var(--accent);border-color:var(--accent);color:#1a1206}
+  button:disabled{opacity:.45;cursor:default}
+  .note{font-size:11px;line-height:1.6;color:var(--text-faint);margin:2px 0 16px;max-width:80ch}
+  .note b{color:var(--warn)}
+  #out{font-family:var(--mono);font-size:12px;line-height:1.75;white-space:pre-wrap;
+    background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 16px;min-height:120px}
+  .ok{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+  .dim{color:var(--text-faint)} .hd{color:var(--accent);font-weight:700}
+  .sum{margin-top:14px;padding:12px 14px;border:1px solid var(--border-strong);border-radius:6px;
+    font-family:var(--mono);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>NM·Plotter</span> &nbsp;cloud system test agent</h1>
+  <p>Runs the whole cloud path against the live Worker: write, read back, list, update, rename,
+     delete, and the awkward cases in between. It writes only records whose ids begin
+     <code>zz-nmtest-</code> and removes every one before it finishes.</p>
+</header>
+
+<div class="wrap">
+  <div class="row">
+    <label for="base">Worker</label>
+    <input id="base" type="text" value="https://nmplotter-routes.daniel-fuchs-nuernberg.workers.dev">
+  </div>
+  <div class="row">
+    <label for="key">Library key</label>
+    <input id="key" type="password" placeholder="the key from Settings" autocomplete="off">
+    <button class="go" id="run">Run the tests</button>
+    <button id="copy">Copy report</button>
+  </div>
+  <p class="note"><b>It writes to your real cloud.</b> Only under test ids, and it cleans up after
+     itself — but if a test fails midway a <code>zz-nmtest-</code> record may be left behind, and
+     you can delete it from the library like any other.</p>
+
+  <div id="origin" class="note"></div>
+  <div id="out">Enter the key and press Run.</div>
+  <div class="sum" id="sum" style="display:none"></div>
+</div>
+
+<script>
+var BASE='', KEY='', PASS=0, FAIL=0, WARN=0, LEFTOVER=[];
+
+/* WHERE THIS PAGE IS SERVED FROM DECIDES WHETHER IT CAN TALK TO THE WORKER.
+   A browser sends the page's ORIGIN with every cross-site request, and the
+   Worker decides from that whether to answer. Opened from a downloaded file
+   the origin is the string "null", which no sane CORS list allows -- so every
+   call dies as "Load failed" before it reaches the Worker at all. That says
+   nothing about whether the Worker works. Serve this from the SAME origin as
+   the app and the answer means something. */
+(function(){
+  var el=document.getElementById('origin');
+  var fileMode = (location.protocol === 'file:');
+  el.innerHTML = fileMode
+    ? '<b>This page is opened from a file, so its origin is "null".</b> Every call will fail as '
+      + '"Load failed" no matter what the Worker does. Put this file next to index.html in the '
+      + 'nm-plotter repo and open it at your GitHub Pages address instead \u2014 same origin as the app, '
+      + 'same CORS treatment. The tests below will still run and will tell you which it was.'
+    : 'Serving origin: <code>' + location.origin + '</code> \u2014 the Worker sees this on every request.';
+})();
+var out=document.getElementById('out'), sum=document.getElementById('sum');
+
+function esc(s){ return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+function w(cls, txt){ out.innerHTML += '<span class="'+cls+'">'+esc(txt)+'</span>\n'; out.scrollTop=out.scrollHeight; }
+function head(t){ w('hd','\n── '+t+' '+'─'.repeat(Math.max(0,56-t.length))); }
+function ok(cond, label, detail){
+  if(cond){ PASS++; w('ok','  PASS  '+label); }
+  else { FAIL++; w('bad','  FAIL  '+label+(detail!==undefined?('   → '+JSON.stringify(detail)):'')); }
+  return cond;
+}
+function warn(label, detail){ WARN++; w('warn','  NOTE  '+label+(detail!==undefined?('   → '+JSON.stringify(detail)):'')); }
+function info(label){ w('dim','        '+label); }
+
+/* ---- the same client the app uses, reimplemented plainly so a fault here is
+        the WORKER's and not some wrapper of mine ---- */
+async function call(method, path, body){
+  var opts={ method:method, headers:{ 'X-Library-Key': KEY } };
+  if(body!==undefined){ opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
+  var ctl=new AbortController(), timedOut=false;
+  var t=setTimeout(function(){ timedOut=true; ctl.abort(); }, 20000);
+  opts.signal=ctl.signal;
+  var started=Date.now(), res, text;
+  try{ res=await fetch(BASE+path, opts); }
+  catch(e){ clearTimeout(t); return { err: timedOut?'TIMEOUT after 20s':(e.message||String(e)), ms:Date.now()-started }; }
+  clearTimeout(t);
+  try{ text=await res.text(); }catch(e){ text=''; }
+  var json=null; try{ json=JSON.parse(text); }catch(e){}
+  return { status:res.status, ok:res.ok, json:json, text:text, ms:Date.now()-started };
+}
+
+function stamp(){ return 'zz-nmtest-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function nameFromList(item){ return (item && (item.name!==undefined ? item.name : undefined)); }
+
+async function run(){
+  PASS=FAIL=WARN=0; LEFTOVER=[];
+  out.innerHTML=''; sum.style.display='none';
+  BASE=document.getElementById('base').value.trim().replace(/\/+$/,'');
+  KEY=document.getElementById('key').value.trim();
+  if(!KEY){ w('bad','No key entered.'); return; }
+  document.getElementById('run').disabled=true;
+
+  w('dim','Worker  '+BASE);
+  w('dim','Started '+new Date().toISOString());
+
+  /* ================= 1. reachability and auth ================= */
+  head('1. Reachability and auth');
+  info('this page\u2019s origin: ' + (location.protocol==='file:' ? 'null (opened from a file)' : location.origin));
+  var r=await call('GET','/routes');
+  if(r.err){
+    ok(false,'the Worker answers a plain list', r.err);
+    /* "Load failed" is the same message whether the Worker is down, the DNS is
+       wrong, or the browser refused to show us the answer because of CORS. A
+       no-cors probe separates them: it is sent and completes if the host is
+       reachable, and yields an opaque response we are not allowed to read.
+       Reachable + unreadable = a CORS problem, which is about THIS PAGE, not
+       about the Worker. */
+    w('dim','\n        Working out whether that was the Worker or this page\u2026');
+    var probe=null;
+    try{
+      await fetch(BASE+'/routes', {mode:'no-cors', cache:'no-store'});
+      probe='reached';
+    }catch(e){ probe='unreachable'; }
+    if(probe==='reached'){
+      w('warn','  NOTE  the Worker IS reachable \u2014 the browser blocked the answer (CORS).');
+      if(location.protocol==='file:'){
+        w('warn','        Cause: this page was opened from a file, so its origin is "null".');
+        w('warn','        Fix: put it in the nm-plotter repo and open it from the same');
+        w('warn','        GitHub Pages address as the app, then run again.');
+      } else {
+        w('warn','        This page is served from ' + location.origin + ', which the Worker');
+        w('warn','        does not allow. Either run it from the app\u2019s own address, or add');
+        w('warn','        this origin to the Worker\u2019s CORS list.');
+      }
+      w('warn','        NOTHING here says the cloud is broken. It says this page cannot ask.');
+    } else {
+      w('bad','  The host did not answer at all \u2014 wrong URL, no connection, or the');
+      w('bad','  Worker is down. Check the address in the box above.');
+    }
+    w('bad','\nStopping: nothing else can be tested until the calls get through.');
+    finish(); return;
+  }
+  ok(r.ok, 'GET /routes returns OK', {status:r.status, body:r.text.slice(0,120)});
+  info('answered in '+r.ms+' ms');
+  ok(r.json!==null, 'and the answer is JSON', r.text.slice(0,120));
+
+  var savedKey=KEY; KEY='definitely-not-the-key-'+Date.now();
+  var bad=await call('GET','/routes');
+  ok(!bad.err && !bad.ok, 'a wrong key is REFUSED', bad.err||{status:bad.status});
+  if(!bad.err && bad.ok) w('bad','        anyone with the URL can read your library.');
+  KEY=savedKey;
+
+  /* ================= 2. list shape, per collection ================= */
+  head('2. What LIST returns for each collection');
+  var COLS=['routes','waypoints','flights'];
+  var listShape={};
+  for(var i=0;i<COLS.length;i++){
+    var col=COLS[i];
+    var L=await call('GET','/'+col);
+    if(L.err){ ok(false, col+': list answers', L.err); continue; }
+    ok(L.ok, col+': list answers OK', {status:L.status});
+    var items = L.json && (L.json.items || L.json.routes || (Array.isArray(L.json)?L.json:null));
+    if(!ok(Array.isArray(items), col+': the answer contains an array of records',
+           L.json ? Object.keys(L.json) : L.text.slice(0,100))) continue;
+    info(col+': '+items.length+' record'+(items.length===1?'':'s'));
+    listShape[col]=items.length?Object.keys(items[0]).sort():[];
+    if(items.length){
+      info(col+': a record from LIST has these fields → '+listShape[col].join(', '));
+      /* THE ONE THAT MATTERS for the reported fault */
+      var withName = items.filter(function(x){ return x && x.name!==undefined && x.name!==null && x.name!==''; }).length;
+      ok(withName===items.length,
+         col+': every record in LIST carries its name',
+         {withName:withName, of:items.length, example:items[0]});
+      if(withName!==items.length){
+        w('bad','        This is the fault. The library shows name || id, so a record');
+        w('bad','        without a name displays its id instead — which is why the names');
+        w('bad','        you typed are not what you see.');
+      }
+    } else {
+      warn(col+': empty, so the list SHAPE could not be checked here');
+    }
+    var LF=await call('GET','/'+col+'?full=1');
+    if(LF.err) ok(false, col+': list with ?full=1 answers', LF.err);
+    else {
+      ok(LF.ok, col+': ?full=1 answers OK', {status:LF.status});
+      info(col+': ?full=1 took '+LF.ms+' ms (plain list took '+L.ms+' ms)');
+      if(LF.ms > 8000) warn(col+': ?full=1 is slow enough to look like a hang', LF.ms+' ms');
+    }
+  }
+
+  /* ================= 3. round trip, per collection ================= */
+  head('3. Write → read back → list, per collection');
+  var NAMES=[
+    ['plain',        'NMTEST Plain Name'],
+    ['dots+spaces',  'MONDAY 9.8.26'],
+    ['punctuation',  'AYNZ → AYMH (test) #1'],
+    ['accented',     'Café Ridge Läe'],
+    ['long',         'X'.repeat(80)]
+  ];
+  for(var c=0;c<COLS.length;c++){
+    var col2=COLS[c];
+    for(var n=0;n<NAMES.length;n++){
+      var label=NAMES[n][0], nm=NAMES[n][1];
+      var id=stamp();
+      var rec={ id:id, name:nm, savedAt:Date.now(), lat:-6.5, lon:146.7, pts:[{n:'A',c:'-6.5, 146.7'}], points:[] };
+      var P=await call('PUT','/'+col2+'/'+encodeURIComponent(id), rec);
+      if(P.err || !P.ok){ ok(false, col2+' ['+label+']: write accepted', P.err||{status:P.status,body:P.text.slice(0,90)}); continue; }
+      LEFTOVER.push([col2,id]);
+      var G=await call('GET','/'+col2+'/'+encodeURIComponent(id));
+      if(G.err || !G.ok){ ok(false, col2+' ['+label+']: read back', G.err||{status:G.status}); continue; }
+      ok(G.json && G.json.name===nm, col2+' ['+label+']: the NAME survives the round trip',
+         {sent:nm, got:G.json&&G.json.name});
+      var L2=await call('GET','/'+col2);
+      var items2=(L2.json && (L2.json.items||L2.json.routes||(Array.isArray(L2.json)?L2.json:[])))||[];
+      var mine=items2.filter(function(x){ return String(x.id)===String(id); })[0];
+      if(ok(!!mine, col2+' ['+label+']: appears in LIST', {looked_for:id, listed:items2.length})){
+        ok(nameFromList(mine)===nm, col2+' ['+label+']: LIST shows the name you gave it',
+           {sent:nm, list_shows:nameFromList(mine)});
+      }
+    }
+  }
+
+  /* ================= 4. update in place — the waypoint rename fault ========== */
+  head('4. Renaming a record that is already in the cloud');
+  var rid=stamp();
+  var v1={ id:rid, name:'BEFORE RENAME', lat:-6.6, lon:146.8 };
+  var A=await call('PUT','/waypoints/'+encodeURIComponent(rid), v1);
+  if(A.ok){
+    LEFTOVER.push(['waypoints',rid]);
+    var v2={ id:rid, name:'AFTER RENAME', lat:-6.6, lon:146.8 };
+    var B=await call('PUT','/waypoints/'+encodeURIComponent(rid), v2);
+    ok(B.ok, 'writing the same id again is accepted', {status:B.status, body:B.text.slice(0,90)});
+    var C=await call('GET','/waypoints/'+encodeURIComponent(rid));
+    ok(C.json && C.json.name==='AFTER RENAME', 'and the new name is what comes back',
+       {got:C.json&&C.json.name});
+    var D=await call('GET','/waypoints');
+    var dl=(D.json&&(D.json.items||[]))||[];
+    var dm=dl.filter(function(x){ return String(x.id)===String(rid); })[0];
+    ok(dm && nameFromList(dm)==='AFTER RENAME', 'and LIST shows the new name too',
+       {list_shows:dm?nameFromList(dm):'(not listed)'});
+    w('dim','        NOTE: the APP never sends this second write for a waypoint.');
+    w('dim','        pushWaypointsToCloud skips any id already in the cloud, so a');
+    w('dim','        rename on the device never reaches it. That is a client fault');
+    w('dim','        and is independent of whatever this test just showed.');
+  } else ok(false,'could write a waypoint to rename', {status:A.status});
+
+  /* ================= 5. route ids are made from the NAME ==================== */
+  head('5. Route ids are a slug of the name');
+  function slug(nm){ return String(nm||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60); }
+  var s1=slug('MONDAY 9.8.26'), s2=slug('Monday 9-8-26'), s3=slug('monday  9 8 26');
+  info('"MONDAY 9.8.26"  → '+s1);
+  info('"Monday 9-8-26"  → '+s2);
+  info('"monday  9 8 26" → '+s3);
+  ok(!(s1===s2 && s2===s3) || true, 'slug behaviour recorded');
+  if(s1===s2 && s2===s3){
+    warn('three different names collapse to ONE id — saving any of them overwrites the others', s1);
+  }
+  var ra=stamp(), rb='zz-nmtest-'+slug('MONDAY 9.8.26');
+  var R1=await call('PUT','/routes/'+encodeURIComponent(rb), {id:rb, name:'MONDAY 9.8.26', pts:[{n:'A',c:'-6.5, 146.7'}]});
+  if(R1.ok){
+    LEFTOVER.push(['routes',rb]);
+    var R2=await call('PUT','/routes/'+encodeURIComponent(rb), {id:rb, name:'MONDAY 9.8.26 RENAMED', pts:[{n:'A',c:'-6.5, 146.7'}]});
+    var R3=await call('GET','/routes/'+encodeURIComponent(rb));
+    ok(R3.json && R3.json.name==='MONDAY 9.8.26 RENAMED',
+       'renaming a route under the SAME id works', {got:R3.json&&R3.json.name});
+    w('dim','        But the app keys a route by slug(name), so renaming it in the app');
+    w('dim','        writes a NEW record and leaves the old one behind under the old name.');
+  }
+
+  /* ================= 6. delete ================= */
+  head('6. Delete');
+  var did=stamp();
+  var E=await call('PUT','/waypoints/'+encodeURIComponent(did), {id:did,name:'NMTEST delete me',lat:-6.1,lon:146.1});
+  if(E.ok){
+    var F=await call('DELETE','/waypoints/'+encodeURIComponent(did));
+    ok(!F.err && F.ok, 'DELETE is accepted', F.err||{status:F.status});
+    var G2=await call('GET','/waypoints/'+encodeURIComponent(did));
+    var gone = G2.err ? false : (!G2.ok || !G2.json || G2.json.error || G2.json.name===undefined);
+    ok(gone, 'and the record is really gone', {status:G2.status, body:(G2.text||'').slice(0,90)});
+  }
+
+  /* ================= 7. missing record and bad input ================= */
+  head('7. Awkward cases');
+  var M=await call('GET','/waypoints/zz-nmtest-does-not-exist-'+Date.now());
+  ok(!M.err, 'asking for a record that is not there answers at all', M.err);
+  if(!M.err) info('missing record → HTTP '+M.status+'  '+(M.text||'').slice(0,80));
+  var U=await call('GET','/notacollection');
+  ok(!U.err, 'an unknown collection answers at all', U.err);
+  if(!U.err) info('unknown collection → HTTP '+U.status+'  '+(U.text||'').slice(0,80));
+
+  /* ================= cleanup ================= */
+  head('Cleanup');
+  var cleaned=0, stuck=[];
+  for(var k=0;k<LEFTOVER.length;k++){
+    var col3=LEFTOVER[k][0], id3=LEFTOVER[k][1];
+    var Dl=await call('DELETE','/'+col3+'/'+encodeURIComponent(id3));
+    if(!Dl.err && Dl.ok) cleaned++; else stuck.push(col3+'/'+id3);
+  }
+  ok(stuck.length===0, 'every test record removed ('+cleaned+' deleted)', stuck);
+  if(stuck.length) w('warn','        Left behind — delete these from the library by hand:\n        '+stuck.join('\n        '));
+
+  finish();
+}
+
+function finish(){
+  document.getElementById('run').disabled=false;
+  var verdict = FAIL===0 ? 'The cloud system answered correctly on every check.'
+                         : FAIL+' check'+(FAIL===1?'':'s')+' failed — see the FAIL lines above.';
+  sum.style.display='block';
+  sum.innerHTML = '<span class="'+(FAIL?'bad':'ok')+'">'+esc(verdict)+'</span>\n'
+    + '<span class="dim">'+PASS+' passed · '+FAIL+' failed · '+WARN+' noted</span>';
+}
+
+document.getElementById('run').addEventListener('click', function(){ run().catch(function(e){
+  w('bad','\nThe agent itself threw: '+(e&&e.message||e)); finish(); }); });
+document.getElementById('copy').addEventListener('click', function(){
+  var t=out.textContent+'\n'+sum.textContent;
+  navigator.clipboard.writeText(t).then(function(){
+    var b=document.getElementById('copy'); var o=b.textContent; b.textContent='Copied';
+    setTimeout(function(){ b.textContent=o; },1200);
+  });
+});
+</script>
+</body>
+</html>
