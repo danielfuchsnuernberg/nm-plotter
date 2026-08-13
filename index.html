@@ -10,6 +10,49 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-08-13  v306: The Times header really is one line. v305 put the four controls in one
+                row and they wrapped straight back into two: .wplib-toolbar carries
+                flex-wrap:wrap and the new rule never overrode it, so the icons dropped
+                below as soon as the row ran out of width. nowrap now, with the date field
+                as the only flexible item -- and flex:1 1 0 rather than 1 1 auto, because
+                with `auto` the input treats its own preferred width as a floor and pushes
+                the icons out instead of giving ground. Label and Today are held to one line
+                each.
+                measure.js gained a wrap check across every toolbar in the left column, since
+                this is a layout fault that reads as a design fault and neither the gates nor
+                the uniformity check could see it.
+    2026-08-13  v305: The Times header is one line instead of two. Date, Today and the log's
+                two actions now share a row -- two rows for four controls was a row of empty
+                space, and part of why that header looked unlike the others. The "Entry"
+                label went with it; the section is already titled Times.
+                Export now sits BEFORE Save to Cloud: local first, then off the device.
+                And the cloud icon is the same one every other section uses. Times had a
+                near-miss of its own -- a different arrow, a differently drawn cloud -- so
+                one action was drawn two ways in a single column.
+    2026-08-13  v304: The Library buttons are actually gone this time. v302 and v303 marked
+                them `hidden`, which does nothing here: the browser's own [hidden] rule is
+                display:none at the lowest possible weight, and this build's
+                `.panel.left .wplib-iconbtn{display:inline-flex}` beats it. They were hidden
+                in the markup and visible on screen. Deleted outright now, markup and all.
+                Same lesson as v303, one step further along: I marked something done without
+                checking what the browser would actually render, twice.
+                And the underlying trap is now closed rather than remembered:
+                `.panel.left [hidden]{display:none !important}` makes the attribute mean what
+                it says in this column, and measure.js asserts it on three control classes.
+    2026-08-13  v303: The route row really is the same height now, and the Library button is
+                gone from Routes too.
+                WHY v298 DID NOT FIX IT, AND WHY MY OWN CHECK MISSED IT. An older rule --
+                `.panel.left .wplib-toolbar .wplib-seg{height:28px}` -- is MORE SPECIFIC than
+                the token rule `.panel.left .wplib-seg`, so the toolbar controls stayed at
+                28 px while everything else moved to 30 px. Two rows sitting directly above
+                one another, 2 px apart. The 28 px block is deleted; the tokens are now the
+                only source of height in the left column.
+                measure.js reported "one height" throughout because it compared the DECLARED
+                value from getComputedStyle rather than working out which rule wins. It read
+                the loser. It now resolves specificity and source order itself and reports
+                the winning rule, which is how the 28 px was finally found. A check that
+                cannot see the bug is worse than no check, and this one had been passing for
+                five versions.
     2026-08-13  v302: FIRST, THE FLOATING LAYERS -- my fault, from v294. That version
                 coalesced the five view-dependent layers behind a plain TRAILING debounce,
                 and every zoom event reset the timer. Through a pinch the labels therefore
@@ -3101,19 +3144,31 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .tmx-row{display:flex;align-items:center;gap:var(--lc-gap,6px);padding:5px 0}
   /* Label, field, button -- proportioned on purpose. The field used to be a
      fixed 132 px next to an auto-width button, so the two never matched. */
-  .panel.left #tmlib .tmx-daterow{display:grid;grid-template-columns:1fr 2fr 1fr;
-    gap:var(--lc-gap,6px);align-items:center;padding:0}
+  /* label | date | Today | the two icons. The date takes the slack so the
+     controls beside it keep their own widths. */
+  /* NOWRAP. .wplib-toolbar sets flex-wrap:wrap, and the rule below never
+     overrode it -- so as soon as the four items exceeded the panel width the
+     icons dropped to a second line, which is the two-row layout coming back by
+     another route. The date field is the only flexible item, so it absorbs the
+     difference instead. */
+  .panel.left #tmlib .tmx-daterow{display:flex;align-items:center;flex-wrap:nowrap;
+    gap:var(--lc-gap,6px);padding:0;margin-bottom:14px}
+  .panel.left #tmlib .tmx-daterow .tmx-rl{flex:0 0 auto;white-space:nowrap}
+  .panel.left #tmlib .tmx-daterow .wplib-icons{flex:0 0 auto;display:flex;gap:var(--lc-gap,6px);margin-left:auto}
   /* A readout, not a box: the date is still typed into, but it does not need a
      control's outline sitting next to Today's. The outline appears when it is
      hovered or focused, so it is still discoverable as editable. */
+  /* 1 1 0, not 1 1 auto: with `auto` the input's own preferred width counts as
+     its floor and it refuses to give ground, pushing the icons out of the row.
+     From zero it shrinks as far as the rest of the line needs. */
   .panel.left #tmlib .tmx-daterow .tmx-in.tmx-date{
-    width:100%; border-color:transparent; background:transparent; font-size:14px }
+    flex:1 1 0; min-width:88px; width:auto;
+    border-color:transparent; background:transparent; font-size:14px }
   .panel.left #tmlib .tmx-daterow .tmx-in.tmx-date:hover{ border-color:var(--border) }
   .panel.left #tmlib .tmx-daterow .tmx-in.tmx-date:focus{
     border-color:var(--accent); background:var(--bg) }
-  /* air between the date row and the stamp tiles */
-  .panel.left #tmlib .tmx-daterow{ margin-bottom:14px }
-  .panel.left #tmlib .tmx-daterow .tmx-now{width:100%}
+
+  .panel.left #tmlib .tmx-daterow .tmx-now{flex:0 0 auto;padding:0 10px;white-space:nowrap}
   .tmx-tbl{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint)}
   .tmx-rl{flex:1 1 auto;min-width:0;font-size:11px;letter-spacing:.06em;
     text-transform:uppercase;color:var(--text-dim);
@@ -4526,6 +4581,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     --lc-label:10px;   /* uppercase button text */
     --lc-value:13px;   /* typed values and readouts */
   }
+  /* [hidden] MUST WIN. The browser's own rule for it is display:none at the
+     lowest possible weight, and the display rules below are set on classes, so
+     a control marked hidden rendered anyway -- which shipped twice, in v302 and
+     v303. Stated once here so hiding a control is a thing that works rather
+     than a trap to remember. */
+  .panel.left [hidden]{ display:none !important }
+
   /* Everything that is a control, at one height, centred, one radius. */
   .panel.left .ghost.small,
   .panel.left .wplib-iconbtn,
@@ -4752,15 +4814,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   @keyframes wplibHl{0%,15%{background:rgba(255,183,0,.28);box-shadow:inset 0 0 0 1px var(--accent)}100%{background:transparent;box-shadow:none}}
   .rt-add{align-items:center}
   .rt-add input.name{flex:1}
-  /* Unify left-sidebar control heights to 28px. Section-header toggles and the
-     multi-line Notes textarea are intentionally excluded. */
-  .panel.left .panel-head .ghost.small,
-  .panel.left .wplib-toolbar .wplib-seg,
-  .panel.left .wplib-toolbar .wplib-iconbtn,
-  .panel.left .flog-tools .flog-import,
-  .panel.left .flog-tools .wplib-iconbtn{height:28px;box-sizing:border-box}
-  .panel.left .panel-head .ghost.small,
-  .panel.left .flog-tools .flog-import{display:inline-flex;align-items:center;justify-content:center}
+  /* The 28 px block that used to live here is GONE. It was MORE SPECIFIC than
+     the v298 token rules (.panel.left .wplib-toolbar .wplib-seg beats
+     .panel.left .wplib-seg), so toolbar controls stayed at 28 px while
+     everything else moved to 30 px -- a 2 px difference between rows sitting
+     directly above one another. The tokens are the only source of height now. */
   /* Import GPX was the last control still styled by hand: a DASHED border and a
      7 px radius where everything else is solid at var(--lc-r), and a 12 px font
      where every other button label is var(--lc-label). It is a button like the
@@ -4854,7 +4912,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <span class="wplib-icons">
               <button class="wplib-iconbtn" id="wplibPhoto" type="button" title="Read coordinates from photo" aria-label="Read coordinates from photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
               <button class="wplib-iconbtn" id="wpCloudSave" type="button" title="Save to cloud" aria-label="Save to cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
-              <button class="wplib-iconbtn" id="wpCloudRefresh" type="button" hidden title="Waypoint library" aria-label="Waypoint library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
             </span>
             <input type="file" id="wplibPhotoInput" accept="image/*" style="display:none">
           </div>
@@ -4872,7 +4929,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <input class="name" id="rtlibName" type="text" maxlength="40" placeholder="Route name (optional)">
             <button class="ghost small" id="rtlibSave" type="button">Save</button>
             <button class="wplib-iconbtn" id="rtlibCloudSave" type="button" title="Save to cloud" aria-label="Save to cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
-            <button class="wplib-iconbtn" id="rtlibCloudRefresh" type="button" title="Open library" aria-label="Open library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
           </div>
           <div class="wplib-cmsg" id="rtCloudMsg"></div>
           <div class="wplib-list" id="rtlibList"></div>
@@ -4905,14 +4961,20 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                same icon buttons on the right. Times used to put its log actions
                in text buttons at the FOOT, which is why it read as a different
                kind of thing. -->
-          <div class="wplib-toolbar">
-            <span class="tmx-tbl">Entry</span>
+          <!-- One line: the date and Today on the left, the log's two actions on
+               the right. Two rows for four controls was a row of empty space.
+               Export sits before Save to Cloud -- local first, then off the
+               device -- and the cloud icon is the SAME one every other section
+               uses, not the near-miss this section had of its own. -->
+          <div class="wplib-toolbar tmx-daterow">
+            <span class="tmx-rl">Date</span>
+            <input class="tmx-in tmx-date" id="tmxDate" type="text" inputmode="numeric" maxlength="9" placeholder="DD MMM YY" autocomplete="off" spellcheck="false">
+            <button class="tmx-now" type="button" id="tmxToday">Today</button>
             <span class="wplib-icons">
-              <button class="wplib-iconbtn" id="tmxCloud" type="button" title="Save the log to the cloud" aria-label="Save the log to the cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/><path d="M20 17.6A4.5 4.5 0 0 0 17.5 9h-1A7 7 0 1 0 5 15.7"/></svg></button>
               <button class="wplib-iconbtn" id="tmxCsv" type="button" title="Export the log as CSV" aria-label="Export the log as CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg></button>
+              <button class="wplib-iconbtn" id="tmxCloud" type="button" title="Save the log to the cloud" aria-label="Save the log to the cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
             </span>
           </div>
-          <div class="tmx-row tmx-daterow"><span class="tmx-rl">Date</span><input class="tmx-in tmx-date" id="tmxDate" type="text" inputmode="numeric" maxlength="9" placeholder="DD MMM YY" autocomplete="off" spellcheck="false"><button class="tmx-now" type="button" id="tmxToday">Today</button></div>
           <div id="tmxStamps"></div>
           <div class="tmx-colh"><i>Sectors</i><i>h:mm</i><i>dec</i></div>
           <div class="tmx-secs" id="tmxSecs"></div>
@@ -4941,7 +5003,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <button class="flog-import" id="flogImport" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Import GPX</button>
             <input type="file" id="flogImportFile" accept=".gpx,.xml,application/gpx+xml,application/xml,text/xml" hidden>
             <button class="wplib-iconbtn" id="flCloudSave" type="button" title="Save to cloud" aria-label="Save to cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
-            <button class="wplib-iconbtn" id="flCloudRefresh" type="button" hidden title="Open library" aria-label="Open library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
           </div>
           <div class="wplib-cmsg" id="flCloudMsgLine"></div>
           <div class="wplib-list" id="flogList"></div>
@@ -14360,6 +14421,9 @@ const PNG_NAVAIDS=[{"i":"BUK","t":"NDB-DME","n":"Buka","a":-5.44302,"o":154.6670
   wpCloudSave = document.getElementById('wpCloudSave');
   wpCloudRefresh = document.getElementById('wpCloudRefresh');
   if(wpCloudSave) wpCloudSave.addEventListener('click', pushWaypointsToCloud);
+  // The per-section Library buttons were removed in v304 -- the Library TILE in
+  // the section strip is the single way in. These lookups stay null-guarded so
+  // nothing here has to know that.
   if(wpCloudRefresh) wpCloudRefresh.addEventListener('click', function(){ openWlib('waypoints'); });
   function wlibInit(){
     var cl=$w('nmWlibClose'), cl2=$w('nmWlibClose2'), rf=$w('nmWlibRefresh'), ovv=$w('nmWlibOverlay'), s=$w('nmWlibSearch');
@@ -16603,7 +16667,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v302 &middot; 2026-08-13</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v306 &middot; 2026-08-13</div>
       </div>
     </div>
   </div>
