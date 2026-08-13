@@ -57,6 +57,7 @@ const COLLECTIONS = {
   routes:  { prefix: 'route',  max: 256 * 1024 },
   flights: { prefix: 'flight', max: 4 * 1024 * 1024 }, // GPS tracks are bigger
   waypoints: { prefix: 'waypoint', max: 256 * 1024 },
+  times:   { prefix: 'time',   max: 256 * 1024 },   // engine/skids records
 };
 
 // ---------------------------------------------------------------------------
