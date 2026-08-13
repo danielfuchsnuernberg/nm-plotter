@@ -10,6 +10,13 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-08-14  v308: The section tiles are one line instead of two -- label, then count, the
+                same shape as the WAYPOINTS 5 / VILLAGES 0 tabs already in this panel, so the
+                two read as the same kind of control. Stacked they cost 118 px of a column
+                that has to hold the section's contents underneath; now they cost 66.
+                Their height is the shared control token, so they sit in the same rhythm as
+                every button beside them. Only the Times stamp tiles still use the taller
+                token -- they carry two label lines and a value, and have earned it.
     2026-08-13  v307: THE ZOOM IS REVERTED to exactly what it was before v294. Every
                 view-dependent layer subscribes to zoomend/moveend directly again, the
                 coalescer and its timer are gone, wheelPxPerZoomLevel is back to 18 and the
@@ -4643,7 +4650,14 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .panel.left #tmlib .tmx-secrm,
   .panel.left #mymaps .mm-b{ width:24px; height:24px }   /* in-row, next to text */
   /* The two tile grids share a height and a radius. */
-  .panel.left .ptile,
+  /* The section tiles are control-height now; only the time stamps, which
+     carry two label lines and a value, still need the taller token. */
+  /* font-size stated, not inherited: without it the tile falls back to the
+     generic button{font-size:12px}, which is the one size in this column that
+     is not a token. The label and count set their own, so this only matters
+     for anything placed in a tile later -- which is exactly when an inherited
+     stray size would go unnoticed. */
+  .panel.left .ptile{ height:var(--lc-h); border-radius:var(--lc-r); font-size:var(--lc-label) }
   .panel.left #tmlib .tmx-st{ height:var(--lc-h-tile); border-radius:var(--lc-r) }
 
   /* EVERY section's content starts at the same place. Measured before this:
@@ -4665,21 +4679,30 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
      Deliberately small: this is navigation, not content. */
   .ptiles{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--lc-gap,6px);
     padding:10px 0 12px;border-top:1px solid var(--border)}
-  .ptile{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:2px;height:42px;padding:0 3px;background:var(--bg-2);
-    border:1px solid var(--border-strong);border-radius:5px;cursor:pointer;
+  /* ONE LINE, label then count -- the same shape as the WAYPOINTS 5 /
+     VILLAGES 0 tabs already in this panel, so the two read as the same kind of
+     thing. Stacked over two lines the six tiles cost 118 px of a panel that has
+     to hold the section's contents underneath; on one line they cost 66. The
+     height is the shared control token, so they sit in the same rhythm as
+     every button beside them. */
+  .ptile{min-width:0;display:flex;flex-direction:row;align-items:center;justify-content:center;
+    gap:6px;height:var(--lc-h,30px);padding:0 6px;background:var(--bg-2);
+    border:1px solid var(--border-strong);border-radius:var(--lc-r,5px);cursor:pointer;
     transition:border-color .12s,background .12s}
   .ptile:hover{border-color:var(--accent-2)}
-  .ptile .c{font-family:var(--mono);font-size:13px;font-weight:700;line-height:1;color:var(--text-faint)}
+  /* The count follows the label, the way the Waypoints/Villages tabs read.
+     flex:0 0 auto so a long label ellipsises instead of squeezing the number. */
+  .ptile .c{flex:0 0 auto;order:2;font-family:var(--mono);font-size:var(--lc-label,10px);
+    font-weight:700;line-height:1;color:var(--text-faint)}
   .ptile .c.zero{color:var(--text-fainter)}
-  .ptile .l{font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
-    line-height:1.1;color:var(--text-dim);max-width:100%;
+  .ptile .l{font-size:var(--lc-label,10px);font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    line-height:1;color:var(--text-dim);min-width:0;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ptile.on{background:rgba(255,176,32,.10);border-color:rgba(255,176,32,.55)}
   .ptile.on .c,.ptile.on .l{color:var(--accent)}
   .ptile.drag{opacity:.5;border-style:dashed;border-color:var(--accent)}
-  /* A dot rather than a count, for Notes, which has no number to show */
-  .ptile .c.dot{width:7px;height:7px;border-radius:50%;background:var(--text-fainter);margin:3px 0}
+  /* A dot rather than a count, for a section with no number to show */
+  .ptile .c.dot{width:6px;height:6px;border-radius:50%;background:var(--text-fainter);margin:0}
   .ptile .c.dot.lit{background:var(--accent)}
 
   /* With the strip in place the headers are redundant, and a shut section
@@ -16626,7 +16649,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v307 &middot; 2026-08-13</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v308 &middot; 2026-08-14</div>
       </div>
     </div>
   </div>
