@@ -10,6 +10,67 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-08-13  v302: FIRST, THE FLOATING LAYERS -- my fault, from v294. That version
+                coalesced the five view-dependent layers behind a plain TRAILING debounce,
+                and every zoom event reset the timer. Through a pinch the labels therefore
+                never redrew at all: they rode the map's transform, drifting away from their
+                points, and snapped back when it stopped. It now renders on the LEADING edge
+                -- the first event in a burst draws immediately, so a single zoom or pan is
+                instant and nothing drifts -- with one trailing catch-up for the rest of the
+                burst. The coalescing still does its job; it just no longer does it by
+                withholding the first frame.
+                Also: the per-section Library buttons are gone from Waypoints, Times and
+                Flights. The Library tile in the section strip reaches the same place, and
+                three copies of one destination was three more boxes.
+                The current date lost its outline -- it is a readout that happens to be
+                typeable, and the box only competed with Today's. The outline returns on
+                hover and focus, so it is still discoverable. More air between that row and
+                the stamp tiles below.
+    2026-08-13  v301: A coordinate typed into the MAP search bar is now something you can act
+                on. It used to drop a dot with a label and stop there -- the same coordinate
+                typed into the left-hand box gave a card with actions, so the two bars
+                answered the same question differently.
+                Arriving at a typed position now opens the map's own action menu, the one a
+                right-click gives: add to route, save as waypoint, forecast, copy
+                coordinates. The pin stays clickable afterwards, so dismissing the menu is
+                not a dead end.
+                Only for a typed POSITION. A named result -- a field, a fix, an area -- still
+                just flies there, because those already have their own cards a click away and
+                a menu opening itself over them would be in the way.
+    2026-08-13  v300: Two fewer boxes in the Waypoints header. "+ Add Row" is a square +
+                button, the same height as Home Base beside it. And the point count lost its
+                outline -- a readout is not a control and should not wear a control's box.
+                Scoped to that one badge: the same class carries the counts on the section
+                tiles and in the library, where the outline still separates a number from
+                the label next to it.
+    2026-08-13  v299: Times now looks like every other section.
+                THE CLOCK ROW IS GONE. It showed the local time and the UTC date -- both
+                already on the Mac's own menu bar two inches above, and neither is what the
+                section is for. Its 15-second repaint went with it.
+                THE ACTIONS MOVED TO A TOOLBAR AT THE TOP, the same one Saved Waypoints and
+                Flight Log have: a label on the left, icon buttons on the right. Cloud save,
+                CSV export and the library are now the same three icons in the same place as
+                everywhere else, instead of text buttons at the foot. That was the real
+                reason Times read as a different kind of thing.
+                DATE AND TODAY ARE THE SAME SIZE. The field was a hand-typed 132 px next to
+                an auto-width button, so they could never match. The row is a 1fr/2fr/1fr
+                grid now -- proportioned on purpose rather than by two independent numbers.
+    2026-08-13  v298: THE LEFT COLUMN IS STANDARDISED. Measured first, not eyeballed: it held
+                EIGHT different control heights (20, 22, 27, 28, 30, 42, 62 and auto), three
+                corner radii and five font sizes, on controls sitting inches apart. Every one
+                had been sized by hand as it was written -- including by me, repeatedly.
+                There are now three sizes and nothing else: 30 px for every button, input and
+                icon button; 56 px for the two tile grids; one radius, one label size, one
+                value size, one gap. They are CSS variables on .panel.left, so the next
+                control cannot be sized by hand without deliberately opting out.
+                EVERY SECTION NOW STARTS AT THE SAME HEIGHT. Measured: the first element in
+                each section carried a different margin -- 10 px on top, 10 px on the bottom,
+                none at all, and one with its own padding -- so clicking between Waypoints,
+                Routes, Maps, Times and Flights moved the content up and down. One rule
+                governs that spacing now.
+                TIMES IS TIDIED. Save to Cloud sat at the bottom beside Export CSV, half a
+                panel away from Save to Log and Clear. The two pairs are now stacked action
+                rows of the same shape, directly under the totals.
     2026-08-13  v297: The add-a-waypoint row is gone from Saved Waypoints -- Name box,
                 coordinate box, waypoint/village toggle and Save. It duplicated four things
                 that already exist and do the job better:
@@ -2463,6 +2524,15 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     letter-spacing:.04em;
   }
   .badge.live{color:var(--accent);border-color:#3a2e10;background:#1a1408}
+  /* A count is a readout, not a control -- it should not wear a control's box.
+     Scoped, because .badge is also the count on the section tiles and in the
+     library, where the outline still earns its place. */
+  .badge.plain{border:none;padding:2px 0;background:none}
+  /* Square icon-only buttons in the panel head: the same height as the text
+     ones beside them, so the row stays level. */
+  .panel.left .panel-head .ghost.small.icon-only{
+    width:var(--lc-h,30px); padding:0; font-size:15px; font-weight:400; letter-spacing:0;
+  }
 
   /* overflow-y:scroll, not auto. The scrollbar here is a styled 8 px one that
      TAKES LAYOUT WIDTH, so with `auto` the content area was 8 px wider whenever
@@ -2992,17 +3062,12 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
      the clock, but a late press is corrected by typing over it. Times are
      HH:MM against the record's date; an end earlier than its start is read
      as past midnight. */
-  .tmx-clock{display:flex;align-items:baseline;justify-content:space-between;
-    background:var(--bg);border:1px solid var(--border);border-radius:3px;
-    padding:6px 10px;margin-bottom:10px}
-  .tmx-clock .loc{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text)}
-  .tmx-clock .utc{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--text-faint)}
   /* The four stamps. One tap is the whole interaction in flight; the typed
      correction is the exception, so it lives INSIDE the tile rather than
      costing a field, a Now and a clear on every row. Four across a 380 px
      panel with the section's own padding: each tile is 1fr, so they cannot
      push past the edge whatever the panel is dragged to. */
-  #tmlib .tmx-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  #tmlib .tmx-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--lc-gap,6px)}
   #tmlib .tmx-st{min-width:0;height:62px;padding:7px 2px 6px;
     display:flex;flex-direction:column;align-items:center;justify-content:space-between;
     background:var(--bg-2);border:1px solid var(--border-strong);border-radius:3px;
@@ -3033,7 +3098,23 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     background:transparent;border:1px solid var(--border-strong);border-radius:3px;
     width:20px;height:20px;padding:0;font-size:12px;line-height:1;color:var(--text-faint);cursor:pointer}
   #tmlib .tmx-secrm:hover{border-color:var(--bad);color:var(--bad)}
-  .tmx-row{display:flex;align-items:center;gap:6px;padding:5px 0}
+  .tmx-row{display:flex;align-items:center;gap:var(--lc-gap,6px);padding:5px 0}
+  /* Label, field, button -- proportioned on purpose. The field used to be a
+     fixed 132 px next to an auto-width button, so the two never matched. */
+  .panel.left #tmlib .tmx-daterow{display:grid;grid-template-columns:1fr 2fr 1fr;
+    gap:var(--lc-gap,6px);align-items:center;padding:0}
+  /* A readout, not a box: the date is still typed into, but it does not need a
+     control's outline sitting next to Today's. The outline appears when it is
+     hovered or focused, so it is still discoverable as editable. */
+  .panel.left #tmlib .tmx-daterow .tmx-in.tmx-date{
+    width:100%; border-color:transparent; background:transparent; font-size:14px }
+  .panel.left #tmlib .tmx-daterow .tmx-in.tmx-date:hover{ border-color:var(--border) }
+  .panel.left #tmlib .tmx-daterow .tmx-in.tmx-date:focus{
+    border-color:var(--accent); background:var(--bg) }
+  /* air between the date row and the stamp tiles */
+  .panel.left #tmlib .tmx-daterow{ margin-bottom:14px }
+  .panel.left #tmlib .tmx-daterow .tmx-now{width:100%}
+  .tmx-tbl{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint)}
   .tmx-rl{flex:1 1 auto;min-width:0;font-size:11px;letter-spacing:.06em;
     text-transform:uppercase;color:var(--text-dim);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -3095,7 +3176,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .tmx-tot .hm{color:var(--accent)}
   .tmx-tot .dc{color:var(--accent-2)}
   .tmx-tot.idle .hm,.tmx-tot.idle .dc{color:var(--text-fainter)}
-  .tmx-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .tmx-acts{display:grid;grid-template-columns:1fr 1fr;gap:var(--lc-gap,6px);margin-top:10px}
+  .panel.left #tmlib .tmx-acts .tmx-csv{width:100%}
   .tmx-act{height:30px;display:flex;align-items:center;justify-content:center;
     padding:0;line-height:1;background:var(--bg-2);border:1px solid var(--border-strong);
     border-radius:3px;font-family:var(--sans);font-size:11px;font-weight:700;
@@ -3112,7 +3194,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     margin:16px 0 2px;padding-top:11px;border-top:1px solid var(--border)}
   .tmx-loghead span{font-size:10px;font-weight:700;letter-spacing:.14em;
     text-transform:uppercase;color:var(--text-dim)}
-  .tmx-logacts{display:flex;gap:6px}
   .tmx-csv{background:transparent;border:1px solid var(--border-strong);border-radius:3px;
     padding:3px 8px;font-family:var(--sans);font-size:10px;font-weight:700;
     letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);
@@ -3426,7 +3507,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .seg button+button{border-left:1px solid var(--border-strong)}
   .seg button.on{background:var(--accent);color:#10141a}
   .flog-hint{font-size:11px;color:var(--text-faint);line-height:1.5;padding:4px 2px 8px}
-  .flog-tools{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+  .flog-tools{display:flex;align-items:center;gap:var(--lc-gap,6px);margin-bottom:8px}
   .flog-import{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;background:var(--bg-2);border:1px dashed var(--border-strong);color:var(--accent-2);font-size:12px;font-weight:600;padding:8px 12px;border-radius:7px;cursor:pointer}
   .flog-err{font-family:var(--sans);font-size:12px;color:var(--bad);line-height:1.4;padding:8px 4px}
   .flog-import:hover{background:var(--panel)}
@@ -4019,7 +4100,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .ap-region{color:var(--text-faint);font-size:10px;font-weight:400}
   .ap-sep{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);padding:6px 12px 3px;border-top:1px solid var(--border)}
   .ap-foot{font-size:10px;color:var(--text-faint);padding:7px 12px;font-style:italic}
-  .mapsearch-vpin{display:flex;align-items:center;gap:5px;color:var(--accent-2);font-size:12px;line-height:1;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;cursor:pointer}
+  .mapsearch-vpin{cursor:pointer;display:flex;align-items:center;gap:5px;color:var(--accent-2);font-size:12px;line-height:1;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;cursor:pointer}
   .mapsearch-vpin span{font-family:var(--sans,system-ui);font-size:11px;font-weight:600;color:var(--text)}
 
   /* ===== Weather (METAR) ===== */
@@ -4426,6 +4507,83 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-head{display:flex;justify-content:space-between;align-items:center;width:100%;background:transparent;border:none;padding:0;cursor:pointer;text-transform:none;letter-spacing:0}
   .wplib-head:hover{border:none;color:inherit}
   .wplib-ttl{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim)}
+
+  /* ===================================================================
+     LEFT COLUMN CONTROL TOKENS
+     Measured before this existed: EIGHT different control heights
+     (20/22/27/28/30/42/62/auto), three corner radii and five font sizes,
+     across controls sitting inches apart. Every one had been sized by
+     hand as it was written.
+     Three sizes now, and nothing else:
+       --lc-h      30px  every button, input and select
+       --lc-h-sq   30px  square icon buttons (same height, so rows line up)
+       --lc-h-tile 56px  the two tile grids (section tiles, time stamps)
+     One radius, one label size, one value size.
+     =================================================================== */
+  .panel.left{
+    --lc-h:30px; --lc-h-sq:30px; --lc-h-tile:56px;
+    --lc-r:5px; --lc-gap:6px;
+    --lc-label:10px;   /* uppercase button text */
+    --lc-value:13px;   /* typed values and readouts */
+  }
+  /* Everything that is a control, at one height, centred, one radius. */
+  .panel.left .ghost.small,
+  .panel.left .wplib-iconbtn,
+  .panel.left .wplib-seg,
+  .panel.left .flog-tools .flog-import,
+  .panel.left .wplib-add input,
+  .panel.left .wplib-add button,
+  .panel.left #tmlib .tmx-in,
+  .panel.left #tmlib .tmx-now,
+  .panel.left #tmlib .tmx-act,
+  .panel.left #tmlib .tmx-add,
+  .panel.left #tmlib .tmx-csv,
+  .panel.left #mymaps .mm-pick{
+    height:var(--lc-h); box-sizing:border-box; border-radius:var(--lc-r);
+    display:inline-flex; align-items:center; justify-content:center; line-height:1;
+  }
+  /* Inputs read left, not centred, and keep their inner padding. */
+  .panel.left .wplib-add input,
+  .panel.left #tmlib .tmx-in{ justify-content:flex-start; padding:0 9px; font-size:var(--lc-value) }
+  .panel.left #tmlib .tmx-in{ text-align:center; justify-content:center }
+  /* Uppercase button text, one size. */
+  .panel.left .ghost.small,
+  .panel.left .flog-tools .flog-import,
+  .panel.left .wplib-add button,
+  .panel.left #tmlib .tmx-now,
+  .panel.left #tmlib .tmx-act,
+  .panel.left #tmlib .tmx-add,
+  .panel.left #tmlib .tmx-csv,
+  .panel.left #mymaps .mm-pick{ font-size:var(--lc-label); font-weight:700; letter-spacing:.1em; text-transform:uppercase }
+  /* The segmented toolbar's own buttons, which sit inside .wplib-seg and so
+     were missed by the list above -- caught by the uniformity check, not by
+     looking. */
+  .panel.left .wplib-seg button{ font-size:var(--lc-label); font-weight:700; letter-spacing:.1em; text-transform:uppercase }
+  .panel.left .wplib-seg{ font-size:var(--lc-label) }
+  /* Square icon buttons: same height, so they sit level with the text ones. */
+  .panel.left .wplib-iconbtn,
+  .panel.left #tmlib .tmx-x,
+  .panel.left #tmlib .tmx-secrm,
+  .panel.left #mymaps .mm-b{
+    width:var(--lc-h-sq); height:var(--lc-h-sq); padding:0; border-radius:var(--lc-r);
+    display:inline-flex; align-items:center; justify-content:center; line-height:1;
+  }
+  .panel.left #tmlib .tmx-secrm,
+  .panel.left #mymaps .mm-b{ width:24px; height:24px }   /* in-row, next to text */
+  /* The two tile grids share a height and a radius. */
+  .panel.left .ptile,
+  .panel.left #tmlib .tmx-st{ height:var(--lc-h-tile); border-radius:var(--lc-r) }
+
+  /* EVERY section's content starts at the same place. Measured before this:
+     first children carried margins of 10px-top, 10px-bottom, none, and one
+     had its own padding -- so switching tiles moved the content up and down. */
+  .panel.left .wplib .wplib-body{ padding-top:0 }
+  .panel.left .wplib .wplib-body > :first-child{ margin-top:0 }
+  .panel.left .wplib .wplib-body > .wplib-toolbar,
+  .panel.left .wplib .wplib-body > .wplib-add,
+  .panel.left .wplib .wplib-body > .mm-add,
+  .panel.left .wplib .wplib-body > .flog-hint,
+  .panel.left .wplib .wplib-body > .notes-field{ margin:0 0 10px; padding-left:0; padding-right:0 }
   /* ===== Section tiles =====
      Six stacked headers spent about 240 px of the panel telling you the names
      of things that were shut. The same six as a 3x2 strip costs a third of
@@ -4433,7 +4591,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
      not do at this width -- "SAVED WAYPOINTS" needs 130 px and there are 63
      to give it.
      Deliberately small: this is navigation, not content. */
-  .ptiles{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;
+  .ptiles{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--lc-gap,6px);
     padding:10px 0 12px;border-top:1px solid var(--border)}
   .ptile{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:2px;height:42px;padding:0 3px;background:var(--bg-2);
@@ -4478,7 +4636,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .notes-lib.has-notes .note-dot{display:inline-block}
   /* Still used by the ROUTE name row (class="wplib-add rt-add"); the waypoint
      add row that also used it was removed in v297. */
-  .wplib-add{display:flex;gap:6px;margin-bottom:10px;align-items:center}
+  .wplib-add{display:flex;gap:var(--lc-gap,6px);margin-bottom:10px;align-items:center}
   .wplib-add input.name{flex:0 0 33%}
   .wplib-add input.coord{flex:1}
   .wplib-add button{flex:0 0 auto}
@@ -4603,6 +4761,15 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .panel.left .flog-tools .wplib-iconbtn{height:28px;box-sizing:border-box}
   .panel.left .panel-head .ghost.small,
   .panel.left .flog-tools .flog-import{display:inline-flex;align-items:center;justify-content:center}
+  /* Import GPX was the last control still styled by hand: a DASHED border and a
+     7 px radius where everything else is solid at var(--lc-r), and a 12 px font
+     where every other button label is var(--lc-label). It is a button like the
+     others; nothing about it earns a different shape. */
+  .panel.left .flog-tools .flog-import{
+    border-style:solid; border-radius:var(--lc-r); padding:0 12px;
+    font-size:var(--lc-label); font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    background:var(--bg-2); gap:7px }
+  .panel.left .flog-tools .flog-import svg{width:13px;height:13px}
   #rows .row input, #rows .row .fuel-toggle, #rows .row .del{height:28px;box-sizing:border-box}
   #rows .row .fuel-toggle, #rows .row .del{display:inline-flex;align-items:center;justify-content:center}
   #rows .row .fuel-toggle{width:28px}
@@ -4648,8 +4815,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <h2>Waypoints</h2>
       <div style="display:flex;gap:8px;align-items:center">
         <button class="ghost small" id="homeBtn" title="Insert LAE BASE coordinates">⌂ Home Base</button>
-        <button class="ghost small" id="addBtn">+ Add Row</button>
-        <span class="badge" id="countBadge">0 PTS</span>
+        <button class="ghost small icon-only" id="addBtn" title="Add a waypoint row" aria-label="Add a waypoint row">+</button>
+        <span class="badge plain" id="countBadge">0 PTS</span>
       </div>
     </div>
     <div class="panel-body">
@@ -4687,7 +4854,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <span class="wplib-icons">
               <button class="wplib-iconbtn" id="wplibPhoto" type="button" title="Read coordinates from photo" aria-label="Read coordinates from photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
               <button class="wplib-iconbtn" id="wpCloudSave" type="button" title="Save to cloud" aria-label="Save to cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
-              <button class="wplib-iconbtn" id="wpCloudRefresh" type="button" title="Waypoint library" aria-label="Waypoint library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
+              <button class="wplib-iconbtn" id="wpCloudRefresh" type="button" hidden title="Waypoint library" aria-label="Waypoint library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
             </span>
             <input type="file" id="wplibPhotoInput" accept="image/*" style="display:none">
           </div>
@@ -4734,8 +4901,18 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
           <span class="wplib-meta"><span class="badge" id="tmlibCount">0</span><span class="wplib-chev">&#x25BE;</span></span>
         </button>
         <div class="wplib-body">
-          <div class="tmx-clock"><span class="loc" id="tmxLoc">--:--</span><span class="utc" id="tmxUtc">&mdash;</span></div>
-          <div class="tmx-row"><span class="tmx-rl">Date</span><input class="tmx-in tmx-date" id="tmxDate" type="text" inputmode="numeric" maxlength="9" placeholder="DD MMM YY" autocomplete="off" spellcheck="false"><button class="tmx-now" type="button" id="tmxToday">Today</button></div>
+          <!-- The same toolbar every other section has: label on the left, the
+               same icon buttons on the right. Times used to put its log actions
+               in text buttons at the FOOT, which is why it read as a different
+               kind of thing. -->
+          <div class="wplib-toolbar">
+            <span class="tmx-tbl">Entry</span>
+            <span class="wplib-icons">
+              <button class="wplib-iconbtn" id="tmxCloud" type="button" title="Save the log to the cloud" aria-label="Save the log to the cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/><path d="M20 17.6A4.5 4.5 0 0 0 17.5 9h-1A7 7 0 1 0 5 15.7"/></svg></button>
+              <button class="wplib-iconbtn" id="tmxCsv" type="button" title="Export the log as CSV" aria-label="Export the log as CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg></button>
+            </span>
+          </div>
+          <div class="tmx-row tmx-daterow"><span class="tmx-rl">Date</span><input class="tmx-in tmx-date" id="tmxDate" type="text" inputmode="numeric" maxlength="9" placeholder="DD MMM YY" autocomplete="off" spellcheck="false"><button class="tmx-now" type="button" id="tmxToday">Today</button></div>
           <div id="tmxStamps"></div>
           <div class="tmx-colh"><i>Sectors</i><i>h:mm</i><i>dec</i></div>
           <div class="tmx-secs" id="tmxSecs"></div>
@@ -4745,8 +4922,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <button class="tmx-act save" id="tmxSave" type="button">Save to log</button>
             <button class="tmx-act del" id="tmxClear" type="button">Clear</button>
           </div>
+
           <div class="tmx-msg" id="tmxMsg"></div>
-          <div class="tmx-loghead"><span>Saved</span><span class="tmx-logacts"><button class="tmx-csv" id="tmxCloud" type="button" title="Push the whole log to the cloud library">&#9729; Save to Cloud</button><button class="tmx-csv" id="tmxCsv" type="button">Export CSV</button></span></div>
+          <div class="tmx-loghead"><span>Saved</span></div>
           <div class="tmx-msg" id="tmxCloudMsg"></div>
           <div class="wplib-list" id="tmxLog"></div>
         </div>
@@ -4763,7 +4941,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             <button class="flog-import" id="flogImport" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Import GPX</button>
             <input type="file" id="flogImportFile" accept=".gpx,.xml,application/gpx+xml,application/xml,text/xml" hidden>
             <button class="wplib-iconbtn" id="flCloudSave" type="button" title="Save to cloud" aria-label="Save to cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></button>
-            <button class="wplib-iconbtn" id="flCloudRefresh" type="button" title="Open library" aria-label="Open library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
+            <button class="wplib-iconbtn" id="flCloudRefresh" type="button" hidden title="Open library" aria-label="Open library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
           </div>
           <div class="wplib-cmsg" id="flCloudMsgLine"></div>
           <div class="wplib-list" id="flogList"></div>
@@ -5496,14 +5674,29 @@ function afterView(fn){
   NM_VIEW_JOBS.push(fn);
   return fn;
 }
+/* LEADING EDGE, then a trailing catch-up.
+
+   v294 used a plain trailing debounce, and every zoom event RESET the timer --
+   so through a pinch the labels never redrew at all. They rode the map's
+   transform, drifting away from their points, and snapped back at the end.
+   That is the floating and jumping.
+
+   Now the first event in a burst renders IMMEDIATELY, so a single zoom or pan
+   is instant and nothing ever drifts. Further events inside the window are
+   collapsed into one trailing render, which is what stops a pinch running five
+   full rebuilds a dozen times. */
+var NM_VIEW_LAST = 0;
+function nmViewRun(){
+  NM_VIEW_LAST = Date.now();
+  for(var i = 0; i < NM_VIEW_JOBS.length; i++){
+    try { NM_VIEW_JOBS[i](); } catch(_){ }   // one bad layer must not stop the rest
+  }
+}
 function nmViewSettled(){
+  var since = Date.now() - NM_VIEW_LAST;
+  if(since >= 120 && !NM_VIEW_T){ nmViewRun(); return; }   // idle: draw now
   if(NM_VIEW_T) clearTimeout(NM_VIEW_T);
-  NM_VIEW_T = setTimeout(function(){
-    NM_VIEW_T = null;
-    for(var i = 0; i < NM_VIEW_JOBS.length; i++){
-      try { NM_VIEW_JOBS[i](); } catch(_){ }   // one bad layer must not stop the rest
-    }
-  }, 55);
+  NM_VIEW_T = setTimeout(function(){ NM_VIEW_T = null; nmViewRun(); }, 90);
 }
 
 /* ===== Map ===== */
@@ -6807,8 +7000,7 @@ async function cloudDelete(col, id){ var r = await cloudFetch('/' + (col||'route
       msgEl   = document.getElementById('tmxMsg'),
       csvBtn  = document.getElementById('tmxCsv'),
       logEl   = document.getElementById('tmxLog'),
-      locEl   = document.getElementById('tmxLoc'),
-      utcEl   = document.getElementById('tmxUtc');
+      libBtn  = null;
 
   var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function pad2(n){ return String(n).padStart(2,'0'); }
@@ -7236,15 +7428,12 @@ async function cloudDelete(col, id){ var r = await cloudFetch('/' + (col||'route
     } catch(err){ flash('Could not write the file.'); }
   });
 
-  /* ---- clocks ---- */
-  function tick(){
-    var d = new Date();
-    if(locEl) locEl.textContent = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
-    if(utcEl) utcEl.textContent = pad2(d.getUTCDate()) + ' ' + MON[d.getUTCMonth()].toUpperCase()
-      + ' ' + pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + 'Z';
-  }
-  setInterval(tick, 15000);
-  tick();
+  /* The clock row is gone. It showed the local time and the UTC date -- both
+     already on the menu bar two inches above, and neither is what this section
+     is for. Its 15-second interval went with it. */
+  /* The per-section Library buttons were removed in v302: the Library tile in
+     the section strip reaches the same place, and every section carrying its
+     own copy was three more boxes for one destination. */
 
   head.addEventListener('click', function(){
     var c = lib.classList.toggle('collapsed');
@@ -8636,13 +8825,33 @@ window.NMPlusRef = function(){
     input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; input.blur();
     box.classList.remove('focused');
   }
-  function goPin(lat, lon, label, zoom){
+  /* `menu` opens the map's own action menu on arrival -- the same one a
+     right-click gives: add to route, save as waypoint, forecast, copy. Used for
+     a typed POSITION, where the pin is the whole answer and a dot you cannot
+     act on is a dead end. Named results (fields, fixes, areas) just fly there;
+     their own cards are a click away. */
+  function goPin(lat, lon, label, zoom, menu){
     if(!isFinite(lat) || !isFinite(lon)) return;
     map.setView([lat, lon], Math.max(map.getZoom()||0, zoom||11));
     clearVillagePin();
-    villageLayer = L.marker([lat, lon], { interactive:false, keyboard:false, icon: L.divIcon({
+    // interactive now, so the pin itself can be clicked open again after the
+    // menu is dismissed
+    villageLayer = L.marker([lat, lon], { interactive:true, keyboard:false, icon: L.divIcon({
       className:'', iconSize:null, iconAnchor:[7,7],
       html:'<div class="mapsearch-vpin">\u25CF<span>'+escapeHtml(label||'')+'</span></div>' }) }).addTo(map);
+    function openHere(){
+      if(typeof window.NMMapMenu !== 'function') return;
+      var pt = null;
+      try { pt = map.latLngToContainerPoint([lat, lon]); } catch(_){ }
+      window.NMMapMenu(L.latLng(lat, lon), pt);
+    }
+    villageLayer.on('click', openHere);
+    /* A plain timer, NOT map.once('moveend'). moveend never fires when the view
+       does not actually change -- search the same coordinate twice and the
+       second one would drop a pin and open nothing. setView has already applied
+       the new centre by the time this runs, so the popup lands in the right
+       place either way. */
+    if(menu) setTimeout(openHere, 60);
     input.value = label || ''; results.innerHTML=''; clearBtn.hidden = !(label); active=0; curOnline=undefined; lastQ=''; input.blur();
     box.classList.remove('focused');
   }
@@ -8664,7 +8873,7 @@ window.NMPlusRef = function(){
     const items = results.querySelectorAll('.ap-item');
     if(e.key==='ArrowDown'){ e.preventDefault(); setActive(active+1); }
     else if(e.key==='ArrowUp'){ e.preventDefault(); setActive(active-1); }
-    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.coord){ goPin(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name, 15); } else if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else if(pick.dataset.fix){ goFix({n:pick.dataset.name, a:+pick.dataset.lat, o:+pick.dataset.lon}); } else if(pick.dataset.air){ goArea({id:pick.dataset.name, lat:+pick.dataset.lat, lon:+pick.dataset.lon}); } else if(pick.dataset.route){ goRoute(pick.dataset.rd); } else if(pick.dataset.wptid){ goWpt(pick.dataset.wptid); } else { go(byId(pick.dataset.id)); } } }
+    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.coord){ goPin(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name, 15, true); } else if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else if(pick.dataset.fix){ goFix({n:pick.dataset.name, a:+pick.dataset.lat, o:+pick.dataset.lon}); } else if(pick.dataset.air){ goArea({id:pick.dataset.name, lat:+pick.dataset.lat, lon:+pick.dataset.lon}); } else if(pick.dataset.route){ goRoute(pick.dataset.rd); } else if(pick.dataset.wptid){ goWpt(pick.dataset.wptid); } else { go(byId(pick.dataset.id)); } } }
     else if(e.key==='Escape'){ e.preventDefault(); input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; curOnline=undefined; lastQ=''; input.blur(); box.classList.remove('focused'); clearVillagePin(); if(window.NMClearPin) window.NMClearPin(); }
   });
   results.addEventListener('click', e => {
@@ -8688,7 +8897,7 @@ window.NMPlusRef = function(){
     }
     const it = e.target.closest('.ap-item');
     if(it){
-      if(it.dataset.coord){ goPin(+it.dataset.lat, +it.dataset.lon, it.dataset.name, 15); }
+      if(it.dataset.coord){ goPin(+it.dataset.lat, +it.dataset.lon, it.dataset.name, 15, true); }
       else if(it.dataset.online){ goVillage(+it.dataset.lat, +it.dataset.lon, it.dataset.name); }
       else if(it.dataset.fix){ goFix({n:it.dataset.name, a:+it.dataset.lat, o:+it.dataset.lon}); }
       else if(it.dataset.air){ goArea({id:it.dataset.name, lat:+it.dataset.lat, lon:+it.dataset.lon}); }
@@ -12373,6 +12582,9 @@ function openMapMenu(latlng, containerPoint){
   });
 }
 // Right-click (desktop) opens the menu; plain left-click just navigates now.
+/* The map search bar drops a pin and needs this same menu; it is defined in a
+   different block, so expose it rather than rely on declaration order. */
+window.NMMapMenu = openMapMenu;
 map.on('contextmenu', function(e){
   if(e.originalEvent && e.originalEvent.preventDefault) e.originalEvent.preventDefault();
   openMapMenu(e.latlng, e.containerPoint);
@@ -16391,7 +16603,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v297 &middot; 2026-08-13</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v302 &middot; 2026-08-13</div>
       </div>
     </div>
   </div>
