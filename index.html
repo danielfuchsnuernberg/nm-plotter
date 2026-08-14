@@ -10,6 +10,14 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-08-14  v311a: The Settings footer said v309 while the app was actually running v311.
+                Two of the three places the version is written by hand got bumped and the
+                third -- the ONLY one visible from the cockpit -- did not, so the app lied
+                about itself to the one person checking whether the deploy had landed, and
+                he cleared caches chasing a deploy that had already worked.
+                Bumped, and closed properly: verchk.py now fails the build unless the
+                changelog, the footer and the sw.js CACHE all agree, and asserts the cache
+                never goes backwards and never sweeps nmplotter-terrain.
     2026-08-14  v311: TWO CHANGES, both in the left column, neither touching the other.
                 (1) The coordinate-format reference is behind a ? in the panel head instead
                 of sitting under the rows permanently. It cost 94 px of a column whose whole
@@ -16725,7 +16733,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v309 &middot; 2026-08-14</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v311a &middot; 2026-08-14</div>
       </div>
     </div>
   </div>
