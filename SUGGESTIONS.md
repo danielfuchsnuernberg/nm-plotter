@@ -5,8 +5,6 @@ been merged into `index.html`.
 
 | # | Suggestion | Why | Raised |
 |---|---|---|---|
-| 1 | **The empty space below the strip when nothing is open.** With the strip glued, the area under it is reserved whether or not a section is open. | The unavoidable price of the strip never moving — reserve the room or it is not reserved. The v314 divider now lets you drag it away when you want more coordinate space, so this may already be a non-issue. Judge it in use. | v314 |
-| 2 | **A hard "collapse everything below" toggle.** | You asked for this back at v311. Still not built, and I think it is now dead: v313 glued the strip and v314 lets you drag the divider, which is a better version of the same control. Say the word and I will close it or build it. | v311 |
 | 6 | **Commit the `gates/` folder to the repo.** Now ten gates, 115 assertions: `cascade.js`, `validate.py`, `verchk.py`, `measure.js`, `btnchk.js`, `gutterchk.js`, `parity.js`, `clickagent.js`, `gate314.js`, `gate315.js`, `gate316.js`, `gate.sh`, README. | Still missing from the v309 pack: `cssguard`, `unwrapchk`, `revertchk`, `libtest`, `workersim` and the twelve numbered feature gates. I did not fake those — I do not know what they asserted, and a gate that guesses is worse than none. | v311 |
 | 7 | **Floating map labels: investigated, diagnosis in HANDOFF, awaiting one answer from you.** Which labels float — aerodrome/fix/airspace, or the amber route labels? | The iPhone lead is a dead end here (`rotfix` and the zoom-sync do not exist in this build). I found a concrete candidate — integer zoom thresholds tested against the fractional zoom that `zoomSnap:0` produces, in five label families that only recompute on `zoomend`. There is a 30-second test in HANDOFF that decides it without a new build. I have shipped no fix: I cannot reproduce it here, and guessing at a fix for a bug I cannot see is how it comes back. | v312 |
 | 8 | **A cloud copy of the backup, once the Worker source is to hand.** The file covers the risk; the cloud would cover "the Mac is gone and so is the file". | Needs the routes-Worker source, which is not in this repo — a new collection has to be accepted server-side. Blobs should stay out of it regardless; KV over JSON is the wrong pipe for a 20 MB chart. | v318 |
@@ -15,6 +13,8 @@ been merged into `index.html`.
 
 | Suggestion | Shipped |
 |---|---|
+| Route name + Save + Save to Cloud belong at the top with the notes, not buried in Saved Routes | v331 (PLAN block) |
+| Collapse everything below the divider, like the column resizers | v327 |
 | Two heights in the left column — coordinate rows outside the token system | v326 (one token, 28px, 21 controls) |
 | cloud-agent reporting two bugs that were already fixed (stale note text) | 2026-08-14 |
 | Clicking a plotted point near an aerodrome opened no card (silent ReferenceError) | v325 |

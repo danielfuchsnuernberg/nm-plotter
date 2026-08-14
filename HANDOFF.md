@@ -6,7 +6,7 @@ Paste this at the start of the next chat, and attach `index.html`, `sw.js` **and
 
 ## Where things stand
 
-**Current build: v329**, service worker cache `nmplotter-v329`. The version now shows in the header strip (derived from the Settings footer, not authored twice) and in the archive filename. Desktop/Mac only.
+**Current build: v331**, service worker cache `nmplotter-v331`. The version now shows in the header strip (derived from the Settings footer, not authored twice) and in the archive filename. Desktop/Mac only.
 `index.html` ~2.44 MB, single file, all libraries inlined.
 
 v311 made two changes, both in the left column:
@@ -68,6 +68,7 @@ npm install jsdom fake-indexeddb acorn acorn-walk   # one-time
 | `gate325.js` | **Clicking a plotted point must OPEN A CARD.** Plots one point on an aerodrome and one in open country, clicks the dot and the label for each, fails if any of the four opens nothing. Reproduces the v325 bug exactly on the old code. |
 | `gate327.js` | The divider's collapse button: hides everything below the line, persists, and — the two easy ones to get wrong — pressing it never starts a drag, and the hide rules beat the v313 section rule on **specificity** (800 > 700), not source order. |
 | `gate328.js` | Fuel Calc defaults are REAL values, not placeholders, and the arithmetic off them is right (60 NM → 110.0 kg trip, 73.3 kg reserve, 183 kg total). |
+| `gate330.js` | The PLAN block: name, Save and Save to Cloud moved out of Saved Routes, moved **not duplicated**, still inside a `.wplib` (which is what gives the name box its styling — v330 lost it), and Save driven for real so the saved record carries both the name and the notes. |
 | `gate314.js` | The strip cannot move (containment + `flex:1 1 0` on sections, the assertion that would have caught the jump) and the divider drags, clamps, persists and resets. Regression-tested: re-inject `flex:1 1 auto` and it fails. |
 
 **Still missing** and deliberately not faked: `cssguard`, `unwrapchk`,
@@ -185,6 +186,12 @@ See SUGGESTIONS #3.
 - ~~No backup for My Maps or Notes.~~ **Solved in v318** — Settings > Backup & restore writes one file covering all 45 `nmplotter_*` keys plus the flight log, and optionally maps and charts. A cloud version could sit on top later; see the changelog for why it is a file and not the Worker.
 - `dlBack` is a duplicate id, allowed explicitly by `validate.py`.
 - ADCOM was dropped by decision. Do not revive it unasked.
+
+**Signed off, so do not 'fix' it back**
+- v331 puts Save to Cloud for routes in the PLAN block at the top, NOT in the
+  Saved Routes section. This breaks the v309 rule that Save to Cloud sits in the
+  same place in all four sections. It was raised twice and approved: the four
+  sections are libraries of stored things, the PLAN block is the plan in hand.
 
 **Never do without explicit sign-off**
 - No aviation data — frequency, coordinate, sector boundary — ships without
