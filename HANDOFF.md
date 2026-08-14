@@ -1,6 +1,6 @@
 # NM Plotter — handoff
 
-Paste this at the start of the next chat, and attach `index.html` + `sw.js`.
+Paste this at the start of the next chat, and attach `index.html`, `sw.js` **and the `gates/` folder**.
 
 ---
 
@@ -21,30 +21,42 @@ v311 made two changes, both in the left column:
 
 ---
 
-## The gate pack was NOT in the repo
+## The gate pack was NOT in the repo — rebuilt, now in `gates/`
 
 The zip that started this session held `index.html`, `sw.js` and `HANDOFF.md`
-only. Every gate named in the v309 handoff was gone. I rebuilt four:
+only. Every gate named in the v309 handoff was gone. **Commit `gates/`.**
 
 ```
-python3 validate.py     script blocks, no width media queries, no phone code, duplicate ids
-node measure.js         resolves specificity ITSELF; checks the rows cap and the ? button win
-node clickagent.js      presses all 135 controls, reports throws and uncaught errors
-node gate311.js         boots the real file and drives the ? toggle — proof it EXECUTES
-./gate.sh               runs all four, checks EXIT CODES, reports crashes separately
+./gate.sh                 gate the release candidate (work.html)
+./gate.sh poc312.html     gate the layout POC instead
 ```
 
-The other ~15 (`btnchk`, `cssguard`, `gutterchk`, `unwrapchk`, `revertchk`,
-`parity`, `libtest`, `workersim`, `gate263`–`gate301`) are still missing.
-**Commit the gate pack to the repo** so this does not recur.
+| Gate | Catches |
+|---|---|
+| `cascade.js` | Not a gate — the ONE shared specificity resolver. measure.js and gate312.js had each grown their own copy; folded onto this one, output byte-identical before and after. |
+| `validate.py` | Script blocks parse, no width media queries outside comments, no phone/tablet leftovers, unexpected duplicate ids. |
+| `measure.js` | Left-column uniformity; the v311 rows cap and `?` rules **win** their cascade. |
+| `btnchk.js` | Fixed height with no centring rule = label at the top of the box. Rule-level, because jsdom has no layout. |
+| `gutterchk.js` | The 8 px scrollbar takes layout width. Checks its own premise first, and knows the difference between the v311 and v312 layouts. |
+| `parity.js` | The standing two-search-bar rule. Reports "0 gap(s)" when clean. |
+| `clickagent.js` | Presses ~135 controls, reports throws and uncaught errors. |
+| `gate311.js` | Boots the real file and drives the `?` toggle — proof it **executes**. |
+| `gate312.js` | Every v312 rule wins its cascade; JS byte-identical to v311. |
 
-Two assertions I wrote were wrong on first run and I fixed the assertion, not
-the file, and said so:
-- `validate.py` searched for the bare string `max-width:430px`; `.wx-modal`
-  legitimately uses it as a modal width. It now looks for a `430px` *breakpoint*.
+**Still missing** and deliberately not faked: `cssguard`, `unwrapchk`,
+`revertchk`, `libtest`, `workersim`, and `gate263/264/269/270/271/272/277/285/
+293/295/297/301`. I do not know what they asserted, and a gate that guesses is
+worse than none.
+
+**Three assertions were wrong on first run. I fixed the assertion, not the file,
+and said so each time:**
+- `validate.py` searched for a bare `max-width:430px`; `.wx-modal` uses it
+  legitimately as a modal width. Now looks for a `430px` *breakpoint*.
 - `clickagent.js` reported three failures that were jsdom not implementing
   `alert()`. Stubbed `alert`/`confirm`/`prompt` (`confirm` returns false so the
   sweep never destroys state).
+- `btnchk.js` flagged Leaflet's popup close button and a 6 px dot as uncentred
+  labels. Neither is a control in this column and neither has a label.
 
 ---
 
