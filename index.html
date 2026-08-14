@@ -10,6 +10,154 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-08-14  v323: THE POINT CARD WAS NOT MISSING -- IT WAS UNREACHABLE. Two reasons,
+                and I was wrong to keep saying the wiring was fine and leave it there. The
+                wiring WAS fine. The target was not.
+                (1) The label -- the big amber chip, the obvious thing to aim at -- was
+                created with interactive:false. Clicking it did nothing at all, silently.
+                (2) The only thing that did open the card was the dot, whose clickable box
+                was 14x14 px: small with a mouse, very small on a moving map.
+                Now the label opens the same card, and the dot's hit box is 24px while the
+                visible dot stays 14px, so nothing looks different. Right-click on either
+                still opens the map action menu, so the two ways in follow one set of rules.
+                LESSON worth keeping: "the code is byte-identical to the last version" was
+                true and useless. It answered "did I break it" when the question was "can he
+                reach it". A handler that cannot be hit is as absent as one that is missing.
+    2026-08-14  v322: A COORDINATE SEARCHED IN THE MAP BAR NOW OPENS THE POINT CARD -- the
+                same card a plotted point gives you: DMS, decimal, plus code, elevation,
+                Docs and My notes. It used to open the generic map action menu, which said
+                nothing about the place you had just looked up. Works for plus codes too,
+                since both come through the same coordinate result.
+                ONE action differs, because the point is not on the route: "Add to route"
+                instead of "Delete point", which would have had nothing to delete. This is
+                the SAME function with an options bag, not a second card builder -- and it
+                keeps the same docs/notes key, so a note written on a searched coordinate is
+                the note you see once that coordinate is plotted.
+                The pin stays clickable and still opens the map action menu. Nothing was
+                taken away.
+                NOT A REGRESSION FIX: the plotted-point card was never gone. Its builder and
+                its dot.on('click') wiring are BYTE-IDENTICAL to the v309 file this session
+                started from -- verified, not assumed. Single left-click a plotted dot; a
+                right-click or long-press opens the action menu instead, and a click that
+                trails a drag is suppressed on purpose.
+    2026-08-14  v321: The Flights cloud button sat lower than every other Save to Cloud.
+                CAUSE, and it is not where it looked: the height-token block -- the one
+                commented "Everything that is a control, at one height" -- addressed
+                `.panel.left .flog-tools .flog-import`. THERE IS NO .flog-tools ELEMENT IN
+                THE MARKUP. Import GPX lives in a .wplib-toolbar. So the selector matched
+                nothing, ever, and that one button kept height:auto with 8px padding while
+                every other control in the column is --lc-h. It rendered ~33px instead of
+                30, the toolbar row grew to fit it, and the 30px cloud button centred inside
+                a taller row -- landing a couple of pixels below the Waypoints and Times
+                ones. Nothing was wrong with the cloud button at all.
+                Re-pointed at #flog, which is what the markup actually is. Two occurrences,
+                plus the matching svg rule that was addressed to the same phantom container.
+                btnchk.js now proves EVERY control in the left column resolves to --lc-h, so
+                a token rule aimed at a selector nothing matches fails the build instead of
+                shipping. That is what let this sit here silently.
+    2026-08-14  v320: DRAG AUTO-SCROLL in the plotting window. Native HTML5 drag does not
+                scroll a container in Safari, so on a long route you picked up row 1, hit
+                the bottom edge and stopped -- drop, scroll by hand, pick it up again.
+                Now the window scrolls while you hold a row near either edge.
+                dragover alone will not do it: it fires on MOVEMENT, so a pointer held
+                still at the edge -- exactly what you do while waiting for a list to
+                scroll -- stops firing and the scroll stalls. dragover only sets a speed;
+                a requestAnimationFrame loop does the scrolling until the drag ends.
+                Speed ramps with depth into the 52px edge zone, to 16px/frame at the very
+                edge: one flat speed is either too slow to cross a long route or too fast
+                to stop on the row you want.
+                Stops on dragend, drop, dragexit, Escape, window blur, and the pointer
+                leaving the window -- and bails the moment scrollTop stops changing, so it
+                does not burn frames at either end. A loop still running after the drag
+                would scroll the panel on its own.
+    2026-08-14  v319: ONLY THE TIMES LOG SCROLLS. The whole Times body used to scroll as
+                one under the glued strip, so the date row, stamps, totals and -- worst --
+                Save to log and Clear slid away once the log had entries. The controls you
+                press should not move because of the data they produce. Everything above
+                #tmxLog now holds its height; the log takes what is left and scrolls.
+                .wplib-body keeps overflow-y:auto as a last resort: if the window is so
+                short that even a floored log will not fit, a second scrollbar in that
+                corner beats a Save button clipped off the bottom.
+    2026-08-14  v318: BACKUP AND RESTORE. Settings now writes one file holding every
+                nmplotter_* key -- Notes, airfield notes, PILOT-ENTERED FREQUENCIES, saved
+                routes, waypoints, the times log, home base, every preference -- plus the
+                flight log, and optionally the My Maps and Charts blobs.
+                It is a FILE, not the cloud, for two reasons, both checked rather than
+                assumed. (1) Maps and Charts are Blobs in IndexedDB; the cloud path is a
+                Worker over KV and everything travels as JSON, so blobs would go as base64,
+                a third bigger, and one chart can be tens of MB. Wrong pipe for that cargo.
+                (2) A /notes or /maps collection needs the Worker to accept it and the
+                Worker source is not in this repo -- shipping a client that PUTs to a
+                collection the Worker may reject is shipping a backup that silently does
+                nothing, which is worse than none because you stop worrying about it.
+                SCOPE WAS WIDER THAN ASKED, deliberately: the request was My Maps and Notes,
+                but the same audit found nmplotter_freq_v1 (pilot-entered frequencies) and
+                nmplotter_af_notes (per-airfield notes) equally unbacked, and both are
+                operational data you verified by hand. Backing up two of four stores would
+                have looked solved while leaving the same failure open.
+                Restore is explicit: it names the file's date, version and contents, says
+                what it will overwrite, and asks. It never runs on its own -- same rule as
+                the cloud pull. It only ever writes keys beginning nmplotter_.
+                Blobs that cannot be read are DROPPED, never written as an empty record: a
+                backup that restores a broken chart is worse than one that admits the gap.
+    2026-08-14  v317: More/Less is amber with no underline. The dotted rule read as clutter
+                on an 11px line. Amber alone is enough of a signal -- it is the app accent
+                and nothing else in that paragraph is amber, so the single coloured word is
+                unambiguous without a border. Hover dims instead of drawing a rule, since
+                adding chrome on hover was exactly what the underline did.
+    2026-08-14  v316: The ? in the panel head is GONE. The format reference is now one
+                always-visible line -- the coordinate examples, the part with standing
+                reference value -- followed by an inline "More" that opens the three
+                learn-once instruction lines. More becomes Less when open.
+                The ? was all-or-nothing and sat nowhere near what it controlled. A
+                disclosure at the end of the line it opens needs no explaining.
+                Default closed, state remembered. The old localStorage key is reused and
+                now means "the extra lines are open" rather than "the block is shown";
+                worst case someone who had it open once sees the extra lines once.
+    2026-08-14  v315: The "Route name (optional)" placeholder is back to normal weight and
+                mixed case. It was inheriting the typed-name identity -- amber, uppercase,
+                600, .04em -- because nothing reset it for the placeholder, so a hint was
+                shouting. The SIZE was never wrong: it already resolved to --lc-value (13px)
+                in var(--sans), the same as every other input in this column. Uppercase plus
+                600 weight on a long string is what read as bulky.
+                Lifted from .row input.name::placeholder, which already solved this for the
+                waypoint rows -- not a second convention for the same idea. Typed text keeps
+                the amber name identity so it still matches the row fields.
+                FOUND A REAL HOLE IN THE GATE TOOLING while diagnosing this: cascade.js
+                ignored @media entirely and flattened every rule into one list. This file
+                has `@media (hover:none) and (pointer:coarse){ input[type="text"]{font-size:
+                16px !important} }` -- an iOS zoom guard -- and the flattening resolver
+                reported that !important rule as the winner for every text input, on a Mac,
+                where it never applies. It sent me after the wrong cause. cascade.js now
+                evaluates media conditions against a desktop profile and drops the blocks
+                that do not apply; the evaluator is unit-tested against all six conditions
+                present in the file.
+    2026-08-14  v314: THE DIVIDER IS A HANDLE. Drag it up or down to trade coordinate
+                space against section space; double-click resets it. The split is stored as
+                a percentage of the panel, not pixels, so it survives a window resize instead
+                of drifting, and it is re-clamped on resize so a split that was legal in a
+                tall window cannot strand the strip in a short one.
+                The handle is the DIVIDER, not the strip. The tiles already own a drag
+                gesture for reordering themselves, and one element cannot answer two drags
+                without one of them feeling broken.
+                Lifted from the existing column resizer -- same pointer capture, same
+                window-level move/up, same resizing class -- rather than written twice.
+    2026-08-14  v313: THE TILE STRIP NO LONGER MOVES. Adding a waypoint used to push it down
+                the panel. Notes, the rows, the format text and the error list are now one
+                fixed-height plotting window that scrolls inside itself, so nothing in there
+                can shift the strip -- one waypoint or twenty, Notes open or shut.
+                AND THE JUMP BETWEEN TILES IS FIXED. That was mine, in the POC: the open
+                section was flex:1 1 AUTO, and `auto` starts from content height. A tall
+                section entered the sizing with a big basis, overflowed the column, and
+                flexbox resolved it by shrinking BOTH items -- squeezing the window and
+                lifting the strip by a different amount for every section. flex:1 1 0 gives
+                the section a zero basis so it contributes no content height at all and just
+                takes the free space; the window is flex:0 0 and cannot be shrunk by anything
+                below it. The strip now holds still by construction, not by luck.
+                Markup: one wrapper div and one handle. Nothing selected panel-body's direct
+                children and no JavaScript indexed them -- checked before writing it.
+                The format reference is visible by default again: inside a scrolling window
+                it costs no fixed height. The ? still turns it off.
     2026-08-14  v311a: The Settings footer said v309 while the app was actually running v311.
                 Two of the three places the version is written by hand got bumped and the
                 third -- the ONLY one visible from the cockpit -- did not, so the app lied
@@ -2626,12 +2774,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .panel.left .panel-head .ghost.small.icon-only{
     width:var(--lc-h,30px); padding:0; font-size:15px; font-weight:400; letter-spacing:0;
   }
-  /* Pressed state, drawn exactly like an open section tile so "this is showing"
-     reads the same wherever it appears in this column. More specific than the
-     rule above AND after it, which is what actually makes it win (v303). */
-  .panel.left .panel-head .ghost.small.icon-only.on{
-    background:rgba(255,176,32,.10); border-color:rgba(255,176,32,.55); color:var(--accent);
-  }
 
   /* overflow-y:scroll, not auto. The scrollbar here is a styled 8 px one that
      TAKES LAYOUT WIDTH, so with `auto` the content area was 8 px wider whenever
@@ -2650,6 +2792,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .panel-foot button svg{display:block}
   .exp-btn{display:flex;align-items:center;gap:6px}
   @media (pointer:fine){ .route-leg{cursor:grab} .route-leg:active{cursor:grabbing} }
+  /* The wrapper is the 24px hit box; the dot inside stays 14px and centred, so
+     nothing about the marker looks different -- it is just catchable. */
+  .wpt-dot-wrap{display:flex;align-items:center;justify-content:center}
   .wpt-dot{width:14px;height:14px;border-radius:50%;background:#ffb020;border:2px solid #d99a18;box-sizing:border-box}
   @media (pointer:fine){ .leaflet-marker-draggable .wpt-dot{cursor:grab} .leaflet-marker-draggable:active .wpt-dot{cursor:grabbing} }
   .pt-menu-ttl{font-weight:700;color:var(--accent);font-size:13px;margin-bottom:2px}
@@ -2943,6 +3088,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .errors div{line-height:1.5}
 
   .marker-label{
+    cursor:pointer;
     background:var(--accent);
     color:#0a0e13;
     font-family:var(--sans);
@@ -3632,7 +3778,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .panel.left #flog .flog-hint{margin:0 0 10px;padding:0 2px}
   .panel.left #flog .flog-import{flex:1 1 auto}
   .flog-hint{font-size:11px;color:var(--text-faint);line-height:1.5;padding:4px 2px 8px}
-  .flog-tools{display:flex;align-items:center;gap:var(--lc-gap,6px);margin-bottom:8px}
+  /* .flog-tools was removed from the markup; the rules that addressed it are
+     re-pointed at #flog. Kept as a note so nobody re-adds a selector for it. */
   .flog-import{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;background:var(--bg-2);border:1px dashed var(--border-strong);color:var(--accent-2);font-size:12px;font-weight:600;padding:8px 12px;border-radius:7px;cursor:pointer}
   .flog-err{font-family:var(--sans);font-size:12px;color:var(--bad);line-height:1.4;padding:8px 4px}
   .flog-import:hover{background:var(--panel)}
@@ -4658,11 +4805,162 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
      than a trap to remember. */
   .panel.left [hidden]{ display:none !important }
 
+  /* ===================================================================
+     v319 -- ONLY THE TIMES LOG SCROLLS
+     Under the glued strip the whole Times body scrolled as one, so the
+     date row, the stamps, the totals and -- worst -- Save to log and
+     Clear slid away as soon as the log had a few entries. The controls
+     you press should not move because of the data they produce.
+     Everything above #tmxLog now holds its height and the log takes
+     what is left.
+     The id beats the v313 section rule (8 classes) without a fight.
+     .wplib-body keeps overflow-y:auto as a last resort: if the window is
+     so short that even a floored log will not fit, something has to be
+     reachable, and a second scrollbar in that corner is better than a
+     Save button clipped off the bottom.
+     =================================================================== */
+  .panel.left.tiled #tmlib > .wplib-body{
+    display:flex; flex-direction:column;
+  }
+  .panel.left.tiled #tmlib > .wplib-body > *{ flex:0 0 auto }
+  .panel.left.tiled #tmlib > .wplib-body > #tmxLog{
+    flex:1 1 0; min-height:80px;
+    overflow-y:auto; overflow-x:hidden; scrollbar-gutter:stable;
+  }
+
+  /* ===================================================================
+     v316 -- THE FORMAT REFERENCE READS AS ONE LINE PLUS "More"
+     The ? in the panel head is gone. It was all-or-nothing -- the whole
+     four-line block or none of it -- and the control sat nowhere near
+     the thing it controlled.
+     The formats line is the part with standing reference value: you
+     glance at it to remember how to type a coordinate. The other three
+     lines are learn-once instructions. So the first line stays, the
+     rest go behind More, and the control sits inline at the end of the
+     line it opens.
+     =================================================================== */
+  .panel.left .hint-more{
+    display:inline; margin-left:6px; padding:0;
+    background:none; border:none;
+    font-family:var(--sans); font-size:11px; line-height:1.5;
+    letter-spacing:0; text-transform:none;
+    color:var(--accent); cursor:pointer;
+  }
+  /* No underline -- it read as clutter on an 11px line. Amber alone carries it:
+     it is the app's accent and nothing else in this paragraph is amber, so the
+     one coloured word is unambiguous. Hover dims rather than adding a rule,
+     because adding chrome on hover is what the underline was doing. */
+  .panel.left .hint-more:hover{ opacity:.7 }
+  .panel.left .hint-rest{ margin-top:5px }
+
+  /* ===================================================================
+     v315 -- THE ROUTE NAME PLACEHOLDER
+     The name-field identity (amber, uppercase, 600 weight, .04em) is
+     right for a name you have TYPED. The PLACEHOLDER inherited all of
+     it, so "Route name (optional)" rendered as bold uppercase amber and
+     read as heavy chrome instead of a quiet hint.
+
+     The size was never the problem: it already resolves to --lc-value
+     (13px) in var(--sans), same as every other input in this column.
+     What looked big was uppercase + 600 + letter-spacing on a string
+     long enough to fill the field.
+
+     The row name fields already solved exactly this, in
+     .row input.name::placeholder. Same treatment here rather than a
+     second convention for the same idea.
+     =================================================================== */
+  .panel.left .wplib-add input.name::placeholder{
+    color:var(--text-faint); font-weight:400; text-transform:none; letter-spacing:0;
+  }
+
+  /* ===================================================================
+     v313 -- THE TILE STRIP DOES NOT MOVE
+     Notes, the rows, the format reference and the error list are one
+     fixed-height window that scrolls inside itself. Anything left
+     outside it would push the strip the moment it changed height, which
+     is the thing being fixed -- so Notes went inside too.
+
+     THE JUMP BETWEEN TILES (found on the POC) was mine, and it was
+     flex-basis. The open section was flex:1 1 AUTO, and `auto` means
+     "start from my content height". A tall section therefore entered
+     the sizing with a big basis, overflowed the column, and flexbox
+     resolved that by shrinking BOTH items -- squeezing the plotting
+     window and lifting the strip. Every section has different content,
+     so every tile lifted it by a different amount.
+     flex:1 1 0 fixes it: with a zero basis the section contributes no
+     content height to the sizing at all and simply takes the free space
+     that is left. The window is flex:0 0 -- it cannot be shrunk by
+     anything below it, by construction rather than by luck.
+
+     One number moves the line: --plotwin-h.
+     =================================================================== */
+  .panel.left{ --plotwin-h:58%; }
+
+  .panel.left .panel-body{
+    display:flex; flex-direction:column;
+    overflow-y:hidden;
+    padding-right:24px;   /* the 8 px the scrollbar gutter used to hold */
+  }
+  .panel.left .panel-body > *{ flex:0 0 auto }
+
+  /* THE PLOTTING WINDOW. grow 0, SHRINK 0 -- nothing below it may take
+     its height. min-height keeps a short window usable. */
+  .panel.left .panel-body > .plotwin{
+    flex:0 0 var(--plotwin-h,58%);
+    min-height:150px;
+    overflow-y:auto; overflow-x:hidden;
+    scrollbar-gutter:stable;
+  }
+  /* The rows do not scroll on their own any more -- the window does.
+     Two nested scrollbars in one column is one too many, and the v311
+     ten-row cap is what the window replaces. */
+  .panel.left .plotwin > .rows{
+    max-height:none; overflow-y:visible; scrollbar-gutter:auto;
+  }
+  .panel.left .panel-body > .ptiles{ flex:0 0 auto }
+
+  /* AN OPEN SECTION takes the free space under the strip. BASIS 0 --
+     see the note above; this is the whole reason the strip holds still. */
+  .panel.left.tiled .panel-body > .wplib:not(.notes-lib):not(.collapsed){
+    flex:1 1 0; min-height:0;
+    display:flex; flex-direction:column;
+  }
+  .panel.left.tiled .panel-body > .wplib:not(.notes-lib):not(.collapsed) > .wplib-body{
+    flex:1 1 auto; min-height:0;
+    overflow-y:auto; scrollbar-gutter:stable;
+  }
+
+  /* ===================================================================
+     v314 -- THE LINE IS A HANDLE
+     Drag it to trade coordinate space against section space. The handle
+     is the DIVIDER, deliberately not the strip: the tiles already own a
+     drag gesture of their own for reordering, and one element cannot
+     answer two drags without one of them feeling broken.
+     Lifted from the column resizer (.col-resizer) -- same pointer
+     capture, same window-level move/up, same .resizing class -- rather
+     than written a second time.
+     =================================================================== */
+  .panel.left .plot-resizer{
+    flex:0 0 auto; height:11px; margin:0; position:relative;
+    cursor:row-resize; touch-action:none;
+  }
+  .panel.left .plot-resizer::after{
+    content:''; position:absolute; left:0; right:0; top:5px; height:1px;
+    background:var(--border); transition:background .12s, box-shadow .12s;
+  }
+  .panel.left .plot-resizer:hover::after,
+  .panel.left.plot-resizing .plot-resizer::after{
+    background:var(--accent); box-shadow:0 0 0 1px rgba(255,176,32,.25);
+  }
+  /* The strip's own top rule would double the line now the handle draws one. */
+  .panel.left .panel-body > .ptiles{ border-top:none; padding-top:2px }
+  /* No text selection anywhere while dragging. */
+  .panel.left.plot-resizing, .panel.left.plot-resizing *{ user-select:none }
+
   /* Everything that is a control, at one height, centred, one radius. */
   .panel.left .ghost.small,
   .panel.left .wplib-iconbtn,
-  .panel.left .wplib-seg,
-  .panel.left .flog-tools .flog-import,
+  .panel.left #flog .flog-import,
   .panel.left .wplib-add input,
   .panel.left .wplib-add button,
   .panel.left #tmlib .tmx-in,
@@ -4674,13 +4972,18 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     height:var(--lc-h); box-sizing:border-box; border-radius:var(--lc-r);
     display:inline-flex; align-items:center; justify-content:center; line-height:1;
   }
+  /* Import GPX kept 8px of VERTICAL padding from its own rule. Harmless while
+     it was height:auto; with the token height and border-box it squeezes the
+     content box to 12px and the 14px icon no longer fits. Horizontal padding
+     only, like every other tokened button in this column. */
+  .panel.left #flog .flog-import{ padding:0 12px }
   /* Inputs read left, not centred, and keep their inner padding. */
   .panel.left .wplib-add input,
   .panel.left #tmlib .tmx-in{ justify-content:flex-start; padding:0 9px; font-size:var(--lc-value) }
   .panel.left #tmlib .tmx-in{ text-align:center; justify-content:center }
   /* Uppercase button text, one size. */
   .panel.left .ghost.small,
-  .panel.left .flog-tools .flog-import,
+  .panel.left #flog .flog-import,
   .panel.left .wplib-add button,
   .panel.left #tmlib .tmx-now,
   .panel.left #tmlib .tmx-act,
@@ -4690,8 +4993,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   /* The segmented toolbar's own buttons, which sit inside .wplib-seg and so
      were missed by the list above -- caught by the uniformity check, not by
      looking. */
-  .panel.left .wplib-seg button{ font-size:var(--lc-label); font-weight:700; letter-spacing:.1em; text-transform:uppercase }
-  .panel.left .wplib-seg{ font-size:var(--lc-label) }
   /* Square icon buttons: same height, so they sit level with the text ones. */
   .panel.left .wplib-iconbtn,
   .panel.left #tmlib .tmx-x,
@@ -4824,6 +5125,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-item.wplib-village{border-left:2px solid var(--accent-2)}
   .wplib-item.wplib-village .wplib-name{color:var(--accent-2)}
   /* Village toggles: save-box "Save as" chip + per-item house toggle */
+  /* .wplib-seg (the segmented Save-as control) was removed from the markup and
+     is not created by any script, so its rules were unreachable. Deleted rather
+     than allowlisted in btnchk: a gate with an exception list for a real finding
+     is how gates go quiet. */
   .wplib-savemode{display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .wplib-savemode .lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
   .wplib-vtog{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;border-radius:5px;background:transparent;border:1px solid var(--border-strong);color:var(--text-dim);cursor:pointer}
@@ -4832,11 +5137,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   .wplib-vtog[aria-pressed="true"]{background:var(--bg-2);border-color:var(--accent-2);color:var(--accent-2)}
   .wplib-saveas{display:flex;align-items:center;gap:8px}
   .wplib-saveas .lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
-  .wplib-seg{display:inline-flex;height:28px;border:1px solid var(--border-strong);border-radius:5px;overflow:hidden}
-  .wplib-seg button{display:inline-flex;align-items:center;justify-content:center;height:100%;padding:0 12px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;background:transparent;border:none;color:var(--text-dim);cursor:pointer}
-  .wplib-seg button+button{border-left:1px solid var(--border-strong)}
-  .wplib-seg button.on{background:var(--bg-2);color:var(--accent)}
-  .wplib-seg #wplibModeVil.on{color:var(--accent-2)}
   .wplib-saveas button{padding:0;width:34px}
   .wplib-saveas svg{width:15px;height:15px}
   .wplib-tabs{display:inline-flex;gap:5px}
@@ -4909,11 +5209,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
      7 px radius where everything else is solid at var(--lc-r), and a 12 px font
      where every other button label is var(--lc-label). It is a button like the
      others; nothing about it earns a different shape. */
-  .panel.left .flog-tools .flog-import{
+  .panel.left #flog .flog-import{
     border-style:solid; border-radius:var(--lc-r); padding:0 12px;
     font-size:var(--lc-label); font-weight:700; letter-spacing:.1em; text-transform:uppercase;
     background:var(--bg-2); gap:7px }
-  .panel.left .flog-tools .flog-import svg{width:13px;height:13px}
+  .panel.left #flog .flog-import svg{width:13px;height:13px}
   #rows .row input, #rows .row .fuel-toggle, #rows .row .del{height:28px;box-sizing:border-box}
   #rows .row .fuel-toggle, #rows .row .del{display:inline-flex;align-items:center;justify-content:center}
   #rows .row .fuel-toggle{width:28px}
@@ -4960,11 +5260,14 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <div style="display:flex;gap:8px;align-items:center">
         <button class="ghost small" id="homeBtn" title="Insert LAE BASE coordinates">⌂ Home Base</button>
         <button class="ghost small icon-only" id="addBtn" title="Add a waypoint row" aria-label="Add a waypoint row">+</button>
-        <button class="ghost small icon-only" id="hintBtn" type="button" title="Coordinate formats & shortcuts" aria-label="Coordinate formats and shortcuts" aria-expanded="false">?</button>
         <span class="badge plain" id="countBadge">0 PTS</span>
       </div>
     </div>
     <div class="panel-body">
+      <!-- The plotting window: Notes, the coordinate rows, the format
+           reference and the error list. Fixed height, scrolls inside
+           itself, so nothing in here can move the tile strip below. -->
+      <div class="plotwin" id="plotWin">
       <div class="wplib notes-lib collapsed" id="noteslib">
         <button class="wplib-head" id="noteslibHead" type="button">
           <span class="wplib-ttl">Notes</span>
@@ -4977,13 +5280,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         </div>
       </div>
       <div class="rows" id="rows"></div>
-      <div class="hint" id="coordHint" hidden>
-        Coord formats: <code>6°45'11''S 146°6'21''E</code> · <code>-6.7531, 146.1058</code><br>
-        Paste multi-line coords, an OzRunways route, or Google Earth KML → auto-fills rows.<br>
-        Or type a <b>name</b> / <b>ICAO</b> / <b>IATA</b> code (<code>AYNZ</code>, <code>POM</code>, <code>Goroka</code>) → pick from the list.<br>
-        Drag <span class="kbd">⋮⋮</span> to reorder. <span class="kbd">⌘/Ctrl+Enter</span> to plot.
+      <div class="hint" id="coordHint">
+        <span class="hint-lead">Coord formats: <code>6°45'11''S 146°6'21''E</code> · <code>-6.7531, 146.1058</code></span><button class="hint-more" id="hintMore" type="button" aria-expanded="false" aria-controls="hintRest">More</button>
+        <div class="hint-rest" id="hintRest" hidden>
+          Paste multi-line coords, an OzRunways route, or Google Earth KML → auto-fills rows.<br>
+          Or type a <b>name</b> / <b>ICAO</b> / <b>IATA</b> code (<code>AYNZ</code>, <code>POM</code>, <code>Goroka</code>) → pick from the list.<br>
+          Drag <span class="kbd">⋮⋮</span> to reorder. <span class="kbd">⌘/Ctrl+Enter</span> to plot.
+        </div>
       </div>
       <div id="errors"></div>
+      </div><!-- /plotwin -->
+      <div class="plot-resizer" id="plotResizer" title="Drag to resize · double-click to reset"></div>
       <div class="ptiles" id="panelTiles"></div>
       <div class="wplib" id="wplib">
         <button class="wplib-head" id="wplibHead" type="button">
@@ -6105,10 +6412,14 @@ function plotPoints(points, fit){
   NM_ROUTE_PTS = points.map(p => ({ lat: p.lat, lon: p.lon }));
 
   points.forEach((p, idx) => {
+    /* The visible dot stays 14px; the CLICKABLE box is 24px. It was 14px, which
+       is a small thing to hit with a mouse and a very small thing to hit while
+       the map is moving -- so the card looked like it had stopped existing.
+       The wrapper centres the dot, so the anchor is still the coordinate. */
     const dotIcon = L.divIcon({
       className:'wpt-dot-wrap',
       html:'<div class="wpt-dot"></div>',
-      iconSize:[14,14], iconAnchor:[7,7]
+      iconSize:[24,24], iconAnchor:[12,12]
     });
     // A plotted point is a route waypoint, so its hover shows both coordinate
     // formats (DMS + decimal). Aerodromes still open the full card on tap (below).
@@ -6186,7 +6497,26 @@ function plotPoints(points, fit){
       iconSize:null,
       iconAnchor:[-10, 8]
     });
-    L.marker([p.lat, p.lon], { icon: labelIcon, interactive: false }).addTo(markerLayer);
+    /* THE LABEL IS CLICKABLE NOW. It was interactive:false, so the big amber
+       chip -- the obvious thing to aim at -- swallowed nothing and did nothing,
+       and the only way to the card was the dot beside it. Opening the same card
+       from the label is what everyone tries first. */
+    const lab = L.marker([p.lat, p.lon], { icon: labelIcon, interactive: true, keyboard:false })
+      .addTo(markerLayer);
+    lab.on('click', (e) => {
+      if(e && e.originalEvent) L.DomEvent.stop(e.originalEvent);
+      if(_fld) openAirfieldCard(_fld, null, p); else openRoutePointCard(p);
+    });
+    /* Right-click / long-press on the label behaves like the dot: the map
+       action menu, not the card. Two ways in, one set of rules. */
+    lab.on('contextmenu', (e) => {
+      if(e && e.originalEvent) L.DomEvent.stop(e.originalEvent);
+      if(typeof window.NMMapMenu === 'function'){
+        let pt = null;
+        try { pt = map.latLngToContainerPoint([p.lat, p.lon]); } catch(_){ }
+        window.NMMapMenu(L.latLng(p.lat, p.lon), pt);
+      }
+    });
   });
 
   // The route's points just moved, so the layers that yield to them need to
@@ -6218,7 +6548,13 @@ function plotPoints(points, fit){
 // is a known field — quick access to the full airfield card. Notes/docs are
 // intentionally omitted; those persist to the saved-points library and a route
 // point isn't a library record.
-function openRoutePointCard(p){
+function openRoutePointCard(p, opts){
+  /* opts.searched: the point came from the map search bar, so it is NOT on the
+     route. Same card, one action swapped -- "Delete point" would have nothing
+     to delete, and "Add to route" is what you want from a position you have
+     just looked up. Everything else is deliberately identical, INCLUDING the
+     docs/notes key, so a note written on a searched coordinate is the same
+     note you see when that coordinate becomes a plotted point. */
   const code = (p.label || '').trim().toUpperCase();
   const fld = code && NM_REGION.airfields.find(a => a.ident === code || (a.iata && a.iata.toUpperCase() === code));
   const chips = '<span class="af-chip">' + (fld ? 'Airfield' : 'Route point') + '</span>'
@@ -6230,7 +6566,8 @@ function openRoutePointCard(p){
   if(fld) acts += '<button type="button" class="af-route rp-info">Airfield</button>';
   acts += '<button type="button" class="af-route rp-fc">Forecast</button>';
   acts += '<button type="button" class="af-edit rp-copy">Copy</button>';
-  acts += '<button type="button" class="af-edit rp-del">Delete point</button>';
+  if(opts && opts.searched) acts += '<button type="button" class="af-route rp-add">Add to route</button>';
+  else acts += '<button type="button" class="af-edit rp-del">Delete point</button>';
   const key = fld ? fld.ident : ('RP:' + p.lat.toFixed(4) + ',' + p.lon.toFixed(4));
   const docsHtml = '<div class="af-charts"><div class="af-charts-h"><span>Docs</span><button type="button" class="af-charts-add">+ Add</button></div><div class="af-charts-list"></div><input type="file" class="af-charts-file" accept="image/*,application/pdf" multiple hidden></div>';
   const notesHtml = '<div class="af-notes"><div class="af-notes-h"><span>My notes</span><span class="af-notes-saved">Saved</span></div><textarea class="af-notes-ta" rows="2" placeholder="Personal notes: hazards, landing spots, contacts"></textarea></div>';
@@ -6250,6 +6587,13 @@ function openRoutePointCard(p){
       window.NMElev(p.lat, p.lon).then(function(ft){ elevB.textContent = (ft == null || !isFinite(ft)) ? '\u2014' : (Math.round(ft).toLocaleString() + ' ft'); }).catch(function(){ elevB.textContent = '\u2014'; });
     } else { elevB.textContent = '\u2014'; }
   }
+  const addB = el.querySelector('.rp-add');
+  if(addB) addB.addEventListener('click', function(){
+    if(typeof window.addFieldToRoute !== 'function') return;
+    window.addFieldToRoute(p.label || '', p.lat.toFixed(6) + ', ' + p.lon.toFixed(6));
+    addB.textContent = 'Added';
+    setTimeout(function(){ try{ map.closePopup(pop); }catch(_){ } }, 600);
+  });
   const copyB = el.querySelector('.rp-copy');
   if(copyB) copyB.addEventListener('click', function(){
     const txt = toDms(p.lat,true) + ' ' + toDms(p.lon,false) + '  \u00b7  ' + p.lat.toFixed(5) + ', ' + p.lon.toFixed(5);
@@ -7853,18 +8197,451 @@ async function cloudDelete(col, id){ var r = await cloudFetch('/' + (col||'route
    tile and you can see it happen. A 6 px threshold separates a
    click from a drag.
    ============================================================ */
-(function coordHint(){
-  /* The format reference is worth keeping and not worth 94 px of a column whose
-     job is the coordinate rows. It sits behind the ? in the panel head -- no
-     seventh collapsible header, and nothing permanent on screen. State is
-     remembered, default off. */
-  var btn  = document.getElementById('hintBtn');
-  var hint = document.getElementById('coordHint');
-  if(!btn || !hint) return;
+(function plotResizer(){
+  /* Drag the divider to trade coordinate space against section space.
+     Stored as a PERCENTAGE of the panel body, not pixels, so the split
+     survives a window resize instead of drifting. */
+  var panel = document.querySelector('.panel.left');
+  var body  = panel && panel.querySelector('.panel-body');
+  var win   = document.getElementById('plotWin');
+  var bar   = document.getElementById('plotResizer');
+  if(!panel || !body || !win || !bar) return;
+
+  var KEY = 'nmplotter_plotwin_h', DEF = 58;
+  var MIN_PLOT = 150;   // the window stays usable
+  var MIN_BELOW = 140;  // the strip plus room for a section under it
+
+  function clampPct(p){
+    var h = body.clientHeight || 1;
+    var tiles = document.getElementById('panelTiles');
+    var below = MIN_BELOW + (tiles ? tiles.offsetHeight : 0);
+    var lo = (MIN_PLOT / h) * 100;
+    var hi = ((h - below) / h) * 100;
+    if(hi < lo) return lo;                 // window too short to honour both
+    return Math.max(lo, Math.min(hi, p));
+  }
+  function apply(p){ panel.style.setProperty('--plotwin-h', clampPct(p).toFixed(2) + '%'); }
+  function stored(){
+    try { var v = parseFloat(localStorage.getItem(KEY)); return isFinite(v) ? v : DEF; }
+    catch(_){ return DEF; }
+  }
+  apply(stored());
+
+  var startY = 0, startH = 0, dragging = false;
+  bar.addEventListener('pointerdown', function(e){
+    dragging = true; startY = e.clientY;
+    startH = win.getBoundingClientRect().height;
+    panel.classList.add('plot-resizing');
+    try { bar.setPointerCapture(e.pointerId); } catch(_){ }
+    e.preventDefault();
+  });
+  function move(e){
+    if(!dragging) return;
+    var h = body.clientHeight || 1;
+    apply(((startH + (e.clientY - startY)) / h) * 100);
+  }
+  function up(){
+    if(!dragging) return;
+    dragging = false;
+    panel.classList.remove('plot-resizing');
+    var pct = parseFloat(panel.style.getPropertyValue('--plotwin-h'));
+    if(isFinite(pct)){ try { localStorage.setItem(KEY, String(pct)); } catch(_){ } }
+  }
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
+
+  // Double-click puts it back where it started.
+  bar.addEventListener('dblclick', function(){
+    apply(DEF);
+    try { localStorage.setItem(KEY, String(DEF)); } catch(_){ }
+  });
+
+  // Re-clamp on resize: a split that was legal in a tall window may not be
+  // in a short one, and a stored percentage must not strand the strip.
+  window.addEventListener('resize', function(){ apply(stored()); });
+})();
+
+(function dragAutoScroll(){
+  /* Native HTML5 drag does not auto-scroll a scrolling container in Safari, so
+     with a long route you could pick up row 1, reach the bottom edge of the
+     plotting window, and simply stop -- you had to drop, scroll by hand, and
+     pick the row up again. Reordering a 20-point route became a chore.
+
+     dragover alone is not enough: it fires on MOVEMENT, so a pointer held
+     still at the edge -- which is exactly what you do when waiting for a list
+     to scroll -- stops firing and the scrolling stalls. So dragover only sets
+     a speed, and a rAF loop does the scrolling until the drag ends.
+
+     Speed ramps with depth into the edge zone: a nudge near the boundary, fast
+     when you push right to the edge. A single flat speed is either too slow to
+     cross a long route or too fast to stop on the row you want. */
+  var ZONE = 52;      // px from each edge where scrolling starts
+  var MAX  = 16;      // px per frame at the very edge
+
+  var win = document.getElementById('plotWin');
+  if(!win){
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', function(){ setTimeout(dragAutoScroll, 0); });
+    }
+    return;
+  }
+
+  var speed = 0, raf = null;
+
+  function step(){
+    if(!speed){ raf = null; return; }
+    var before = win.scrollTop;
+    win.scrollTop = before + speed;
+    // Nothing moved: we are already at an end, so stop burning frames.
+    if(win.scrollTop === before){ speed = 0; raf = null; return; }
+    raf = requestAnimationFrame(step);
+  }
+  function setSpeed(v){
+    speed = v;
+    if(speed && raf == null) raf = requestAnimationFrame(step);
+  }
+  function stop(){
+    speed = 0;
+    if(raf != null){ cancelAnimationFrame(raf); raf = null; }
+  }
+
+  win.addEventListener('dragover', function(e){
+    var r = win.getBoundingClientRect();
+    var y = e.clientY;
+    if(y < r.top + ZONE){
+      setSpeed(-Math.ceil(MAX * Math.min(1, (r.top + ZONE - y) / ZONE)));
+    } else if(y > r.bottom - ZONE){
+      setSpeed(Math.ceil(MAX * Math.min(1, (y - (r.bottom - ZONE)) / ZONE)));
+    } else {
+      stop();
+    }
+  });
+
+  /* Stop on every way a drag can end, including the ones that do not fire on
+     the container: dragend fires on the source, drop can land elsewhere, and
+     Escape cancels without either. Leaving the loop running would keep
+     scrolling the panel after the drag was over. */
+  ['dragend', 'drop', 'dragexit'].forEach(function(ev){
+    document.addEventListener(ev, stop, true);
+  });
+  window.addEventListener('blur', stop);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') stop(); });
+  win.addEventListener('dragleave', function(e){
+    // Only when the pointer actually leaves the window, not a child swap.
+    if(!e.relatedTarget || !win.contains(e.relatedTarget)) stop();
+  });
+
+  window.NMDragScroll = { speed: function(){ return speed; }, stop: stop, zone: ZONE, max: MAX };
+})();
+
+(function backupRestore(){
+  /* WHY A FILE AND NOT THE CLOUD.
+     Two reasons, both checked rather than assumed:
+     1. My Maps and Charts are BLOBS in IndexedDB -- real PDFs and images. The
+        cloud path is a Worker over KV and everything goes as JSON, so blobs
+        would have to be base64 (a third bigger) and a single chart can run to
+        tens of MB. That is the wrong pipe for this cargo.
+     2. Adding a /notes or /maps collection needs the Worker to accept it, and
+        the Worker source is not in this repo. Shipping a client that PUTs to a
+        collection the Worker may reject is shipping a backup that silently
+        does nothing -- which is worse than no backup, because you would stop
+        worrying about it.
+     A file works offline, needs no key, has no size ceiling worth caring about,
+     and you can put it wherever you already trust. The cloud version can come
+     later on top of this; this one removes the risk today. */
+
+  var DB_NAME = 'nmplotter', DB_VER = 3;
+  var PREFIX  = 'nmplotter_';
+  var FMT     = 1;
+
+  /* The Settings sheet markup lives AFTER this script block in the file, so at
+     parse time none of these exist and the whole section wired itself to
+     nothing -- silently, because every lookup just returned null. Same trap as
+     myMaps and nmxRendererSync. Start after the document has parsed. Caught by
+     gate318, which asked for window.NMBackup and got undefined. */
+  var elStatus = document.getElementById('bkStatus');
+  var bData = document.getElementById('bkSaveData');
+  var bAll  = document.getElementById('bkSaveAll');
+  var bRest = document.getElementById('bkRestoreBtn');
+  var file  = document.getElementById('bkFile');
+  if(!elStatus || !bData || !bAll || !bRest || !file){
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', function(){ setTimeout(backupRestore, 0); });
+      return;
+    }
+    return;   // truly absent: do nothing rather than half-wire
+  }
+
+  function say(msg, cls){
+    elStatus.textContent = msg;
+    elStatus.className = 'set-cloud-status' + (cls ? ' ' + cls : '');
+  }
+  function human(n){
+    if(n < 1024) return n + ' B';
+    if(n < 1048576) return (n/1024).toFixed(0) + ' KB';
+    return (n/1048576).toFixed(1) + ' MB';
+  }
+
+  /* ---- localStorage: every app key, nothing else on the origin ---- */
+  function readLocal(){
+    var out = {};
+    try {
+      for(var i = 0; i < localStorage.length; i++){
+        var k = localStorage.key(i);
+        if(k && k.indexOf(PREFIX) === 0) out[k] = localStorage.getItem(k);
+      }
+    } catch(_){ }
+    return out;
+  }
+
+  /* ---- IndexedDB ---- */
+  function db(){
+    return new Promise(function(res, rej){
+      var r;
+      try { r = indexedDB.open(DB_NAME, DB_VER); } catch(e){ rej(e); return; }
+      r.onerror = function(){ rej(r.error); };
+      r.onsuccess = function(){ res(r.result); };
+    });
+  }
+  function allFrom(d, store){
+    return new Promise(function(res){
+      if(!d.objectStoreNames.contains(store)) return res([]);
+      try {
+        var rq = d.transaction(store, 'readonly').objectStore(store).getAll();
+        rq.onsuccess = function(){ res(rq.result || []); };
+        rq.onerror = function(){ res([]); };
+      } catch(_){ res([]); }
+    });
+  }
+  function putInto(d, store, recs){
+    return new Promise(function(res){
+      if(!d.objectStoreNames.contains(store) || !recs.length) return res(0);
+      try {
+        var tx = d.transaction(store, 'readwrite'), os = tx.objectStore(store), n = 0;
+        recs.forEach(function(r){ try { os.put(r); n++; } catch(_){ } });
+        tx.oncomplete = function(){ res(n); };
+        tx.onerror = function(){ res(n); };
+      } catch(_){ res(0); }
+    });
+  }
+
+  function u8ToB64(u){
+    var CH = 0x8000, out = '';
+    for(var i = 0; i < u.length; i += CH){
+      out += String.fromCharCode.apply(null, u.subarray(i, i + CH));
+    }
+    return btoa(out);
+  }
+  /* Anything that can yield bytes is acceptable, not just a Blob: a record can
+     come back from IndexedDB holding an ArrayBuffer or a typed array depending
+     on how it was written and by which build. Refusing those would silently
+     drop a map the pilot can see in the app. Returns null only when the bytes
+     genuinely cannot be read -- and null means DROP, never write an empty
+     record, because a backup that restores a broken chart is worse than one
+     that admits the gap. */
+  async function blobToB64(b){
+    if(!b) return null;
+    try {
+      /* Duck-typed on purpose, not instanceof. instanceof compares against the
+         constructor of ONE realm, so a value that arrived from another realm
+         -- an iframe, a worker, a test harness -- fails the check while being a
+         perfectly good buffer, and the record gets dropped for no reason. What
+         matters is whether it can yield bytes, not which realm minted it. */
+      if(typeof b.arrayBuffer === 'function') return u8ToB64(new Uint8Array(await b.arrayBuffer()));
+      if(b.buffer && typeof b.byteLength === 'number')                     // typed array
+        return u8ToB64(new Uint8Array(b.buffer, b.byteOffset || 0, b.byteLength));
+      if(typeof b.byteLength === 'number')                                 // ArrayBuffer
+        return u8ToB64(new Uint8Array(b));
+      if(typeof Blob !== 'undefined' && typeof FileReader !== 'undefined' && b instanceof Blob){
+        return await new Promise(function(res){
+          var fr = new FileReader();
+          fr.onload = function(){ res(String(fr.result).split(',')[1] || ''); };
+          fr.onerror = function(){ res(null); };
+          fr.readAsDataURL(b);
+        });
+      }
+    } catch(_){ }
+    return null;
+  }
+  function b64ToBlob(b64, mime){
+    try {
+      var bin = atob(b64), n = bin.length, u = new Uint8Array(n);
+      for(var i = 0; i < n; i++) u[i] = bin.charCodeAt(i);
+      return new Blob([u], { type: mime || 'application/octet-stream' });
+    } catch(_){ return null; }
+  }
+
+  /* Records carry a Blob under .blob; JSON cannot hold one, so it is swapped
+     for base64 on the way out and back to a Blob on the way in. */
+  var skipped = [];
+  async function packStore(d, store, withBlobs){
+    var recs = await allFrom(d, store);
+    var out = [];
+    for(const r of recs){
+      /* ONE BAD RECORD MUST NOT KILL THE BACKUP. Before this, an unreadable
+         blob threw out of packStore and the whole file failed -- so the single
+         map with an odd record cost you every note and frequency too. Each
+         record now stands or falls alone, and skipped ones are counted. */
+      try {
+        var c = Object.assign({}, r);
+        if(c.blob){
+          if(!withBlobs){ continue; }        // skipped entirely, not half-saved
+          c._b64 = await blobToB64(c.blob);
+          c._mime = (c.blob && c.blob.type) || c.mime || '';
+          delete c.blob;
+          if(c._b64 == null){ skipped.push((r && r.name) || (r && r.id) || '?'); continue; }
+        }
+        out.push(c);
+      } catch(e){
+        skipped.push((r && r.name) || (r && r.id) || '?');
+      }
+    }
+    return out;
+  }
+  function unpackStore(recs){
+    return (recs || []).map(function(r){
+      var c = Object.assign({}, r);
+      if(c._b64 != null){
+        c.blob = b64ToBlob(c._b64, c._mime);
+        delete c._b64; delete c._mime;
+      }
+      return c;
+    }).filter(function(c){ return !(c.hasOwnProperty('blob') && !c.blob); });
+  }
+
+  async function build(withBlobs){
+    var bundle = {
+      format: FMT,
+      app: 'NM Plotter',
+      version: (document.getElementById('setVersion') || {}).textContent || '',
+      createdAt: new Date().toISOString(),
+      includesBlobs: !!withBlobs,
+      local: readLocal(),
+      idb: { flights: [], charts: [], maps: [] }
+    };
+    skipped = [];
+    var d = null;
+    try { d = await db(); } catch(_){ }
+    if(d){
+      bundle.idb.flights = await packStore(d, 'flights', true);   // no blobs anyway
+      bundle.idb.charts  = await packStore(d, 'charts',  withBlobs);
+      bundle.idb.maps    = await packStore(d, 'maps',    withBlobs);
+    }
+    bundle.skipped = skipped.slice();
+    return bundle;
+  }
+
+  async function download(withBlobs, btn){
+    var was = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Working\u2026';
+    say('Collecting\u2026');
+    try {
+      var bundle = await build(withBlobs);
+      var text = JSON.stringify(bundle);
+      var blob = new Blob([text], { type: 'application/json' });
+      var d = new Date(), pad = function(n){ return String(n).padStart(2, '0'); };
+      var name = 'NMPlotter_backup_' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' +
+                 pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) +
+                 (withBlobs ? '_full' : '') + '.json';
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ try{ URL.revokeObjectURL(a.href); }catch(_){ } a.remove(); }, 2000);
+      var n = Object.keys(bundle.local).length;
+      var line = name + ' \u00b7 ' + human(blob.size) + ' \u00b7 ' + n + ' settings, ' +
+                 bundle.idb.maps.length + ' maps, ' + bundle.idb.charts.length + ' charts, ' +
+                 bundle.idb.flights.length + ' flights';
+      /* If anything could not be read, SAY SO on the same line. A backup that
+         quietly leaves something out is the worst kind. */
+      if(bundle.skipped && bundle.skipped.length){
+        say(line + ' \u2014 could not read: ' + bundle.skipped.join(', '), 'bad');
+      } else {
+        say(line, 'ok');
+      }
+    } catch(e){
+      say('Backup failed: ' + ((e && e.message) || e), 'bad');
+    }
+    btn.disabled = false; btn.textContent = was;
+  }
+
+  bData.addEventListener('click', function(){ download(false, bData); });
+  bAll.addEventListener('click',  function(){ download(true,  bAll);  });
+
+  /* ---- restore: explicit, described, confirmed, never automatic ---- */
+  bRest.addEventListener('click', function(){ file.value = ''; file.click(); });
+
+  file.addEventListener('change', async function(){
+    var f = file.files && file.files[0];
+    if(!f) return;
+    say('Reading ' + f.name + '\u2026');
+    var bundle;
+    try { bundle = JSON.parse(await f.text()); }
+    catch(e){ say('That file is not readable JSON.', 'bad'); return; }
+
+    if(!bundle || bundle.app !== 'NM Plotter' || !bundle.local){
+      say('That is not an NM Plotter backup.', 'bad'); return;
+    }
+    if(bundle.format > FMT){
+      say('That backup was written by a newer version of NM Plotter.', 'bad'); return;
+    }
+
+    var nLocal = Object.keys(bundle.local).length;
+    var idb = bundle.idb || {};
+    var nMaps = (idb.maps||[]).length, nCharts = (idb.charts||[]).length, nFl = (idb.flights||[]).length;
+
+    /* Say what is in the file and what it will do, THEN ask. A restore
+       overwrites work in progress; it must never be a surprise. */
+    var msg = 'Restore this backup?\n\n' +
+      'Written: ' + (bundle.createdAt || 'unknown') + '\n' +
+      (bundle.version ? bundle.version + '\n' : '') + '\n' +
+      nLocal + ' settings and data keys\n' +
+      nMaps + ' maps, ' + nCharts + ' charts, ' + nFl + ' flights\n\n' +
+      'This OVERWRITES anything with the same name on this device.\n' +
+      'Your current route in the plotter is not touched until you reload.';
+    if(!confirm(msg)){ say('Restore cancelled. Nothing was changed.'); return; }
+
+    try {
+      var wrote = 0;
+      Object.keys(bundle.local).forEach(function(k){
+        if(k.indexOf(PREFIX) !== 0) return;      // never write outside our own keys
+        try { localStorage.setItem(k, bundle.local[k]); wrote++; } catch(_){ }
+      });
+      var m = 0, c = 0, fl = 0, d = null;
+      try { d = await db(); } catch(_){ }
+      if(d){
+        m  = await putInto(d, 'maps',    unpackStore(idb.maps));
+        c  = await putInto(d, 'charts',  unpackStore(idb.charts));
+        fl = await putInto(d, 'flights', unpackStore(idb.flights));
+      }
+      say('Restored ' + wrote + ' settings, ' + m + ' maps, ' + c + ' charts, ' +
+          fl + ' flights. Reload the page to see everything.', 'ok');
+    } catch(e){
+      say('Restore failed: ' + ((e && e.message) || e), 'bad');
+    }
+  });
+
+  /* Exposed so a gate can exercise the round trip without the file picker. */
+  /* encode/decode exposed so a gate can exercise the byte path directly.
+     Necessary, not decorative: the test IndexedDB drops Blob contents on
+     structured clone, so the only honest way to prove a real Blob survives
+     encoding is to hand one straight to the function that does it. */
+  window.NMBackup = { build: build, unpack: unpackStore, readLocal: readLocal,
+                      encode: blobToB64, decode: b64ToBlob };
+})();
+
+(function coordHintMore(){
+  /* The formats line is always there -- it is the bit with standing reference
+     value. The three instruction lines are behind More, which sits at the end
+     of the line it opens rather than up in the panel head. Default closed: the
+     lead line is the "little text" and More is the way in. */
+  var btn  = document.getElementById('hintMore');
+  var rest = document.getElementById('hintRest');
+  if(!btn || !rest) return;
   var KEY = 'nmplotter_coordhint';
   function apply(on){
-    hint.hidden = !on;
-    btn.classList.toggle('on', !!on);
+    rest.hidden = !on;
+    btn.textContent = on ? 'Less' : 'More';
     btn.setAttribute('aria-expanded', on ? 'true' : 'false');
   }
   var open = false;
@@ -8957,7 +9734,7 @@ window.NMPlusRef = function(){
      a typed POSITION, where the pin is the whole answer and a dot you cannot
      act on is a dead end. Named results (fields, fixes, areas) just fly there;
      their own cards are a click away. */
-  function goPin(lat, lon, label, zoom, menu){
+  function goPin(lat, lon, label, zoom, menu, card){
     if(!isFinite(lat) || !isFinite(lon)) return;
     map.setView([lat, lon], Math.max(map.getZoom()||0, zoom||11));
     clearVillagePin();
@@ -8978,7 +9755,17 @@ window.NMPlusRef = function(){
        second one would drop a pin and open nothing. setView has already applied
        the new centre by the time this runs, so the popup lands in the right
        place either way. */
-    if(menu) setTimeout(openHere, 60);
+    /* A searched COORDINATE opens the point card -- the same card a plotted
+       point gives you, with elevation, plus code, docs and notes. It used to
+       open the map action menu, which said nothing about the place you had
+       just looked up. The pin stays clickable and still opens the action menu,
+       so nothing was taken away. */
+    function openCard(){
+      if(typeof openRoutePointCard !== 'function') return openHere();
+      openRoutePointCard({ lat:lat, lon:lon, label:label || '' }, { searched:true });
+    }
+    if(card) setTimeout(openCard, 60);
+    else if(menu) setTimeout(openHere, 60);
     input.value = label || ''; results.innerHTML=''; clearBtn.hidden = !(label); active=0; curOnline=undefined; lastQ=''; input.blur();
     box.classList.remove('focused');
   }
@@ -9000,7 +9787,7 @@ window.NMPlusRef = function(){
     const items = results.querySelectorAll('.ap-item');
     if(e.key==='ArrowDown'){ e.preventDefault(); setActive(active+1); }
     else if(e.key==='ArrowUp'){ e.preventDefault(); setActive(active-1); }
-    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.coord){ goPin(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name, 15, true); } else if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else if(pick.dataset.fix){ goFix({n:pick.dataset.name, a:+pick.dataset.lat, o:+pick.dataset.lon}); } else if(pick.dataset.air){ goArea({id:pick.dataset.name, lat:+pick.dataset.lat, lon:+pick.dataset.lon}); } else if(pick.dataset.route){ goRoute(pick.dataset.rd); } else if(pick.dataset.wptid){ goWpt(pick.dataset.wptid); } else { go(byId(pick.dataset.id)); } } }
+    else if(e.key==='Enter'){ e.preventDefault(); const pick=items[active]||items[0]; if(pick){ if(pick.dataset.coord){ goPin(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name, 15, true, true); } else if(pick.dataset.online){ goVillage(+pick.dataset.lat, +pick.dataset.lon, pick.dataset.name); } else if(pick.dataset.fix){ goFix({n:pick.dataset.name, a:+pick.dataset.lat, o:+pick.dataset.lon}); } else if(pick.dataset.air){ goArea({id:pick.dataset.name, lat:+pick.dataset.lat, lon:+pick.dataset.lon}); } else if(pick.dataset.route){ goRoute(pick.dataset.rd); } else if(pick.dataset.wptid){ goWpt(pick.dataset.wptid); } else { go(byId(pick.dataset.id)); } } }
     else if(e.key==='Escape'){ e.preventDefault(); input.value=''; results.innerHTML=''; clearBtn.hidden=true; active=0; curOnline=undefined; lastQ=''; input.blur(); box.classList.remove('focused'); clearVillagePin(); if(window.NMClearPin) window.NMClearPin(); }
   });
   results.addEventListener('click', e => {
@@ -9024,7 +9811,7 @@ window.NMPlusRef = function(){
     }
     const it = e.target.closest('.ap-item');
     if(it){
-      if(it.dataset.coord){ goPin(+it.dataset.lat, +it.dataset.lon, it.dataset.name, 15, true); }
+      if(it.dataset.coord){ goPin(+it.dataset.lat, +it.dataset.lon, it.dataset.name, 15, true, true); }
       else if(it.dataset.online){ goVillage(+it.dataset.lat, +it.dataset.lon, it.dataset.name); }
       else if(it.dataset.fix){ goFix({n:it.dataset.name, a:+it.dataset.lat, o:+it.dataset.lon}); }
       else if(it.dataset.air){ goArea({id:it.dataset.name, lat:+it.dataset.lat, lon:+it.dataset.lon}); }
@@ -16726,6 +17513,19 @@ if (navigator.storage && navigator.storage.persist) {
           <div class="set-note" style="margin-top:8px">Type the <b>same phrase</b> on each device (Mac &amp; iPad); it&#39;s stored on this device only. Plan on the desktop, tap <b>&#9729; Save to Cloud</b>; then at the aircraft open <b>Saved Routes</b> on the iPad and <b>Pull</b> it. Pulling never happens on its own. <span id="cloudKeyTest" class="fq-adv-more">Test connection</span></div>
         </div>
         <div class="set-sec" style="margin-top:18px">
+          <div class="fq-radius-label">Backup &amp; restore</div>
+          <div class="set-cloud-row">
+            <button type="button" class="ghost small" id="bkSaveData">Back up settings &amp; data</button>
+            <button type="button" class="ghost small" id="bkSaveAll">Include maps &amp; charts</button>
+          </div>
+          <div class="set-cloud-row" style="margin-top:6px">
+            <button type="button" class="ghost small" id="bkRestoreBtn">Restore from file…</button>
+            <input type="file" id="bkFile" accept="application/json,.json" hidden>
+          </div>
+          <div class="set-cloud-status" id="bkStatus"></div>
+          <div class="set-note" style="margin-top:8px">Writes <b>one file</b> you keep yourself — drop it in iCloud or Drive. Covers Notes, airfield notes, pilot-entered frequencies, saved routes, waypoints, the times log and every setting. <b>Include maps &amp; charts</b> adds your uploaded PDFs and images, which makes the file much larger. Restore asks before it writes and never runs on its own.</div>
+        </div>
+        <div class="set-sec" style="margin-top:18px">
           <div class="fq-radius-label">Guided tour</div>
           <button type="button" class="ghost small" id="tourStartBtn">Take the guided tour</button>
           <div class="set-note" style="margin-top:8px">A quick walkthrough of the main controls, highlighted one at a time. Desktop only for now.</div>
@@ -16733,7 +17533,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v311a &middot; 2026-08-14</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v323 &middot; 2026-08-14</div>
       </div>
     </div>
   </div>
