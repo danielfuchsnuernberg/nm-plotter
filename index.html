@@ -10,6 +10,24 @@
   ============================================================
 
   CHANGELOG (newest first):
+    2026-08-14  v325: THE REAL REASON THE CARD DID NOT OPEN. Clicking a plotted point threw
+                ReferenceError: openAirfieldCard is not defined, and the click died there.
+                openAirfieldCard is declared INSIDE an IIFE. The route code that calls it
+                runs at top level, ~5,000 lines earlier, and called it by bare name. Out of
+                scope, so a ReferenceError -- silent, because nothing catches it.
+                It only fired when the plotted point sat within RP_SNAP_NM (0.25 NM) of an
+                aerodrome, which is why it looked random. Danny's P1 is 0.25 NM from AYII
+                Imane; the point in his earlier screenshot, which DID open a card, was in
+                open country. Same code, opposite behaviour, decided by the coordinate.
+                Exported as window.NMAirfieldCard and both call sites now fall back to the
+                route-point card if it is ever unavailable, so a click always produces a
+                card rather than nothing.
+                PRESENT IN v309 TOO -- this is not a regression from this session. But my
+                "the code is byte-identical to v309, so it is fine" was worthless twice
+                over: identical to a file that already had the bug. I should have executed
+                the click instead of reading it. gate325.js now plots a point ON an
+                aerodrome and one in open country, clicks the dot and the label for each,
+                and fails if any of the four does not open a card.
     2026-08-14  v324: THE VERSION IS IN THE HEADER, next to WGS-84 - GREAT CIRCLE. You
                 should not have to open Settings to find out which build a file is, and a
                 downloaded copy sitting in ~/Downloads gave no clue at all.
@@ -6491,7 +6509,8 @@ function plotPoints(points, fit){
       if(e && e.originalEvent) L.DomEvent.stop(e.originalEvent);
       if(dot._dragging || (Date.now() - (dot._dragEndAt || 0) < 250)) return; // trailing click after a drag
       dot.closeTooltip();
-      if(_fld) openAirfieldCard(_fld, null, p); else openRoutePointCard(p);
+      if(_fld && typeof window.NMAirfieldCard === 'function') window.NMAirfieldCard(_fld, null, p);
+      else openRoutePointCard(p);   /* never nothing: a missing airfield card falls back */
     });
 
     /* Every plotted point is labelled. Full stop.
@@ -6521,7 +6540,8 @@ function plotPoints(points, fit){
       .addTo(markerLayer);
     lab.on('click', (e) => {
       if(e && e.originalEvent) L.DomEvent.stop(e.originalEvent);
-      if(_fld) openAirfieldCard(_fld, null, p); else openRoutePointCard(p);
+      if(_fld && typeof window.NMAirfieldCard === 'function') window.NMAirfieldCard(_fld, null, p);
+      else openRoutePointCard(p);   /* never nothing: a missing airfield card falls back */
     });
     /* Right-click / long-press on the label behaves like the dot: the map
        action menu, not the card. Two ways in, one set of rules. */
@@ -12451,6 +12471,15 @@ document.getElementById('plotBtn').addEventListener('click', () => {
     return pop;
   }
   // Open the info card for a field by ident (used by the map action menu).
+  /* openAirfieldCard lives inside this IIFE, but the ROUTE code -- which runs at
+     top level, thousands of lines earlier -- calls it by bare name when a
+     plotted point sits on an aerodrome. That is a ReferenceError, and it has
+     been one since at least v309: the click threw, no card appeared, and
+     nothing in the UI said why. It only bit when a point landed within
+     RP_SNAP_NM (0.25 NM) of a field, which is why it looked intermittent.
+     Exported here so the route code has something real to call. */
+  window.NMAirfieldCard = openAirfieldCard;
+
   window.NMShowAirfield = function(ident, distNm){
     const f = fqMap[ident];
     if(f) openAirfieldCard(f, distNm);
@@ -17568,7 +17597,7 @@ if (navigator.storage && navigator.storage.persist) {
         <div class="set-sec" style="margin-top:18px;margin-bottom:0">
           <div class="set-adv"><strong>Advisory only</strong>Open-source data, not AIRAC-current. Cross-check every frequency against the PNG AIP before use. Pilot-entered freqs show a green &#10003;.</div>
         </div>
-        <div class="set-ver" id="setVersion">NM Plotter &middot; v324 &middot; 2026-08-14</div>
+        <div class="set-ver" id="setVersion">NM Plotter &middot; v325 &middot; 2026-08-14</div>
       </div>
     </div>
   </div>
