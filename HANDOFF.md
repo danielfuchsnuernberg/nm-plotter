@@ -6,7 +6,7 @@ Paste this at the start of the next chat, and attach `index.html`, `sw.js` **and
 
 ## Where things stand
 
-**Current build: v324**, service worker cache `nmplotter-v324`. The version now shows in the header strip (derived from the Settings footer, not authored twice) and in the archive filename. Desktop/Mac only.
+**Current build: v326**, service worker cache `nmplotter-v326`. The version now shows in the header strip (derived from the Settings footer, not authored twice) and in the archive filename. Desktop/Mac only.
 `index.html` ~2.44 MB, single file, all libraries inlined.
 
 v311 made two changes, both in the left column:
@@ -44,6 +44,7 @@ The zip that started this session held `index.html`, `sw.js` and `HANDOFF.md`
 only. Every gate named in the v309 handoff was gone. **Commit `gates/`.**
 
 ```
+npm install jsdom fake-indexeddb acorn acorn-walk   # one-time
 ./gate.sh                 gate the release candidate (work.html)
 ./gate.sh other.html      gate another build
 ```
@@ -51,6 +52,7 @@ only. Every gate named in the v309 handoff was gone. **Commit `gates/`.**
 | Gate | Catches |
 |---|---|
 | `cascade.js` | Not a gate — the ONE shared specificity resolver, and now **media-aware**. It used to flatten `@media` blocks into the rule set, so the touch-only `input[type="text"]{font-size:16px !important}` iOS zoom guard was reported as winning on a Mac, where it never applies. It now evaluates media conditions against a desktop profile; the evaluator is unit-tested against all six conditions in the file. |
+| `scopeproof.js` | **AST scope check.** Finds calls to functions that are not in scope — the `openAirfieldCard` bug class, invisible to `node --check` (the file parses) and to grep (the name is there, just in another room). Needs `npm install acorn acorn-walk`. Counts `window.X =` as a global, or it cries wolf on three working exports. |
 | `validate.py` | Script blocks parse, no width media queries outside comments, no phone/tablet leftovers, unexpected duplicate ids. |
 | `measure.js` | Left-column uniformity; the v311 rows cap and `?` rules **win** their cascade. |
 | `btnchk.js` | Two checks. (1) Fixed height with no centring rule = label at the top of the box. (2) **v321:** every left-column control, checked as an ELEMENT, must resolve to `--lc-h`, and no rule may address a container class absent from the markup. The old version only inspected rules that *did* set a height, so a token rule pointed at a non-existent `.flog-tools` matched nothing and went unseen. |
@@ -63,6 +65,7 @@ only. Every gate named in the v309 handoff was gone. **Commit `gates/`.**
 | `gate319.js` | Only the Times log scrolls: every child of the Times body except `#tmxLog` must be `flex:0 0`, checked against the real element rather than a hand-written list. |
 | `gate320.js` | Drag auto-scroll driven with real drag events at real coordinates. Checks every stop path — dragend, drop, dragexit, Escape, blur — because a loop left running scrolls the panel on its own. |
 | `gate322.js` | The plotted-point card is still wired (its parts compared against the **v309 file this session started from**), and a searched coordinate opens that same card by both click and Enter. |
+| `gate325.js` | **Clicking a plotted point must OPEN A CARD.** Plots one point on an aerodrome and one in open country, clicks the dot and the label for each, fails if any of the four opens nothing. Reproduces the v325 bug exactly on the old code. |
 | `gate314.js` | The strip cannot move (containment + `flex:1 1 0` on sections, the assertion that would have caught the jump) and the divider drags, clamps, persists and resets. Regression-tested: re-inject `flex:1 1 auto` and it fails. |
 
 **Still missing** and deliberately not faked: `cssguard`, `unwrapchk`,
@@ -94,7 +97,13 @@ and said so each time:**
 4. **jsdom has no layout, so nothing can see a wrapped row.**
 5. **Check structure, not class names.**
 6. **One variable per build.**
-7. **Anchored greps only.** I broke this twice in one session — `sed -n` over a
+7. **A handler that throws is a handler that is missing.** `openAirfieldCard`
+   is declared inside an IIFE; the route code called it by bare name from top
+   level and got a silent ReferenceError whenever a plotted point sat within
+   0.25 NM of an aerodrome. I twice reported "the code is byte-identical to
+   v309, so it is fine" — identical to a file that already had the bug. Reading
+   code answers "did I change it". Only running it answers "does it work".
+8. **Anchored greps only.** I broke this twice in one session — `sed -n` over a
    line range that contained the 575-record airfield array, and a `grep` that hit
    the Leaflet blob. Both dumped enormous output. Truncate with `cut -c1-160`.
 
@@ -117,7 +126,7 @@ screenshots — he reviews on his own machine.
 
 ## Design tokens — do not hand-size anything
 
-On `.panel.left`: `--lc-h 30px`, `--lc-h-sq 30px`, `--lc-h-tile 56px`,
+On `.panel.left`: `--lc-h 28px`, `--lc-h-sq 28px`, `--lc-h-tile 56px`,
 `--lc-r 5px`, `--lc-gap 6px`, `--lc-label 10px`, `--lc-value 13px`.
 New in v311: `--rows-max 334px` (ten rows).
 
@@ -135,8 +144,8 @@ See SUGGESTIONS #3.
   still wanted. My read is that capping the rows already solved it, because the
   tiles sit *below* the rows and never pushed them off screen — but that is a
   guess about how it feels, and you are the one flying with it.
-- Run `cloud-agent.html` from the GitHub Pages URL (must be same-origin).
-- Seven old cloud routes stored under pre-v291 slug ids: re-push, then delete.
+- `cloud-agent.html` run 2026-08-14: **56 passed, 0 failed.** The Worker LIST-name patch is confirmed (section 3b: plain list, `?full=1` and the record all agree). Two of its notes were STALE TEXT describing pre-fix app behaviour and have been removed; section 5 now hunts for leftover slug-id routes instead of asserting the old app behaviour. Self-tested against a fake Worker (`gates/agentlegacy.js`).
+- Old cloud routes under pre-v291 slug ids: **run cloud-agent section 5** — it now lists them by id and name. For each: load it in the app, Save to Cloud, delete the old id.
 - Re-push waypoints once so the cloud carries the corrected names.
 
 **Known and unresolved**
