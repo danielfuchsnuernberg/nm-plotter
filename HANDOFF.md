@@ -6,7 +6,7 @@ Paste this at the start of the next chat, and attach `index.html`, `sw.js` **and
 
 ## Where things stand
 
-**Current build: v326**, service worker cache `nmplotter-v326`. The version now shows in the header strip (derived from the Settings footer, not authored twice) and in the archive filename. Desktop/Mac only.
+**Current build: v329**, service worker cache `nmplotter-v329`. The version now shows in the header strip (derived from the Settings footer, not authored twice) and in the archive filename. Desktop/Mac only.
 `index.html` ~2.44 MB, single file, all libraries inlined.
 
 v311 made two changes, both in the left column:
@@ -66,6 +66,8 @@ npm install jsdom fake-indexeddb acorn acorn-walk   # one-time
 | `gate320.js` | Drag auto-scroll driven with real drag events at real coordinates. Checks every stop path — dragend, drop, dragexit, Escape, blur — because a loop left running scrolls the panel on its own. |
 | `gate322.js` | The plotted-point card is still wired (its parts compared against the **v309 file this session started from**), and a searched coordinate opens that same card by both click and Enter. |
 | `gate325.js` | **Clicking a plotted point must OPEN A CARD.** Plots one point on an aerodrome and one in open country, clicks the dot and the label for each, fails if any of the four opens nothing. Reproduces the v325 bug exactly on the old code. |
+| `gate327.js` | The divider's collapse button: hides everything below the line, persists, and — the two easy ones to get wrong — pressing it never starts a drag, and the hide rules beat the v313 section rule on **specificity** (800 > 700), not source order. |
+| `gate328.js` | Fuel Calc defaults are REAL values, not placeholders, and the arithmetic off them is right (60 NM → 110.0 kg trip, 73.3 kg reserve, 183 kg total). |
 | `gate314.js` | The strip cannot move (containment + `flex:1 1 0` on sections, the assertion that would have caught the jump) and the divider drags, clamps, persists and resets. Regression-tested: re-inject `flex:1 1 auto` and it fails. |
 
 **Still missing** and deliberately not faked: `cssguard`, `unwrapchk`,
